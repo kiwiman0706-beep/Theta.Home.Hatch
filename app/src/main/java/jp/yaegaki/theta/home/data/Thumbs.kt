@@ -6,11 +6,12 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.pdf.PdfRenderer
-import android.media.ExifInterface
+import androidx.exifinterface.media.ExifInterface
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.LruCache
 import android.util.Size
+import jp.yaegaki.theta.home.drive.GDrive
 import jp.yaegaki.theta.home.nas.Nas
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Semaphore
@@ -89,6 +90,20 @@ object Thumbs {
         }
     }
 
+    suspend fun drive(drive: GDrive, item: GDrive.Item, px: Int): Bitmap? {
+        if (item.thumb == null) return null
+        val b = bucket(px)
+        val key = cacheKey("drive:" + item.id + ":" + item.modified, px)
+        cache.get(key)?.let { return it }
+        if (key in failed) return null
+        return nasGate.withPermit {
+            val t = runCatching { drive.token() }.getOrNull() ?: return@withPermit null
+            withContext(Dispatchers.IO) {
+                remember(key, drive.thumb(t, item, b)?.let { decodeBytes(it, b) })
+            }
+        }
+    }
+
     private fun remember(key: String, bmp: Bitmap?): Bitmap? {
         if (bmp == null) failed += key else cache.put(key, bmp)
         return bmp
@@ -109,14 +124,7 @@ object Thumbs {
             BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample(o.outWidth, o.outHeight, px) })
         } ?: return null
         val deg = runCatching {
-            cr.openInputStream(uri)?.use {
-                when (ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
-                    ExifInterface.ORIENTATION_ROTATE_90 -> 90
-                    ExifInterface.ORIENTATION_ROTATE_180 -> 180
-                    ExifInterface.ORIENTATION_ROTATE_270 -> 270
-                    else -> 0
-                }
-            }
+            cr.openInputStream(uri)?.use { ExifInterface(it).rotationDegrees }
         }.getOrNull() ?: 0
         return if (deg == 0) bmp else Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, Matrix().apply { postRotate(deg.toFloat()) }, true)
     }

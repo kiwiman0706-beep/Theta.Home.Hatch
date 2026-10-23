@@ -28,8 +28,18 @@ enum class TabKind(val group: Int, val defaultLabel: String, val key: Char?) {
 data class TabSpec(val id: String, val kind: TabKind, val label: String, val folderUri: String? = null) {
     val nasPath: String? get() = folderUri?.takeIf { it.startsWith(NAS_PREFIX) }?.removePrefix(NAS_PREFIX)
 
+    /** Google ドライブのフォルダ（ID と名前）。 */
+    val driveFolder: Pair<String, String>? get() = folderUri?.takeIf { it.startsWith(DRIVE_PREFIX) }?.removePrefix(DRIVE_PREFIX)?.let {
+        val cut = it.indexOf(':')
+        if (cut < 0) it to it else it.substring(0, cut) to it.substring(cut + 1)
+    }
+
+    /** 端末のフォルダ（SAF）か。 */
+    val isLocal: Boolean get() = folderUri != null && nasPath == null && driveFolder == null
+
     companion object {
         const val NAS_PREFIX = "nas:"
+        const val DRIVE_PREFIX = "gdrive:"
     }
 }
 

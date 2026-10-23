@@ -23,17 +23,21 @@ import org.json.JSONObject;
 
 /**
  * Synology NAS（DSM File Station API）への接続と、ネットワーク・Tailscale・NAS の状態。DSBooks と同じ手順：
- * entry.cgi で使える API を問い合わせ → SYNO.API.Auth（v3 まで）でログイン → SYNO.FileStation.List / Download。
+ * entry.cgi で使える API を問い合わせ → SYNO.API.Auth でログイン → SYNO.FileStation.List / Download / Thumb。
+ * 2 段階認証は初回だけコードを入れ、以後はデバイストークン（did）で通す。
+ * https の自己署名証明書は、初回に指紋（SHA-256）を見せて信頼してもらい、以後はその証明書だけを受け入れる。
  * Tailscale は外部アプリとして扱い、勝手にオンにはしない。VPN が無いだけで Tailscale がオフとは断定しない。
  */
 public final class Nas {
     public static final String TAILSCALE = "com.tailscale.ipn";
-    public static final int UNSET = 0, CHECKING = 1, OK = 2, UNREACHABLE = 3, AUTH = 4;
+    public static final int UNSET = 0, CHECKING = 1, OK = 2, UNREACHABLE = 3, AUTH = 4, NEED_OTP = 5, CERT = 6;
 
     public static final class Status {
         public boolean network, vpn, tailscale;
         public int nas = UNSET;
         public String message = "";
+        /** CERT のとき、信頼するか尋ねる証明書の指紋。 */
+        public String cert;
         public long checkedAt;
     }
 
@@ -43,14 +47,29 @@ public final class Nas {
         public long size, modified;
     }
 
-    static final class AuthException extends IOException {
+    static class AuthException extends IOException {
         AuthException(String m) { super(m); }
+    }
+
+    static final class OtpException extends AuthException {
+        OtpException(String m) { super(m); }
+    }
+
+    /** 端末が信頼していない証明書。fingerprint を見せて、信頼するか尋ねる。 */
+    public static final class CertException extends IOException {
+        public final String fingerprint;
+        CertException(String fingerprint) {
+            super("信頼されていない証明書です");
+            this.fingerprint = fingerprint;
+        }
     }
 
     private final Context context;
     private final SharedPreferences prefs;
     private JSONObject apis;
     private String sid;
+    /** 次のログインで 1 回だけ使う 2 段階認証のコード。 */
+    private String otp;
 
     public Nas(Context context, SharedPreferences prefs) {
         this.context = context.getApplicationContext();
@@ -61,15 +80,46 @@ public final class Nas {
     public String account() { return prefs.getString("nasAccount", ""); }
     public boolean configured() { return !base().isEmpty() && !account().isEmpty(); }
 
-    public void save(String url, String account, String password) throws Exception {
+    /**
+     * 入力を URL に整える。「100.1.2.3」のように方式を省いたときは DSM の既定のポート（http 5000）を補う。
+     * 方式を書いたときはそのまま使う（リバースプロキシで 443 にしている場合など）。
+     */
+    public static String normalize(String url) {
         String u = url.trim();
-        if (!u.startsWith("http://") && !u.startsWith("https://")) u = "http://" + u;
         while (u.endsWith("/")) u = u.substring(0, u.length() - 1);
+        if (u.isEmpty()) return u;
+        if (!u.startsWith("http://") && !u.startsWith("https://")) {
+            String host = u.contains("/") ? u.substring(0, u.indexOf('/')) : u;
+            u = "http://" + u;
+            if (!host.contains(":")) u = "http://" + host + ":5000" + u.substring(("http://" + host).length());
+        }
+        return u;
+    }
+
+    public void save(String url, String account, String password) throws Exception {
+        String u = normalize(url);
         SharedPreferences.Editor e = prefs.edit().putString("nasUrl", u).putString("nasAccount", account.trim());
         if (!password.isEmpty()) e.putString("nasPassword", Secret.seal(password));
+        // 接続先かアカウントが変わったら、デバイストークンと証明書の信頼はやり直す
+        if (!u.equals(base()) || !account.trim().equals(account())) e.remove("nasDid").remove("nasCertPin");
         e.apply();
         synchronized (this) { sid = null; apis = null; }
     }
+
+    /** 2 段階認証のコード。次のログインで 1 回だけ使う。 */
+    public synchronized void setOtp(String code) {
+        otp = code == null || code.trim().isEmpty() ? null : code.trim();
+        if (otp != null) sid = null;
+    }
+
+    /** 見せた指紋の証明書を信頼する。 */
+    public synchronized void trustCert(String fingerprint) {
+        prefs.edit().putString("nasCertPin", fingerprint).apply();
+        sid = null;
+        apis = null;
+    }
+
+    public String trustedCert() { return prefs.getString("nasCertPin", ""); }
 
     /** 端末のネットワークと VPN（Tailscale はここに出る）の有無。 */
     public static boolean[] network(Context c) {
@@ -113,6 +163,13 @@ public final class Nas {
             call("SYNO.FileStation.List", "list_share", map("offset", "0", "limit", "1"));
             s.nas = OK;
             s.message = "NAS に接続しています";
+        } catch (OtpException e) {
+            s.nas = NEED_OTP;
+            s.message = e.getMessage();
+        } catch (CertException e) {
+            s.nas = CERT;
+            s.cert = e.fingerprint;
+            s.message = "NAS の証明書を端末が信頼していません（自己署名など）。指紋を確かめて信頼すると、つながります。";
         } catch (AuthException e) {
             s.nas = AUTH;
             s.message = "NAS にログインできません（" + e.getMessage() + "）。設定でアカウントを確認してください。";
@@ -208,14 +265,35 @@ public final class Nas {
         String password = Secret.open(prefs.getString("nasPassword", ""));
         if (password.isEmpty()) throw new AuthException("パスワード未設定");
         JSONObject auth = apis.getJSONObject("SYNO.API.Auth");
-        JSONObject login = new JSONObject(read(post(base + "/webapi/" + auth.optString("path", "entry.cgi"),
-                form(map("api", "SYNO.API.Auth", "version", "" + Math.min(3, auth.optInt("maxVersion", 3)), "method", "login",
-                        "account", account(), "passwd", password, "session", "FileStation", "format", "sid")), 10000).getInputStream()));
+        String did = prefs.getString("nasDid", "");
+        Map<String, String> p = map("api", "SYNO.API.Auth", "method", "login",
+                "account", account(), "passwd", password, "session", "FileStation", "format", "sid");
+        // 2 段階認証（コード・デバイストークン）は v6 から
+        boolean twoStep = otp != null || !did.isEmpty();
+        p.put("version", "" + Math.min(twoStep ? 6 : 3, auth.optInt("maxVersion", 3)));
+        if (otp != null) {
+            p.put("otp_code", otp);
+            p.put("enable_device_token", "yes");
+            p.put("device_name", "ThetaHomeHatch");
+        } else if (!did.isEmpty()) {
+            p.put("device_id", did);
+            p.put("device_name", "ThetaHomeHatch");
+        }
+        otp = null;
+        JSONObject login = new JSONObject(read(post(base + "/webapi/" + auth.optString("path", "entry.cgi"), form(p), 10000).getInputStream()));
         if (!login.optBoolean("success")) {
             int code = login.optJSONObject("error") == null ? 0 : login.getJSONObject("error").optInt("code");
-            throw new AuthException(code == 400 ? "アカウントかパスワードが違います" : code == 403 || code == 406 ? "2 段階認証には未対応です" : "エラー " + code);
+            if (code == 403 || code == 406) {
+                prefs.edit().remove("nasDid").apply();
+                throw new OtpException("2 段階認証のコードを入れてください（NAS の設定から。1 回入れれば、この端末は次から要りません）");
+            }
+            if (code == 404) throw new OtpException("2 段階認証のコードが違います。新しいコードを入れてください");
+            throw new AuthException(code == 400 ? "アカウントかパスワードが違います" : code == 407 ? "ログインの失敗が続いたため、NAS が一時的に拒否しています" : "エラー " + code);
         }
-        sid = login.getJSONObject("data").getString("sid");
+        JSONObject data = login.getJSONObject("data");
+        sid = data.getString("sid");
+        String newDid = data.optString("did", data.optString("device_id", ""));
+        if (!newDid.isEmpty()) prefs.edit().putString("nasDid", newDid).apply();
     }
 
     private JSONObject api(String name) throws IOException {
@@ -246,8 +324,21 @@ public final class Nas {
         throw new IOException("DSM に接続できません");
     }
 
-    private static HttpURLConnection post(String url, String body, int timeout) throws IOException {
+    private HttpURLConnection post(String url, String body, int timeout) throws IOException {
+        try {
+            return postOnce(url, body, timeout);
+        } catch (javax.net.ssl.SSLException e) {
+            // 端末が信頼しない証明書（自己署名など）。指紋を取り出して、信頼するか尋ねる
+            String fp = Tls.probe(url, timeout);
+            if (fp != null && !fp.equals(trustedCert())) throw new CertException(fp);
+            throw e;
+        }
+    }
+
+    private HttpURLConnection postOnce(String url, String body, int timeout) throws IOException {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+        String pin = trustedCert();
+        if (c instanceof javax.net.ssl.HttpsURLConnection && !pin.isEmpty()) Tls.pin((javax.net.ssl.HttpsURLConnection) c, pin);
         c.setConnectTimeout(timeout);
         c.setReadTimeout(timeout);
         c.setRequestMethod("POST");

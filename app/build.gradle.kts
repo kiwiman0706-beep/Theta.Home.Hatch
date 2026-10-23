@@ -21,8 +21,8 @@ android {
         applicationId = "jp.yaegaki.theta.home"
         minSdk = 29
         targetSdk = 35
-        versionCode = 8
-        versionName = "0.7.0-alpha"
+        versionCode = 9
+        versionName = "0.8.0-alpha"
     }
 
     signingConfigs {
@@ -70,6 +70,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
     implementation("androidx.documentfile:documentfile:1.1.0")
+    implementation("androidx.exifinterface:exifinterface:1.4.1")
+    // Google ドライブ：Google アカウントでの許可（Drive API の読み取り）
+    implementation("com.google.android.gms:play-services-auth:21.4.0")
     testImplementation("junit:junit:4.13.2")
     // 画面の見本（スクリーンショット）を JVM 上で描く
     testImplementation("org.robolectric:robolectric:4.16.1")

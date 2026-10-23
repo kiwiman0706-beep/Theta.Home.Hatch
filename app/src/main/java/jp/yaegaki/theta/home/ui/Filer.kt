@@ -73,6 +73,7 @@ import jp.yaegaki.theta.home.data.TabKind
 import jp.yaegaki.theta.home.data.TabSpec
 import jp.yaegaki.theta.home.hatch.HatchCatalog
 import jp.yaegaki.theta.home.nas.Nas
+import jp.yaegaki.theta.home.drive.GDrive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -90,15 +91,28 @@ private data class Row(
     val mime: String?,
     val entry: Entry? = null,
     val nas: Nas.Item? = null,
+    val drive: GDrive.Item? = null,
     /** 2 行目を差し替えるとき（最近：どこで開いたか・いつ）。 */
     val note: String? = null,
 ) {
-    val badge: String get() = if (isDir) "DIR" else name.substringAfterLast('.', "FILE").uppercase(Locale.ROOT).take(4)
+    val badge: String get() = when {
+        isDir -> "DIR"
+        drive?.isGoogleDoc == true -> when (drive.mime.substringAfterLast('.')) {
+            "document" -> "GDOC"
+            "spreadsheet" -> "GSHT"
+            "presentation" -> "GSLD"
+            "form" -> "GFRM"
+            else -> "GAPP"
+        }
+        else -> name.substringAfterLast('.', "FILE").uppercase(Locale.ROOT).take(4)
+    }
 }
 
 private fun Entry.row() = Row(uri.toString(), name, isDir, size, modified, mime, entry = this)
 
 private fun Nas.Item.row() = Row("nas:$path", name, dir, size, modified, if (dir) null else Files.mimeOf(name), nas = this)
+
+private fun GDrive.Item.row() = Row("drive:$id", name, isDir, size, modified, mime, drive = this)
 
 /**
  * 背景（デスクトップ）のファイラー。スマホでもファイルの置き場をホームにする。
@@ -109,6 +123,7 @@ private fun Nas.Item.row() = Row("nas:$path", name, dir, size, modified, if (dir
 fun Filer(model: HomeModel) {
     val layout = LocalLayout.current
     var nasDialog by remember { mutableStateOf(false) }
+    var driveDialog by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().padding(horizontal = if (layout.compact) 14.dp else 28.dp, vertical = 12.dp)) {
         FilerHeader(model)
         Gap(8.dp)
@@ -125,7 +140,7 @@ fun Filer(model: HomeModel) {
                     if (showPlaces) Places(model, Modifier.width(176.dp).fillMaxHeight()) { nasDialog = true }
                     Column(Modifier.weight(1f).fillMaxHeight()) {
                         if (!showPlaces) PlaceChips(model)
-                        FolderView(model, preview = showPreview, selected = selected, onSelect = { selected = it }) { nasDialog = true }
+                        FolderView(model, preview = showPreview, selected = selected, onSelect = { selected = it }, openNasSettings = { nasDialog = true }, openDriveSettings = { driveDialog = true })
                     }
                     if (showPreview) Preview(model, selected, Modifier.width(300.dp).fillMaxHeight())
                 }
@@ -134,6 +149,13 @@ fun Filer(model: HomeModel) {
         FilerFooter(model)
     }
     if (nasDialog) NasDialog(model) { nasDialog = false }
+    if (driveDialog) DriveDialog(model) { driveDialog = false }
+}
+
+/** ドライブのファイルを開く。Google ドキュメントなどはリンクで（ドキュメントのアプリかブラウザが開く）、ほかは取得してから。 */
+private fun openDriveItem(model: HomeModel, actions: Actions, d: GDrive.Item) {
+    if (d.isGoogleDoc) d.link?.let { actions.start(Intent(Intent.ACTION_VIEW, Uri.parse(it))) }
+    else model.fetchDrive(d) { f -> actions.start(Files.openIntent(Files.localUri(actions.activity, f), d.mime)) }
 }
 
 /** 下端の帯：今の場所・件数・画面の種類。 */
@@ -251,6 +273,8 @@ private fun StatusStrip(model: HomeModel, openNasSettings: () -> Unit) {
                 s.nas == Nas.OK -> "LINKED"
                 s.nas == Nas.UNSET -> "未登録"
                 s.nas == Nas.AUTH -> "AUTH ERR"
+                s.nas == Nas.NEED_OTP -> "2FA ›"
+                s.nas == Nas.CERT -> "CERT ›"
                 else -> "NO LINK"
             }, if (s == null || s.nas == Nas.UNSET) null else nasOk) {
                 if (s?.nas == Nas.OK) model.openNas("") else openNasSettings()
@@ -268,6 +292,8 @@ private fun StatusStrip(model: HomeModel, openNasSettings: () -> Unit) {
                 if (s.tailscale && !s.vpn) PillButton("Tailscale を開く", { openTailscale(actions) }, primary = true)
                 PillButton("再接続", { model.refreshStatus(force = true) })
                 if (s.nas == Nas.AUTH) PillButton("接続先を直す", openNasSettings)
+                if (s.nas == Nas.NEED_OTP) PillButton("コードを入れる", openNasSettings, primary = true)
+                if (s.nas == Nas.CERT) PillButton("証明書を確かめる", openNasSettings, primary = true)
             }
         }
     }
@@ -287,8 +313,14 @@ private fun Places(model: HomeModel, modifier: Modifier, openNasSettings: () -> 
         SectionTitle("LOCATION / 場所", Modifier.padding(start = 4.dp, bottom = 6.dp))
         var n = 0
         model.tabs.filter { it.kind == TabKind.FOLDER }.forEach { t ->
-            PlaceButton(++n, t.label, if (t.nasPath != null) "NAS" else if (t.folderUri == null) "未割り当て" else "LOCAL", isActive(model, t)) { model.showFolder(t) }
+            PlaceButton(++n, t.label, when {
+                t.nasPath != null -> "NAS"
+                t.driveFolder != null -> "DRIVE"
+                t.folderUri == null -> "未割り当て"
+                else -> "LOCAL"
+            }, isActive(model, t)) { model.showFolder(t) }
         }
+        PlaceButton(++n, "DRIVE", if (model.driveOn) "GOOGLE" else "未接続", model.location == "drive" && model.driveTab == null) { model.openDrive(listOf(GDrive.ROOT to "DRIVE")) }
         PlaceButton(++n, "NAS", if (model.nas.configured()) "SHARED" else "未登録", model.location == "nas" && model.nasTab == null) {
             if (model.nas.configured()) model.openNas("") else openNasSettings()
         }
@@ -299,7 +331,7 @@ private fun Places(model: HomeModel, modifier: Modifier, openNasSettings: () -> 
 }
 
 private fun isActive(model: HomeModel, t: TabSpec) =
-    model.location == "tab:${t.id}" || model.location == "nas" && model.nasTab == t.id
+    model.location == "tab:${t.id}" || model.location == "nas" && model.nasTab == t.id || model.location == "drive" && model.driveTab == t.id
 
 @Composable
 private fun PlaceButton(index: Int, title: String, sub: String, active: Boolean, onClick: () -> Unit) {
@@ -334,12 +366,13 @@ private fun PlaceChips(model: HomeModel) {
         }
         model.tabs.filter { it.kind == TabKind.FOLDER }.forEach { t -> chip(t.label, isActive(model, t)) { model.showFolder(t) } }
         chip("NAS", model.location == "nas" && model.nasTab == null) { model.openNas("") }
+        chip("DRIVE", model.location == "drive" && model.driveTab == null) { model.openDrive(listOf(GDrive.ROOT to "DRIVE")) }
         chip("最近", model.location == "recent") { model.showRecent() }
     }
 }
 
 @Composable
-private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSelect: (Row?) -> Unit, openNasSettings: () -> Unit) {
+private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSelect: (Row?) -> Unit, openNasSettings: () -> Unit, openDriveSettings: () -> Unit) {
     val actions = LocalActions.current
     val loc = model.location
     val tab = model.tab(loc.removePrefix("tab:")).takeIf { loc.startsWith("tab:") }
@@ -353,15 +386,19 @@ private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSel
                 actions.start(Files.openIntent(e.uri, e.mime))
             }
             n != null -> model.fetchNas(n) { f -> actions.start(Files.openIntent(Files.localUri(actions.activity, f), r.mime)) }
+            r.drive != null -> openDriveItem(model, actions, r.drive)
         }
     }
 
     fun share(r: Row) {
         val e = r.entry
         val n = r.nas
+        val d = r.drive
         when {
             e != null -> actions.start(Files.shareIntent(e.uri, e.mime, e.name))
             n != null -> model.fetchNas(n) { f -> actions.start(Files.shareIntent(Files.localUri(actions.activity, f), r.mime, f.name)) }
+            d != null && d.isGoogleDoc -> d.link?.let { actions.start(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, it), "共有")) }
+            d != null -> model.fetchDrive(d) { f -> actions.start(Files.shareIntent(Files.localUri(actions.activity, f), d.mime, f.name)) }
         }
     }
 
@@ -422,6 +459,40 @@ private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSel
                             DropdownMenuItem(text = { Text("「${t.label}」のタブにする") }, onClick = { close(); model.assignNasFolder(t.id, r.nas!!.path); actions.toast("「${t.label}」を NAS の ${r.name} にしました") })
                         }
                     }
+                },
+            )
+        }
+        loc == "drive" -> {
+            if (!model.driveOn) {
+                NeedPermission("Google ドライブを、端末のフォルダと同じように辿れます（読み取りのみ）。初回だけ Google Cloud での登録が要ります。", "Google ドライブにつなぐ", openDriveSettings)
+                return
+            }
+            val s = model.driveState
+            val stack = s.stack.ifEmpty { listOf(GDrive.ROOT to "DRIVE") }
+            Listing(
+                model = model,
+                viewKeys = stack.reversed().map { "drive:" + it.first },
+                crumbs = stack.map { it.second },
+                onCrumb = { i -> model.loadDrive(stack.take(i + 1)) },
+                canUp = stack.size > 1,
+                onUp = { model.driveUp() },
+                rows = s.entries.map { it.row() },
+                loading = s.loading,
+                error = s.error,
+                onRetry = { model.loadDrive(stack) },
+                preview = preview,
+                selected = selected,
+                onTap = { r -> if (r.isDir) model.loadDrive(stack + (r.drive!!.id to r.name)) else if (preview) onSelect(r) else open(r, "DRIVE") },
+                onOpen = { open(it, "DRIVE") },
+                onShare = ::share,
+                extraMenu = { r, close ->
+                    val d = r.drive
+                    if (r.isDir && d != null && !d.id.startsWith("~")) {
+                        model.tabs.filter { it.kind == TabKind.FOLDER }.forEach { t ->
+                            DropdownMenuItem(text = { Text("「${t.label}」のタブにする") }, onClick = { close(); model.assignDriveFolder(t.id, d.id, d.name); actions.toast("「${t.label}」をドライブの ${d.name} にしました") })
+                        }
+                    }
+                    if (d?.link != null) DropdownMenuItem(text = { Text("ブラウザ・ドライブで開く") }, onClick = { close(); actions.start(Intent(Intent.ACTION_VIEW, Uri.parse(d.link))) })
                 },
             )
         }
@@ -589,7 +660,7 @@ private fun Thumb(model: HomeModel, r: Row, modifier: Modifier) {
     BoxWithConstraints(modifier.clipToBounds().background(if (r.isDir) p.accent else p.raised).border(1.dp, if (r.isDir) p.accent else p.line), contentAlignment = Alignment.Center) {
         val side = minOf(maxWidth, maxHeight)
         val px = with(LocalDensity.current) { side.roundToPx() }
-        val kind = if (r.isDir) null else Thumbs.kind(r.name, r.mime)
+        val kind = if (r.isDir) null else Thumbs.kind(r.name, r.mime) ?: if (r.drive?.thumb != null) "doc" else null
         val bmp by produceState(r.entry?.let { Thumbs.cached(it.uri.toString(), px) }, r.key, px, kind) {
             if (kind == null) return@produceState
             val e = r.entry
@@ -597,6 +668,7 @@ private fun Thumb(model: HomeModel, r: Row, modifier: Modifier) {
             value = when {
                 e != null -> Thumbs.local(ctx, e.uri, r.name, r.mime, px)
                 n != null -> Thumbs.nas(model.nas, n, px)
+                r.drive != null -> Thumbs.drive(model.drive, r.drive, px)
                 else -> null
             }
         }
@@ -671,25 +743,49 @@ private fun Preview(model: HomeModel, r: Row?, modifier: Modifier) {
 /** NAS の接続先。パスワードは端末の鍵で暗号化して保存する。 */
 @Composable
 fun NasDialog(model: HomeModel, onDismiss: () -> Unit) {
+    val p = LocalPalette.current
     var url by remember { mutableStateOf(model.nas.base()) }
     var account by remember { mutableStateOf(model.nas.account()) }
     var password by remember { mutableStateOf("") }
+    var otp by remember { mutableStateOf("") }
+    var tried by remember { mutableStateOf(false) }
+    val st = model.status
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("NAS（Synology）") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Field(url, { url = it.trim() }, "http://100.x.x.x:5000")
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Field(url, { url = it.trim() }, "100.x.x.x（:5000 は省略可）")
                 Field(account, { account = it }, "アカウント")
                 Field(password, { password = it }, if (model.nas.configured()) "パスワード（変えるときだけ）" else "パスワード", password = true)
+                if (st?.nas == Nas.NEED_OTP || otp.isNotEmpty()) Field(otp, { otp = it.filter(Char::isDigit).take(8) }, "2 段階認証のコード（6 桁）")
+                if (tried || st?.nas == Nas.NEED_OTP || st?.nas == Nas.CERT) {
+                    val ok = st?.nas == Nas.OK
+                    Text(
+                        if (model.checking) "確かめています…" else st?.message.orEmpty(),
+                        color = if (ok) p.fg else p.accent, fontSize = 13.sp, lineHeight = 19.sp,
+                    )
+                    val fp = st?.cert
+                    if (!model.checking && st?.nas == Nas.CERT && fp != null) {
+                        Text("SHA-256\n$fp", color = p.muted, fontSize = 11.sp, fontFamily = Hud.mono, lineHeight = 16.sp)
+                        Text(
+                            if (model.nas.trustedCert().isEmpty()) "DSM の「コントロールパネル → セキュリティ → 証明書」で同じ指紋か確かめてから信頼してください。"
+                            else "前に信頼した証明書と違います。NAS で証明書を更新したのでなければ、つながないでください。",
+                            color = p.muted, fontSize = 12.sp, lineHeight = 18.sp,
+                        )
+                        PillButton("この証明書を信頼する", { model.trustNasCert(fp) }, primary = true)
+                    }
+                }
                 Text(
-                    "DSBooks と同じ DSM の File Station でつなぎます。外出先からは Tailscale 経由のアドレス（Tailscale の画面に出る 100.x.x.x、または 〇〇.ts.net）を入れてください。2 段階認証のアカウントには未対応です。",
-                    color = LocalPalette.current.muted, fontSize = 12.sp, lineHeight = 18.sp,
+                    "DSBooks と同じ DSM の File Station でつなぎます。家の中は NAS の IP（192.168.x.x）、外出先からは Tailscale のアドレス（100.x.x.x か 〇〇.ts.net）。" +
+                        "https（:5001）の自己署名証明書は、初回に指紋を確かめて信頼できます。2 段階認証は、求められたら 1 回だけコードを入れれば、この端末は次から要りません。",
+                    color = p.muted, fontSize = 12.sp, lineHeight = 18.sp,
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = { model.saveNas(url, account, password); onDismiss() }, enabled = url.isNotBlank() && account.isNotBlank()) { Text("保存して接続") }
+            if (tried && st?.nas == Nas.OK && !model.checking) TextButton(onClick = onDismiss) { Text("閉じる") }
+            else TextButton(onClick = { tried = true; model.saveNas(url, account, password, otp); otp = "" }, enabled = url.isNotBlank() && account.isNotBlank() && !model.checking) { Text("保存して接続") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("やめる") } },
     )

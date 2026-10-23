@@ -44,6 +44,7 @@ fun SettingsPanel(model: HomeModel) {
     var renaming by remember { mutableStateOf<TabSpec?>(null) }
     var adding by remember { mutableStateOf(false) }
     var nasDialog by remember { mutableStateOf(false) }
+    var driveDialog by remember { mutableStateOf(false) }
     var importing by remember { mutableStateOf(false) }
     var sorting by remember { mutableStateOf(false) }
     var renamingCategory by remember { mutableStateOf<jp.yaegaki.theta.home.data.Category?>(null) }
@@ -88,9 +89,10 @@ fun SettingsPanel(model: HomeModel) {
                 Toggle("起動・復帰のときに新しい版を確かめる（1 日 1 回）", model.autoUpdate) { model.changeAutoUpdate(it) }
                 Note("新しい版があると、画面上部に「UPDATE」が出ます。押すと取得して SHA-256 を照合し、Android の確認画面へ進みます（2 回目からは確認を省けることがあります）。")
                 Gap(18.dp)
-                SectionTitle("NAS とウィジェット", Modifier.padding(horizontal = 10.dp))
+                SectionTitle("NAS・GOOGLE DRIVE・ウィジェット", Modifier.padding(horizontal = 10.dp))
                 FlowRow2 {
                     PillButton(if (model.nas.configured()) "NAS の接続先：${model.nas.base()}" else "NAS を登録", { nasDialog = true })
+                    PillButton(if (model.driveOn) "Google ドライブ：${model.driveEmail.ifEmpty { "接続中" }}" else "Google ドライブにつなぐ", { driveDialog = true }, primary = !model.driveOn)
                     PillButton("ウィジェット：${if (model.profile == "wide") "閉じた画面" else "開いた画面"}から取り込む", { importing = true })
                 }
                 Gap(18.dp)
@@ -199,6 +201,7 @@ fun SettingsPanel(model: HomeModel) {
                             when {
                                 t.kind == TabKind.FOLDER && t.folderUri == null -> "フォルダ · 未割り当て"
                                 t.kind == TabKind.FOLDER && t.nasPath != null -> "フォルダ · NAS " + t.nasPath!!.ifEmpty { "/" }
+                                t.kind == TabKind.FOLDER && t.driveFolder != null -> "フォルダ · DRIVE " + t.driveFolder!!.second
                                 t.kind == TabKind.FOLDER -> "フォルダ · " + android.net.Uri.decode(t.folderUri!!.substringAfterLast('/')).substringAfter(':')
                                 else -> t.kind.defaultLabel + (t.kind.key?.let { " · Alt+$it" } ?: "")
                             },
@@ -211,6 +214,11 @@ fun SettingsPanel(model: HomeModel) {
                         if (t.kind == TabKind.FOLDER && model.nas.configured()) DropdownMenuItem(
                             text = { Text("NAS の今のフォルダ（${model.nasState.path.ifEmpty { "/" }}）にする") },
                             onClick = { menu = false; model.assignNasFolder(t.id, model.nasState.path) },
+                        )
+                        val dTop = model.driveState.stack.lastOrNull()
+                        if (t.kind == TabKind.FOLDER && model.driveOn && dTop != null && !dTop.first.startsWith("~") && dTop.first.isNotEmpty()) DropdownMenuItem(
+                            text = { Text("ドライブの今のフォルダ（${dTop.second}）にする") },
+                            onClick = { menu = false; model.assignDriveFolder(t.id, dTop.first, dTop.second) },
                         )
                         if (i > 0) DropdownMenuItem(text = { Text("上へ") }, onClick = { menu = false; model.updateTabs(model.tabs.move(i, i - 1)) })
                         if (i < model.tabs.lastIndex) DropdownMenuItem(text = { Text("下へ") }, onClick = { menu = false; model.updateTabs(model.tabs.move(i, i + 1)) })
@@ -236,6 +244,7 @@ fun SettingsPanel(model: HomeModel) {
     }
 
     if (nasDialog) NasDialog(model) { nasDialog = false }
+    if (driveDialog) DriveDialog(model) { driveDialog = false }
     if (importing) ImportWidgetsDialog(model) { importing = false }
     if (sorting) SortGuide(model) { sorting = false }
     renamingPreset?.let { old ->

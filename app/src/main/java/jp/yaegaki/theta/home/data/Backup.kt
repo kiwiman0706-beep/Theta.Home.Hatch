@@ -103,7 +103,7 @@ object Backup {
             listOf("narrow", "wide").flatMap { p -> w.optJSONArray(p)?.let { a -> (0 until a.length()).map { a.getJSONObject(it).optString("label") } }.orEmpty() }
         }.orEmpty().distinct()
         val folders = store.tabs().filter { t ->
-            t.kind == TabKind.FOLDER && t.folderUri != null && t.nasPath == null && !Files.hasGrant(context, Uri.parse(t.folderUri))
+            t.kind == TabKind.FOLDER && t.isLocal && !Files.hasGrant(context, Uri.parse(t.folderUri))
         }.map { it.label }
         return ImportReport(missing, widgets, folders, nasUrl.isNotEmpty() && store.prefs.getString("nasPassword", "").isNullOrEmpty())
     }

@@ -98,10 +98,20 @@ private const val SETTINGS = "__settings"
 @Composable
 fun HomeRoot(model: HomeModel, activity: ComponentActivity) {
     val actions = rememberActions(model, activity)
+    // Google ドライブの許可の画面
+    val consent = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
+        model.driveConsentResult(it.resultCode == android.app.Activity.RESULT_OK, it.data)
+    }
+    LaunchedEffect(model.driveConsent) {
+        val pi = model.driveConsent ?: return@LaunchedEffect
+        model.driveConsent = null
+        runCatching { consent.launch(androidx.activity.result.IntentSenderRequest.Builder(pi.intentSender).build()) }
+    }
     val p = LocalPalette.current
 
     val here = model.tab(model.location.removePrefix("tab:"))
     val canGoUp = model.location == "nas" && model.nasState.path.isNotEmpty() ||
+        model.location == "drive" && model.driveState.stack.size > 1 ||
         here != null && (model.folders[here.id]?.stack?.size ?: 0) > 1
     BackHandler(enabled = model.open != null || model.settingsOpen || model.query.isNotEmpty() || canGoUp) {
         when {
@@ -109,6 +119,7 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity) {
             model.open != null -> model.close()
             model.query.isNotEmpty() -> model.query = ""
             model.location == "nas" -> model.nasUp()
+            model.location == "drive" -> model.driveUp()
             here != null -> model.up(here.id)
         }
     }

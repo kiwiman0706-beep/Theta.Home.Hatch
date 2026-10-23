@@ -35,6 +35,8 @@ import jp.yaegaki.theta.home.hatch.HatchCatalog
 import jp.yaegaki.theta.home.hatch.HatchInstaller
 import jp.yaegaki.theta.home.hatch.Release
 import jp.yaegaki.theta.home.nas.Nas
+import jp.yaegaki.theta.home.drive.GDrive
+import android.app.PendingIntent
 import jp.yaegaki.theta.home.data.WidgetTab
 import jp.yaegaki.theta.home.data.Category
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +54,14 @@ data class FolderState(
     val current: Uri? get() = stack.lastOrNull()?.first
     val path: String get() = stack.joinToString(" › ") { it.second }
 }
+
+/** Google ドライブで見ている場所。stack の末尾が今いるフォルダ（ID と名前）。 */
+data class DriveState(
+    val stack: List<Pair<String, String>> = emptyList(),
+    val entries: List<GDrive.Item> = emptyList(),
+    val loading: Boolean = false,
+    val error: String? = null,
+)
 
 data class NasState(
     val path: String = "",
@@ -103,6 +113,14 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     var nasState by mutableStateOf(NasState()); private set
     val nas = Nas(app, store.prefs)
     var status by mutableStateOf<Nas.Status?>(null); private set
+    val drive = GDrive(app, store.prefs)
+    var driveState by mutableStateOf(DriveState()); private set
+    /** Google ドライブを開いたフォルダのタブ（タブから開いたときだけ）。 */
+    var driveTab by mutableStateOf<String?>(null); private set
+    var driveEmail by mutableStateOf(drive.email); private set
+    var driveOn by mutableStateOf(drive.enabled); private set
+    /** 出してほしい Google の許可の画面。画面側が開いて null に戻す。 */
+    var driveConsent by mutableStateOf<PendingIntent?>(null)
     var checking by mutableStateOf(false); private set
 
     /** ウィジェットの設定は画面ごと："narrow"（幅 600dp 未満）・"wide"。 */
@@ -224,6 +242,11 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             openNas(nasPath, t.id)
             return
         }
+        val df = t.driveFolder
+        if (df != null) {
+            openDrive(listOf(df), t.id)
+            return
+        }
         moveTo("tab:${t.id}")
         if (folders[t.id]?.stack.isNullOrEmpty() || folders[t.id]?.error != null) openRoot(t)
     }
@@ -286,6 +309,95 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         updateTabs(tabs.map { if (it.id == tabId) it.copy(folderUri = TabSpec.NAS_PREFIX + path) else it })
     }
 
+    // ---- Google ドライブ ----
+
+    fun openDrive(stack: List<Pair<String, String>> = driveState.stack.ifEmpty { listOf(GDrive.ROOT to "DRIVE") }, fromTab: String? = null) {
+        open = null
+        driveTab = fromTab
+        moveTo("drive")
+        if (drive.enabled) loadDrive(stack) else driveState = DriveState(stack)
+    }
+
+    fun loadDrive(stack: List<Pair<String, String>>) {
+        driveState = DriveState(stack, entries = if (stack == driveState.stack) driveState.entries else emptyList(), loading = true)
+        viewModelScope.launch {
+            val r = runCatching {
+                val t = drive.token()
+                withContext(Dispatchers.IO) { drive.list(t, stack.last().first) }
+            }
+            if (driveState.stack != stack) return@launch
+            r.exceptionOrNull()?.let { if (it is GDrive.NeedConsent) driveConsent = it.intent }
+            driveState = r.fold({ DriveState(stack, it) }, { DriveState(stack, error = it.message ?: it.javaClass.simpleName) })
+        }
+    }
+
+    fun driveUp(): Boolean {
+        val st = driveState.stack
+        if (st.size <= 1) return false
+        loadDrive(st.dropLast(1))
+        return true
+    }
+
+    /** Google でログインして、ドライブを読めるようにする。許可の画面が要れば driveConsent に置く。 */
+    fun connectDrive() {
+        viewModelScope.launch {
+            val r = runCatching { drive.token(force = true) }
+            val e = r.exceptionOrNull()
+            when {
+                e is GDrive.NeedConsent -> driveConsent = e.intent
+                e != null -> (ctx as HomeApp).toast(e.message ?: "つなげませんでした")
+                else -> afterDriveConnected()
+            }
+        }
+    }
+
+    /** 許可の画面から戻ったとき。 */
+    fun driveConsentResult(ok: Boolean, data: android.content.Intent?) {
+        if (!ok || !drive.acceptResult(data)) {
+            (ctx as HomeApp).toast("Google ドライブにはつなぎませんでした")
+            return
+        }
+        viewModelScope.launch { afterDriveConnected() }
+    }
+
+    private suspend fun afterDriveConnected() {
+        driveOn = true
+        runCatching { val t = drive.token(); withContext(Dispatchers.IO) { drive.about(t) } }.onSuccess {
+            drive.email = it
+            driveEmail = it
+        }
+        if (location == "drive") loadDrive(driveState.stack.ifEmpty { listOf(GDrive.ROOT to "DRIVE") })
+    }
+
+    fun disconnectDrive() {
+        drive.signOut()
+        driveOn = false
+        driveEmail = ""
+        driveState = DriveState()
+    }
+
+    /** ドライブのファイルを端末（キャッシュ）に取得して渡す。Google ドキュメントはリンクで開く。 */
+    fun fetchDrive(item: GDrive.Item, then: (File) -> Unit) {
+        viewModelScope.launch {
+            val r = runCatching {
+                val t = drive.token()
+                withContext(Dispatchers.IO) {
+                    val dir = File(ctx.cacheDir, "nas").apply { mkdirs() }
+                    dir.listFiles()?.sortedByDescending { it.lastModified() }?.drop(30)?.forEach { it.delete() }
+                    File(dir, item.name.replace(Regex("[\\\\/:*?\"<>|]"), "_")).also { drive.download(t, item, it) }
+                }
+            }
+            r.onSuccess(then).onFailure {
+                if (it is GDrive.NeedConsent) driveConsent = it.intent
+                else (ctx as HomeApp).toast("取得できませんでした：${it.message}")
+            }
+        }
+    }
+
+    fun assignDriveFolder(tabId: String, id: String, name: String) {
+        updateTabs(tabs.map { if (it.id == tabId) it.copy(folderUri = TabSpec.DRIVE_PREFIX + id + ":" + name) else it })
+    }
+
     /** ネットワーク・Tailscale・NAS の状態。force でなければ 20 秒以内の結果を使い回す。 */
     fun refreshStatus(force: Boolean = false) {
         val last = status
@@ -297,12 +409,25 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun saveNas(url: String, account: String, password: String) {
+    /** 保存して、すぐ確かめる。otp は 2 段階認証のコード（求められたときだけ）。 */
+    fun saveNas(url: String, account: String, password: String, otp: String = "") {
         viewModelScope.launch {
-            runCatching { withContext(Dispatchers.IO) { nas.save(url, account, password) } }
-            refreshStatus(force = true)
-            if (location == "nas") loadNas("")
+            runCatching { withContext(Dispatchers.IO) { nas.save(url, account, password); nas.setOtp(otp) } }
+            recheckNas()
         }
+    }
+
+    /** 見せた指紋の証明書を信頼して、つなぎ直す。 */
+    fun trustNasCert(fingerprint: String) {
+        nas.trustCert(fingerprint)
+        viewModelScope.launch { recheckNas() }
+    }
+
+    private suspend fun recheckNas() {
+        checking = true
+        status = withContext(Dispatchers.IO) { nas.check() }
+        checking = false
+        if (location == "nas") loadNas(if (status?.nas == Nas.OK) nasState.path else "")
     }
 
     // ---- フォルダ ----
