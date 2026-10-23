@@ -29,6 +29,7 @@ import jp.yaegaki.theta.home.data.RecentFile
 import jp.yaegaki.theta.home.data.Store
 import jp.yaegaki.theta.home.data.TabKind
 import jp.yaegaki.theta.home.data.TabSpec
+import jp.yaegaki.theta.home.data.ViewSpec
 import jp.yaegaki.theta.home.hatch.HatchApp
 import jp.yaegaki.theta.home.hatch.HatchCatalog
 import jp.yaegaki.theta.home.hatch.HatchInstaller
@@ -357,6 +358,23 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         tab(tabId)?.let(::openRoot)
     }
 
+    // ---- フォルダの見せ方（フォルダごとに記憶） ----
+
+    var folderViews by mutableStateOf(store.folderViews()); private set
+
+    /**
+     * keys は今のフォルダから上へ順に。最初に見つかった設定を使う（子のフォルダは親の設定を引き継ぐ）。
+     * どこにも無ければ、写真・動画が多いフォルダはグリッド、それ以外は一覧。
+     */
+    fun viewFor(keys: List<String>, mostlyMedia: Boolean): ViewSpec =
+        keys.firstNotNullOfOrNull { ViewSpec.decode(folderViews[it]) } ?: if (mostlyMedia) ViewSpec.GRID else ViewSpec.LIST
+
+    fun setView(key: String, v: ViewSpec) {
+        // 新しく触ったものを末尾に。多くなったら古いものから忘れる
+        folderViews = (folderViews - key + (key to v.encode())).entries.toList().takeLast(500).associate { it.key to it.value }
+        store.saveFolderViews(folderViews)
+    }
+
     fun rememberOpened(tabLabel: String, e: Entry) {
         val r = RecentFile(e.uri.toString(), e.name, e.mime, tabLabel, System.currentTimeMillis())
         recents = (listOf(r) + recents.filter { it.uri != r.uri }).take(12)
@@ -667,6 +685,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         categoryPresets = store.categoryPresets
         categoryDefaults = store.categoryDefaults
         bookmarks = store.bookmarks()
+        folderViews = store.folderViews()
         widgetTabs = store.widgetTabs(profile)
         folders.clear()
         open = null

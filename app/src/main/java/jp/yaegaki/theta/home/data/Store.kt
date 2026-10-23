@@ -43,6 +43,24 @@ data class RecentFile(val uri: String, val name: String, val mime: String?, val 
 
 data class Bookmark(val id: String, val name: String, val url: String)
 
+/** フォルダの見せ方：一覧（LIST）かグリッド（GRID）か、大きさ 0〜3（S・M・L・XL）。 */
+data class ViewSpec(val grid: Boolean, val size: Int) {
+    fun encode() = (if (grid) "grid" else "list") + ":" + size
+
+    companion object {
+        const val SIZES = 4
+        val NAMES = listOf("S", "M", "L", "XL")
+        val LIST = ViewSpec(false, 1)
+        val GRID = ViewSpec(true, 1)
+
+        fun decode(s: String?): ViewSpec? {
+            val parts = s?.split(':') ?: return null
+            if (parts.size != 2 || parts[0] !in setOf("grid", "list")) return null
+            return ViewSpec(parts[0] == "grid", (parts[1].toIntOrNull() ?: 1).coerceIn(0, SIZES - 1))
+        }
+    }
+}
+
 data class ClipItem(
     val id: String,
     val text: String?,
@@ -189,6 +207,14 @@ class Store(context: Context) {
     var pendingWidget: Int
         get() = prefs.getInt("pendingWidget", -1)
         set(v) = prefs.edit().putInt("pendingWidget", v).apply()
+
+    /** フォルダごとの見せ方。キーは "doc:<uri>"・"nas:<path>"・"recent"、値は ViewSpec.encode()。 */
+    fun folderViews(): Map<String, String> = runCatching {
+        val o = JSONObject(prefs.getString("views", "{}") ?: "{}")
+        o.keys().asSequence().associateWith { o.getString(it) }
+    }.getOrDefault(emptyMap())
+
+    fun saveFolderViews(map: Map<String, String>) = prefs.edit().putString("views", JSONObject(map).toString()).apply()
 
     fun recents(): List<RecentFile> = objects("recents") {
         RecentFile(it.getString("uri"), it.getString("name"), it.optString("mime").ifEmpty { null }, it.getString("where"), it.getLong("time"))

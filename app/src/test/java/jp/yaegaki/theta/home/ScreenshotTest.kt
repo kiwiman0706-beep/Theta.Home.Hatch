@@ -35,13 +35,14 @@ class ScreenshotTest {
 
     private var scenario: ActivityScenario<MainActivity>? = null
 
-    private fun launch(theme: String = "dark", iconMode: String = "mono") {
+    private fun launch(theme: String = "dark", iconMode: String = "mono", setup: (HomeApp) -> Unit = {}) {
         val app = ApplicationProvider.getApplicationContext<HomeApp>()
         // 前のテストの設定（テーマ・カテゴリー）を持ち越さない
         app.store.prefs.edit().clear().commit()
         app.store.themeMode = theme
         app.store.iconMode = iconMode
         app.store.autoUpdate = false
+        setup(app)
         val pm = shadowOf(app.packageManager)
         val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         listOf(
@@ -107,6 +108,40 @@ class ScreenshotTest {
         compose.onNodeWithContentDescription("CAPTURE（Alt+R）").performClick()
         compose.mainClock.advanceTimeBy(600)
         shot("fold5-cover-capture")
+    }
+
+    /** 最近のファイルに写真を並べ、グリッドとサムネイルを確かめる。 */
+    private fun photos(app: HomeApp, view: String) {
+        val dir = java.io.File(app.filesDir, "Capture").apply { mkdirs() }
+        val colors = listOf(0xFFB0452A, 0xFF2A6FB0, 0xFF3C8C4A, 0xFFC9A227, 0xFF6B3FA0, 0xFF444444)
+        val list = colors.mapIndexed { i, c ->
+            val f = java.io.File(dir, "photo-${i + 1}.png")
+            val bmp = android.graphics.Bitmap.createBitmap(240, 180, android.graphics.Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(bmp)
+            canvas.drawColor(c.toInt())
+            canvas.drawCircle(120f, 90f, 50f, android.graphics.Paint().apply { color = android.graphics.Color.WHITE })
+            f.outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            jp.yaegaki.theta.home.data.RecentFile(android.net.Uri.fromFile(f).toString(), f.name, "image/png", "PHOTO", 1_761_200_000_000L - i * 3_600_000L)
+        } + jp.yaegaki.theta.home.data.RecentFile("content://x/doc.pdf", "report.pdf", "application/pdf", "WORK", 1_761_100_000_000L)
+        app.store.saveRecents(list)
+        app.store.location = "recent"
+        app.store.saveFolderViews(mapOf("recent" to view))
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun filerGrid() {
+        launch { photos(it, "grid:1") }
+        compose.mainClock.advanceTimeBy(1000)
+        shot("filer-grid")
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun filerList() {
+        launch("light") { photos(it, "list:2") }
+        compose.mainClock.advanceTimeBy(1000)
+        shot("filer-list-thumbs")
     }
 
     @Test

@@ -213,7 +213,7 @@ fun VerticalLabel(text: String, color: Color, fontSize: Int = 13) {
 }
 
 /** 線で描く小さな記号（虫めがね・ピン・×・‹・＋）。アイコン用ライブラリに頼らない。 */
-enum class Glyph { SEARCH, PIN, CLOSE, BACK, PLUS, GEAR }
+enum class Glyph { SEARCH, PIN, CLOSE, BACK, PLUS, GEAR, LIST, GRID, FOLDER }
 
 @Composable
 fun GlyphIcon(g: Glyph, color: Color, size: Dp = 18.dp) {
@@ -247,6 +247,21 @@ private fun DrawScope.drawGlyph(g: Glyph, color: Color) {
             }
             drawPath(path, color, style = s)
             drawLine(color, Offset(w * 0.5f, w * 0.58f), Offset(w * 0.5f, w * 0.9f), s.width, StrokeCap.Square)
+        }
+        Glyph.LIST -> for (i in 0 until 3) {
+            val y = w * (0.26f + i * 0.24f)
+            drawLine(color, Offset(w * 0.16f, y), Offset(w * 0.24f, y), s.width, StrokeCap.Square)
+            drawLine(color, Offset(w * 0.38f, y), Offset(w * 0.84f, y), s.width, StrokeCap.Square)
+        }
+        Glyph.GRID -> for (i in 0 until 2) for (j in 0 until 2) {
+            drawRect(color, Offset(w * (0.16f + i * 0.38f), w * (0.16f + j * 0.38f)), androidx.compose.ui.geometry.Size(w * 0.3f, w * 0.3f), style = s)
+        }
+        Glyph.FOLDER -> {
+            val path = Path().apply {
+                moveTo(w * 0.1f, w * 0.24f); lineTo(w * 0.4f, w * 0.24f); lineTo(w * 0.48f, w * 0.34f); lineTo(w * 0.9f, w * 0.34f)
+                lineTo(w * 0.9f, w * 0.8f); lineTo(w * 0.1f, w * 0.8f); close()
+            }
+            drawPath(path, color, style = s)
         }
         Glyph.GEAR -> {
             drawCircle(color, radius = w * 0.16f, center = Offset(w / 2, w / 2), style = s)

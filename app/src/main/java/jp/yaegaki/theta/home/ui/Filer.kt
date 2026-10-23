@@ -1,5 +1,17 @@
 package jp.yaegaki.theta.home.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.platform.LocalDensity
+import jp.yaegaki.theta.home.data.Thumbs
+import jp.yaegaki.theta.home.data.ViewSpec
 import android.Manifest
 import android.content.Intent
 import android.graphics.BitmapFactory
@@ -25,7 +37,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -79,6 +90,8 @@ private data class Row(
     val mime: String?,
     val entry: Entry? = null,
     val nas: Nas.Item? = null,
+    /** 2 行目を差し替えるとき（最近：どこで開いたか・いつ）。 */
+    val note: String? = null,
 ) {
     val badge: String get() = if (isDir) "DIR" else name.substringAfterLast('.', "FILE").uppercase(Locale.ROOT).take(4)
 }
@@ -354,15 +367,29 @@ private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSel
 
     when {
         loc == "recent" -> {
-            DrawerList {
-                if (model.recents.isEmpty()) item { Note("フォルダから開いたファイルがここに並びます") }
-                itemsIndexed(model.recents, key = { _, it -> it.uri }) { zi, r ->
-                    RowButton(zebra = zi, onClick = { actions.start(Files.openIntent(Uri.parse(r.uri), r.mime)) }) {
-                        Badge(r.name.substringAfterLast('.', "FILE").uppercase(Locale.ROOT).take(4))
-                        TwoLines(r.name, "${r.where} · ${shortTime(r.time)}", Modifier.weight(1f))
-                    }
-                }
+            val rows = model.recents.map { r ->
+                val e = Entry(Uri.parse(r.uri), r.name, r.mime, false, 0, r.time)
+                Row(r.uri, r.name, false, 0, r.time, r.mime, entry = e, note = "${r.where} · ${shortTime(r.time)}")
             }
+            Listing(
+                model = model,
+                viewKeys = listOf("recent"),
+                crumbs = listOf("RECENT"),
+                onCrumb = {},
+                canUp = false,
+                onUp = {},
+                rows = rows,
+                loading = false,
+                error = null,
+                onRetry = {},
+                preview = preview,
+                selected = selected,
+                onTap = { r -> if (preview) onSelect(r) else r.entry?.let { actions.start(Files.openIntent(it.uri, it.mime)) } },
+                onOpen = { r -> r.entry?.let { actions.start(Files.openIntent(it.uri, it.mime)) } },
+                onShare = ::share,
+                extraMenu = { _, _ -> },
+                empty = "フォルダから開いたファイルがここに並びます",
+            )
         }
         loc == "nas" -> {
             if (!model.nas.configured()) {
@@ -374,6 +401,8 @@ private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSel
                 parts.mapIndexed { i, name -> name to "/" + parts.take(i + 1).joinToString("/") }
             }
             Listing(
+                model = model,
+                viewKeys = crumbs.reversed().map { "nas:" + it.second },
                 crumbs = crumbs.map { it.first },
                 onCrumb = { i -> model.loadNas(crumbs[i].second) },
                 canUp = s.path.isNotEmpty(),
@@ -410,6 +439,8 @@ private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSel
             }
             val st = state ?: return
             Listing(
+                model = model,
+                viewKeys = st.stack.reversed().map { "doc:" + it.first },
                 crumbs = st.stack.map { it.second },
                 onCrumb = { i -> model.jump(tab.id, i) },
                 canUp = st.stack.size > 1,
@@ -431,8 +462,19 @@ private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSel
     }
 }
 
+/** 一覧の大きさ（S・M・L・XL）ごとの、サムネイルの辺とグリッドの 1 マスの最小幅。 */
+private val listThumb = listOf(40.dp, 56.dp, 76.dp, 104.dp)
+private val gridCell = listOf(84.dp, 112.dp, 152.dp, 208.dp)
+
+/**
+ * フォルダの中身。一覧（LIST）とグリッド（GRID）、大きさ 4 段。見せ方はフォルダごとに覚える。
+ * viewKeys は今のフォルダから上へ順に並べたキー。設定の無いフォルダは親の見せ方を引き継ぐ。
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun Listing(
+    model: HomeModel,
+    viewKeys: List<String>,
     crumbs: List<String>,
     onCrumb: (Int) -> Unit,
     canUp: Boolean,
@@ -448,10 +490,15 @@ private fun Listing(
     onShare: (Row) -> Unit,
     extraMenu: @Composable (Row, () -> Unit) -> Unit,
     footer: (@Composable () -> Unit)? = null,
+    empty: String = "空のフォルダです",
 ) {
     val p = LocalPalette.current
     val actions = LocalActions.current
     var menuFor by remember { mutableStateOf<String?>(null) }
+    val files = rows.filter { !it.isDir }
+    val mostlyMedia = files.isNotEmpty() && files.count { Thumbs.kind(it.name, it.mime).let { k -> k == "image" || k == "video" } } * 10 >= files.size * 6
+    val spec = model.viewFor(viewKeys, mostlyMedia)
+    val full: androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
     Column(Modifier.fillMaxSize()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (canUp) GlyphButton(Glyph.BACK, "上のフォルダへ", onUp)
@@ -463,26 +510,58 @@ private fun Listing(
                 }
             }
             if (loading) Text("読み込み中…", color = p.faint, fontSize = 12.sp)
+            GlyphButton(if (spec.grid) Glyph.LIST else Glyph.GRID, if (spec.grid) "一覧で見る" else "グリッドで見る", { model.setView(viewKeys.first(), spec.copy(grid = !spec.grid)) })
+            Box(
+                Modifier.size(44.dp).clickable(onClickLabel = "大きさを変える（今 ${ViewSpec.NAMES[spec.size]}）") {
+                    model.setView(viewKeys.first(), spec.copy(size = (spec.size + 1) % ViewSpec.SIZES))
+                },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(ViewSpec.NAMES[spec.size], color = p.muted, fontSize = 12.sp, fontFamily = Hud.mono, modifier = Modifier.border(1.dp, p.line).padding(horizontal = 5.dp, vertical = 2.dp))
+            }
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-        DrawerList {
-            if (error != null) item {
+        LazyVerticalGrid(
+            columns = if (spec.grid) GridCells.Adaptive(gridCell[spec.size]) else GridCells.Fixed(1),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (spec.grid) 8.dp else 0.dp),
+            verticalArrangement = Arrangement.spacedBy(if (spec.grid) 10.dp else 0.dp),
+        ) {
+            if (error != null) item(span = full) {
                 Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(error, color = p.muted, fontSize = 13.sp)
                     PillButton("再接続", onRetry, primary = true)
                 }
             }
-            if (!loading && error == null && rows.isEmpty()) item { Note("空のフォルダです") }
+            if (!loading && error == null && rows.isEmpty()) item(span = full) { Note(empty) }
             itemsIndexed(rows, key = { _, it -> it.key }) { zi, r ->
+                val sub = r.note ?: if (r.isDir) null else listOfNotNull(if (r.modified > 0) shortTime(r.modified) else null, if (r.size > 0) Files.sizeText(r.size) else null).joinToString(" · ")
+                val chosen = preview && selected?.key == r.key
                 Box {
-                    RowButton(zebra = zi, 
-                        onClick = { onTap(r) },
-                        onLongClick = { menuFor = r.key },
-                        label = if (r.isDir) "フォルダを開く" else "ファイルを開く",
-                        modifier = if (preview && selected?.key == r.key) Modifier.background(p.raised, RoundedCornerShape(0.dp)) else Modifier,
-                    ) {
-                        Badge(r.badge, highlight = r.isDir)
-                        TwoLines(r.name, if (r.isDir) null else listOfNotNull(if (r.modified > 0) shortTime(r.modified) else null, Files.sizeText(r.size)).joinToString(" · "), Modifier.weight(1f))
+                    if (spec.grid) {
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .background(if (chosen) p.raised else Color.Transparent)
+                                .combinedClickable(onClick = { onTap(r) }, onLongClick = { menuFor = r.key }, onClickLabel = if (r.isDir) "フォルダを開く" else "ファイルを開く")
+                                .padding(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Thumb(model, r, Modifier.fillMaxWidth().aspectRatio(1f))
+                            Text(r.name, color = p.fg, fontSize = if (spec.size == 0) 11.sp else 12.sp, lineHeight = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            if (spec.size >= 2 && !sub.isNullOrEmpty()) Text(sub, color = p.muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    } else {
+                        RowButton(zebra = zi,
+                            onClick = { onTap(r) },
+                            onLongClick = { menuFor = r.key },
+                            label = if (r.isDir) "フォルダを開く" else "ファイルを開く",
+                            modifier = if (chosen) Modifier.background(p.raised, RoundedCornerShape(0.dp)) else Modifier,
+                        ) {
+                            Thumb(model, r, Modifier.size(listThumb[spec.size]))
+                            TwoLines(r.name, sub, Modifier.weight(1f))
+                        }
                     }
                     DropdownMenu(expanded = menuFor == r.key, onDismissRequest = { menuFor = null }) {
                         val close = { menuFor = null }
@@ -497,7 +576,39 @@ private fun Listing(
                     }
                 }
             }
-            footer?.let { f -> item { Gap(10.dp); f() } }
+            footer?.let { f -> item(span = full) { Column { Gap(10.dp); f() } } }
+        }
+    }
+}
+
+/** サムネイル。写真・動画・PDF は中身を、それ以外は種類の札（フォルダはオレンジ）を出す。 */
+@Composable
+private fun Thumb(model: HomeModel, r: Row, modifier: Modifier) {
+    val p = LocalPalette.current
+    val ctx = LocalActions.current.activity
+    BoxWithConstraints(modifier.clipToBounds().background(if (r.isDir) p.accent else p.raised).border(1.dp, if (r.isDir) p.accent else p.line), contentAlignment = Alignment.Center) {
+        val side = minOf(maxWidth, maxHeight)
+        val px = with(LocalDensity.current) { side.roundToPx() }
+        val kind = if (r.isDir) null else Thumbs.kind(r.name, r.mime)
+        val bmp by produceState(r.entry?.let { Thumbs.cached(it.uri.toString(), px) }, r.key, px, kind) {
+            if (kind == null) return@produceState
+            val e = r.entry
+            val n = r.nas
+            value = when {
+                e != null -> Thumbs.local(ctx, e.uri, r.name, r.mime, px)
+                n != null -> Thumbs.nas(model.nas, n, px)
+                else -> null
+            }
+        }
+        val b = bmp
+        if (b != null) {
+            Image(b.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            if (kind == "video") Text("▶", color = Color.White, fontSize = (side.value * 0.22f).coerceIn(10f, 28f).sp,
+                modifier = Modifier.align(Alignment.BottomStart).background(Color(0x99000000)).padding(horizontal = 4.dp))
+        } else if (r.isDir) {
+            GlyphIcon(Glyph.FOLDER, p.onAccent, size = side * 0.5f)
+        } else {
+            Text(r.badge, color = p.muted, fontSize = (side.value * 0.24f).coerceIn(10f, 22f).sp, fontFamily = Hud.mono, maxLines = 1)
         }
     }
 }

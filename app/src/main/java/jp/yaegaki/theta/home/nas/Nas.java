@@ -178,6 +178,25 @@ public final class Nas {
         if (!part.renameTo(dest)) throw new IOException("保存できませんでした");
     }
 
+    /** NAS が作るサムネイル（SYNO.FileStation.Thumb）。写真・動画のみ。作れないときは null。 */
+    public byte[] thumb(String path, boolean large) throws Exception {
+        ensureLogin();
+        JSONObject api = api("SYNO.FileStation.Thumb");
+        String url = base() + "/webapi/" + api.optString("path", "entry.cgi");
+        String body = form(map("api", "SYNO.FileStation.Thumb", "version", "" + Math.min(2, api.optInt("maxVersion", 2)),
+                "method", "get", "path", path, "size", large ? "medium" : "small", "rotate", "1", "_sid", sid));
+        HttpURLConnection c = post(url, body, 15000);
+        String type = c.getContentType();
+        if (type == null || !type.startsWith("image/")) return null;
+        try (InputStream in = c.getInputStream()) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buf = new byte[16384];
+            int n;
+            while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+            return out.toByteArray();
+        }
+    }
+
     private synchronized void ensureLogin() throws Exception {
         if (sid != null) return;
         String base = base();
