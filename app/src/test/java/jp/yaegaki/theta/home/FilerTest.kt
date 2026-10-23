@@ -36,3 +36,36 @@ class FilerTest {
         assertFalse(t.isLocal)
     }
 }
+
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(sdk = [35])
+class QueryTest {
+    private val now = 1_761_200_000_000L // 2025-10-23T06:13:20Z
+
+    @Test
+    fun driveQuery() {
+        val q = jp.yaegaki.theta.home.data.SavedQuery(
+            "q-1", "x", "drive", kinds = setOf("pdf"), nameContains = "O'Neil", days = 7, starred = true, folderId = "F1",
+        )
+        assertEquals(
+            "trashed = false and mimeType != 'application/vnd.google-apps.folder' and (mimeType = 'application/pdf')" +
+                " and name contains 'O\\'Neil' and modifiedTime > '2025-10-16T06:13:20Z' and starred = true and 'F1' in parents",
+            q.driveQuery(now),
+        )
+    }
+
+    @Test
+    fun nasKinds() {
+        val q = jp.yaegaki.theta.home.data.SavedQuery("q-2", "x", "nas", kinds = setOf("image", "sheet"))
+        org.junit.Assert.assertTrue(q.matchesKind("IMG_0001.JPG"))
+        org.junit.Assert.assertTrue(q.matchesKind("家計.xlsx"))
+        assertFalse(q.matchesKind("memo.pdf"))
+        org.junit.Assert.assertTrue(q.copy(kinds = emptySet()).matchesKind("anything.bin"))
+    }
+
+    @Test
+    fun json() {
+        val q = jp.yaegaki.theta.home.data.SavedQuery("q-3", "請求書", "drive", setOf("pdf"), "請求", "合計", 30, false, true, "F", "経理")
+        assertEquals(q, jp.yaegaki.theta.home.data.SavedQuery.fromJson(q.toJson()))
+    }
+}

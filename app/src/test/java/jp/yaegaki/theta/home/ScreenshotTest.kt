@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.activity.compose.setContent
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -142,6 +143,25 @@ class ScreenshotTest {
         launch("light") { photos(it, "list:2") }
         compose.mainClock.advanceTimeBy(1000)
         shot("filer-list-thumbs")
+    }
+
+    /** 検索フォルダ（仮想フォルダ）を作る画面。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun queryDialog() {
+        launch()
+        scenario!!.onActivity { a ->
+            val model = androidx.lifecycle.ViewModelProvider(a)[HomeModel::class.java]
+            val q = jp.yaegaki.theta.home.data.SavedQuery(
+                "q-test", "請求書", "drive", kinds = setOf("pdf", "sheet"), nameContains = "請求", days = 30,
+                folderId = "1abc", folderName = "経理",
+            )
+            a.setContent {
+                jp.yaegaki.theta.home.ui.HomeTheme(dark = true) { jp.yaegaki.theta.home.ui.QueryDialog(model, q, inline = true) {} }
+            }
+        }
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("build/screenshots/query-dialog.png")
     }
 
     @Test

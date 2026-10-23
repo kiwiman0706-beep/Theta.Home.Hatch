@@ -226,6 +226,17 @@ class Store(context: Context) {
 
     fun saveFolderViews(map: Map<String, String>) = prefs.edit().putString("views", JSONObject(map).toString()).apply()
 
+    /** 保存した検索（仮想フォルダ）。初回だけドライブの候補を置く。 */
+    fun queries(): List<SavedQuery> {
+        if (!prefs.getBoolean("queriesSeeded", false)) {
+            saveQueries(SavedQuery.defaults())
+            prefs.edit().putBoolean("queriesSeeded", true).apply()
+        }
+        return objects("queries") { SavedQuery.fromJson(it) }
+    }
+
+    fun saveQueries(list: List<SavedQuery>) = putObjects("queries", list) { it.toJson() }
+
     fun recents(): List<RecentFile> = objects("recents") {
         RecentFile(it.getString("uri"), it.getString("name"), it.optString("mime").ifEmpty { null }, it.getString("where"), it.getLong("time"))
     }

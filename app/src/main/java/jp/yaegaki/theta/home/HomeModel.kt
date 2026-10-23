@@ -30,6 +30,7 @@ import jp.yaegaki.theta.home.data.Store
 import jp.yaegaki.theta.home.data.TabKind
 import jp.yaegaki.theta.home.data.TabSpec
 import jp.yaegaki.theta.home.data.ViewSpec
+import jp.yaegaki.theta.home.data.SavedQuery
 import jp.yaegaki.theta.home.hatch.HatchApp
 import jp.yaegaki.theta.home.hatch.HatchCatalog
 import jp.yaegaki.theta.home.hatch.HatchInstaller
@@ -271,7 +272,22 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     fun loadNas(path: String) {
         nasState = NasState(path = path, entries = if (path == nasState.path) nasState.entries else emptyList(), loading = true)
         viewModelScope.launch {
-            val r = runCatching { withContext(Dispatchers.IO) { nas.list(path) } }
+            val r = runCatching {
+                withContext(Dispatchers.IO) {
+                    when {
+                        path.startsWith("?") -> {
+                            val q = query(path.drop(1)) ?: throw java.io.IOException("この検索フォルダは消されました")
+                            val from = if (q.days > 0) (System.currentTimeMillis() - q.days * 86_400_000L) / 1000 else 0
+                            nas.search(listOfNotNull(q.folderId.ifEmpty { null }), q.nameContains, from, 500).filter { q.matchesKind(it.name) }
+                        }
+                        // 共有フォルダの一覧の上に、保存した検索を並べる
+                        path.isEmpty() -> queries.filter { it.source == "nas" }.map { q ->
+                            Nas.Item().apply { name = q.name; this.path = "?" + q.id; dir = true }
+                        } + nas.list(path)
+                        else -> nas.list(path)
+                    }
+                }
+            }
             if (nasState.path != path) return@launch
             nasState = r.fold(
                 { NasState(path, it) },
@@ -285,6 +301,10 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     fun nasUp(): Boolean {
         val p = nasState.path
         if (p.isEmpty()) return false
+        if (p.startsWith("?")) {
+            loadNas("")
+            return true
+        }
         val cut = p.lastIndexOf('/')
         loadNas(if (cut <= 0) "" else p.substring(0, cut))
         return true
@@ -321,9 +341,17 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     fun loadDrive(stack: List<Pair<String, String>>) {
         driveState = DriveState(stack, entries = if (stack == driveState.stack) driveState.entries else emptyList(), loading = true)
         viewModelScope.launch {
+            val id = stack.last().first
             val r = runCatching {
                 val t = drive.token()
-                withContext(Dispatchers.IO) { drive.list(t, stack.last().first) }
+                withContext(Dispatchers.IO) {
+                    when {
+                        id.startsWith(SavedQuery.PREFIX) -> drive.search(t, query(id) ?: throw java.io.IOException("この検索フォルダは消されました"))
+                        // 入口には、保存した検索も並べる
+                        id == GDrive.ROOT -> drive.list(t, id) + queries.filter { it.source == "drive" }.map { GDrive.Item(it.id, it.name, GDrive.FOLDER, 0, 0, null, null) }
+                        else -> drive.list(t, id)
+                    }
+                }
             }
             if (driveState.stack != stack) return@launch
             r.exceptionOrNull()?.let { if (it is GDrive.NeedConsent) driveConsent = it.intent }
@@ -481,6 +509,32 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         updateTabs(tabs.map { if (it.id == tabId) it.copy(folderUri = tree.toString()) else it })
         folders.remove(tabId)
         tab(tabId)?.let(::openRoot)
+    }
+
+    // ---- 保存した検索（仮想フォルダ） ----
+
+    var queries by mutableStateOf(store.queries()); private set
+
+    fun query(id: String): SavedQuery? = queries.firstOrNull { it.id == id }
+
+    /** 追加か、同じ ID を置き換え。開いている一覧も読み直す。 */
+    fun saveQuery(q: SavedQuery) {
+        queries = if (queries.any { it.id == q.id }) queries.map { if (it.id == q.id) q else it } else queries + q
+        store.saveQueries(queries)
+        reloadPlace()
+    }
+
+    fun deleteQuery(id: String) {
+        queries = queries.filter { it.id != id }
+        store.saveQueries(queries)
+        reloadPlace()
+    }
+
+    private fun reloadPlace() {
+        when (location) {
+            "drive" -> if (driveState.stack.isNotEmpty() && drive.enabled) loadDrive(driveState.stack)
+            "nas" -> loadNas(nasState.path)
+        }
     }
 
     // ---- フォルダの見せ方（フォルダごとに記憶） ----
@@ -811,6 +865,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         categoryDefaults = store.categoryDefaults
         bookmarks = store.bookmarks()
         folderViews = store.folderViews()
+        queries = store.queries()
         widgetTabs = store.widgetTabs(profile)
         folders.clear()
         open = null

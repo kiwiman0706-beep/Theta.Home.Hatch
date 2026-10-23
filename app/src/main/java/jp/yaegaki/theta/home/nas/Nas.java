@@ -213,6 +213,60 @@ public final class Nas {
         return out;
     }
 
+    /**
+     * ファイルを探す（SYNO.FileStation.Search）。folders が空なら全部の共有フォルダ。サブフォルダも含む。
+     * pattern は名前の一部、mtimeFrom は更新日時の下限（秒、0 なら無し）。最大 limit 件・30 秒まで待つ。
+     */
+    public ArrayList<Item> search(java.util.List<String> folders, String pattern, long mtimeFrom, int limit) throws Exception {
+        ensureLogin();
+        java.util.List<String> roots = new ArrayList<>(folders);
+        if (roots.isEmpty()) for (Item s : list("")) roots.add(s.path);
+        JSONArray paths = new JSONArray();
+        for (String r : roots) paths.put(r);
+        Map<String, String> p = map("folder_path", paths.toString(), "recursive", "true", "filetype", "file");
+        if (pattern != null && !pattern.trim().isEmpty()) p.put("pattern", "*" + pattern.trim() + "*");
+        if (mtimeFrom > 0) p.put("mtime_from", "" + mtimeFrom);
+        String task = call("SYNO.FileStation.Search", "start", p).optString("taskid");
+        if (task.isEmpty()) throw new IOException("検索を始められませんでした");
+        String quoted = JSONObject.quote(task);
+        ArrayList<Item> out = new ArrayList<>();
+        try {
+            long until = System.currentTimeMillis() + 30000;
+            while (true) {
+                JSONObject data = call("SYNO.FileStation.Search", "list", map("taskid", quoted, "offset", "0", "limit", "" + limit,
+                        "additional", "[\"size\",\"time\"]", "sort_by", "mtime", "sort_direction", "desc"));
+                boolean finished = data.optBoolean("finished", true);
+                if (finished || System.currentTimeMillis() > until) {
+                    JSONArray items = data.optJSONArray("files");
+                    if (items != null) for (int i = 0; i < items.length(); i++) {
+                        JSONObject o = items.getJSONObject(i);
+                        if (o.optBoolean("isdir")) continue;
+                        Item it = new Item();
+                        it.name = o.optString("name");
+                        it.path = o.optString("path");
+                        JSONObject add = o.optJSONObject("additional");
+                        if (add != null) {
+                            it.size = add.optLong("size");
+                            JSONObject time = add.optJSONObject("time");
+                            if (time != null) it.modified = time.optLong("mtime") * 1000;
+                        }
+                        if (!it.path.contains("/@eaDir/") && !it.path.contains("/#recycle/") && !it.name.startsWith(".")) out.add(it);
+                    }
+                    break;
+                }
+                Thread.sleep(700);
+            }
+        } finally {
+            try {
+                call("SYNO.FileStation.Search", "stop", map("taskid", quoted));
+                call("SYNO.FileStation.Search", "clean", map("taskid", quoted));
+            } catch (Exception ignored) {
+            }
+        }
+        out.sort((a, b) -> Long.compare(b.modified, a.modified));
+        return out;
+    }
+
     /** NAS のファイルを端末に取得する。 */
     public void download(String path, File dest) throws Exception {
         ensureLogin();

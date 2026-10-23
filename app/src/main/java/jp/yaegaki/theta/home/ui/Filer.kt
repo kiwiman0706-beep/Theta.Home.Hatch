@@ -12,6 +12,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalDensity
 import jp.yaegaki.theta.home.data.Thumbs
 import jp.yaegaki.theta.home.data.ViewSpec
+import jp.yaegaki.theta.home.data.SavedQuery
 import android.Manifest
 import android.content.Intent
 import android.graphics.BitmapFactory
@@ -376,6 +377,8 @@ private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSel
     val actions = LocalActions.current
     val loc = model.location
     val tab = model.tab(loc.removePrefix("tab:")).takeIf { loc.startsWith("tab:") }
+    var editing by remember { mutableStateOf<SavedQuery?>(null) }
+    editing?.let { q -> QueryDialog(model, q) { editing = null } }
 
     fun open(r: Row, where: String) {
         val e = r.entry
@@ -434,7 +437,8 @@ private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSel
                 return
             }
             val s = model.nasState
-            val crumbs = listOf("NAS" to "") + s.path.split('/').filter { it.isNotEmpty() }.let { parts ->
+            val crumbs = listOf("NAS" to "") + if (s.path.startsWith("?")) listOf((model.query(s.path.drop(1))?.name ?: "SEARCH") to s.path)
+            else s.path.split('/').filter { it.isNotEmpty() }.let { parts ->
                 parts.mapIndexed { i, name -> name to "/" + parts.take(i + 1).joinToString("/") }
             }
             Listing(
@@ -444,7 +448,7 @@ private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSel
                 onCrumb = { i -> model.loadNas(crumbs[i].second) },
                 canUp = s.path.isNotEmpty(),
                 onUp = { model.nasUp() },
-                rows = s.entries.map { it.row() },
+                rows = s.entries.map { e -> e.row().let { r -> if (e.path.startsWith("?")) r.copy(note = model.query(e.path.drop(1))?.summary()) else r } },
                 loading = s.loading,
                 error = s.error,
                 onRetry = { model.refreshStatus(force = true); model.loadNas(s.path) },
@@ -455,11 +459,16 @@ private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSel
                 onShare = ::share,
                 extraMenu = { r, close ->
                     if (r.isDir) {
+                        val path = r.nas!!.path
+                        val q = if (path.startsWith("?")) model.query(path.drop(1)) else null
+                        if (q != null) DropdownMenuItem(text = { Text("条件を変える・消す") }, onClick = { close(); editing = q })
+                        else DropdownMenuItem(text = { Text("この中の検索フォルダを作る") }, onClick = { close(); editing = newQuery("nas", path, r.name) })
                         model.tabs.filter { it.kind == TabKind.FOLDER }.forEach { t ->
-                            DropdownMenuItem(text = { Text("「${t.label}」のタブにする") }, onClick = { close(); model.assignNasFolder(t.id, r.nas!!.path); actions.toast("「${t.label}」を NAS の ${r.name} にしました") })
+                            DropdownMenuItem(text = { Text("「${t.label}」のタブにする") }, onClick = { close(); model.assignNasFolder(t.id, path); actions.toast("「${t.label}」を NAS の ${r.name} にしました") })
                         }
                     }
                 },
+                footer = if (s.path.isEmpty()) ({ FlowRow2 { PillButton("＋ 検索フォルダを作る", { editing = newQuery("nas") }) } }) else null,
             )
         }
         loc == "drive" -> {
@@ -476,7 +485,7 @@ private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSel
                 onCrumb = { i -> model.loadDrive(stack.take(i + 1)) },
                 canUp = stack.size > 1,
                 onUp = { model.driveUp() },
-                rows = s.entries.map { it.row() },
+                rows = s.entries.map { e -> e.row().let { r -> if (e.id.startsWith(SavedQuery.PREFIX)) r.copy(note = model.query(e.id)?.summary()) else r } },
                 loading = s.loading,
                 error = s.error,
                 onRetry = { model.loadDrive(stack) },
@@ -487,6 +496,9 @@ private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSel
                 onShare = ::share,
                 extraMenu = { r, close ->
                     val d = r.drive
+                    val q = d?.let { model.query(it.id) }
+                    if (q != null) DropdownMenuItem(text = { Text("条件を変える・消す") }, onClick = { close(); editing = q })
+                    else if (r.isDir && d != null && !d.id.startsWith("~")) DropdownMenuItem(text = { Text("この中の検索フォルダを作る") }, onClick = { close(); editing = newQuery("drive", d.id, d.name) })
                     if (r.isDir && d != null && !d.id.startsWith("~")) {
                         model.tabs.filter { it.kind == TabKind.FOLDER }.forEach { t ->
                             DropdownMenuItem(text = { Text("「${t.label}」のタブにする") }, onClick = { close(); model.assignDriveFolder(t.id, d.id, d.name); actions.toast("「${t.label}」をドライブの ${d.name} にしました") })
@@ -494,12 +506,13 @@ private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSel
                     }
                     if (d?.link != null) DropdownMenuItem(text = { Text("ブラウザ・ドライブで開く") }, onClick = { close(); actions.start(Intent(Intent.ACTION_VIEW, Uri.parse(d.link))) })
                 },
+                footer = if (stack.last().first == GDrive.ROOT) ({ FlowRow2 { PillButton("＋ 検索フォルダを作る", { editing = newQuery("drive") }) } }) else null,
             )
         }
         tab != null -> {
             val state = model.folders[tab.id]
             if (tab.folderUri == null) {
-                NeedPermission("「${tab.label}」に、よく使うフォルダを 1 つ割り当てます（端末内・SD カード・Google ドライブなど）。NAS のフォルダにするときは、NAS で開いて長押し →「タブにする」。", "フォルダを選ぶ") {
+                NeedPermission("「${tab.label}」に、よく使うフォルダを 1 つ割り当てます（端末内・SD カードなど）。NAS・Google ドライブのフォルダや検索フォルダにするときは、NAS・DRIVE で開いて長押し →「タブにする」。", "フォルダを選ぶ") {
                     actions.pickFolder(tab.id)
                 }
                 return
@@ -678,7 +691,8 @@ private fun Thumb(model: HomeModel, r: Row, modifier: Modifier) {
             if (kind == "video") Text("▶", color = Color.White, fontSize = (side.value * 0.22f).coerceIn(10f, 28f).sp,
                 modifier = Modifier.align(Alignment.BottomStart).background(Color(0x99000000)).padding(horizontal = 4.dp))
         } else if (r.isDir) {
-            GlyphIcon(Glyph.FOLDER, p.onAccent, size = side * 0.5f)
+            val virtual = r.drive?.id?.startsWith(SavedQuery.PREFIX) == true || r.nas?.path?.startsWith("?") == true
+            GlyphIcon(if (virtual) Glyph.SEARCH else Glyph.FOLDER, p.onAccent, size = side * 0.5f)
         } else {
             Text(r.badge, color = p.muted, fontSize = (side.value * 0.24f).coerceIn(10f, 22f).sp, fontFamily = Hud.mono, maxLines = 1)
         }

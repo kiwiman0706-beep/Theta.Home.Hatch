@@ -4,7 +4,7 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**0.8.0-alpha（versionCode 9）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.9.0-alpha（versionCode 10）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
@@ -36,6 +36,14 @@
 ## Google ドライブ
 
 Drive API でつなぐ（読み取りのみ、`drive.readonly`）。ファイラーの「DRIVE」から、マイドライブ・共有アイテム・共有ドライブ・スター付きを辿る。開く・共有は端末へ取得してから（Google ドキュメントなどはリンクで開く）。フォルダを長押し →「〇〇のタブにする」。
+
+### 検索フォルダ（仮想フォルダ）
+
+条件を保存して、合うファイルをフォルダのように出す（Google ドライブと NAS）。ドライブ・NAS の入口の「＋ 検索フォルダを作る」か、フォルダを長押し →「この中の検索フォルダを作る」。条件は種類・ファイル名・更新した時期・場所、ドライブは本文・スター付き・共有されたものも。端のタブにも割り当てられる。ドライブには初めから RECENT 7D・PDF・PHOTOS・OFFICE がある。
+
+![](docs/screenshots/query-dialog.png)
+
+### 初回の登録
 
 初回だけ、自分の Google Cloud プロジェクトにこのアプリを登録する（設定 →「Google ドライブにつなぐ」に手順とリンク）：
 

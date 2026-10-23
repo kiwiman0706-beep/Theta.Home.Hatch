@@ -145,6 +145,24 @@ class GDrive(context: Context, private val prefs: SharedPreferences) {
         return out.sortedWith(compareBy<Item>({ !it.isDir }, { it.name.lowercase(Locale.ROOT) }))
     }
 
+    /** 保存した検索の結果。新しい順、最大 500 件。本文検索は並べ替えを指定できないので、受け取ってから並べる。 */
+    fun search(t: String, query: jp.yaegaki.theta.home.data.SavedQuery): List<Item> {
+        val out = ArrayList<Item>()
+        var page: String? = null
+        do {
+            val url = "$API/files?q=" + enc(query.driveQuery()) +
+                "&pageSize=500&corpora=allDrives&includeItemsFromAllDrives=true&supportsAllDrives=true" +
+                (if (query.text.isBlank()) "&orderBy=" + enc("modifiedTime desc") else "") +
+                "&fields=" + enc("nextPageToken,files(id,name,mimeType,size,modifiedTime,thumbnailLink,webViewLink,shortcutDetails)") +
+                (page?.let { "&pageToken=" + enc(it) } ?: "")
+            val o = JSONObject(get(t, url))
+            val a = o.optJSONArray("files")
+            if (a != null) for (i in 0 until a.length()) out += item(a.getJSONObject(i))
+            page = o.optString("nextPageToken").ifEmpty { null }
+        } while (page != null && out.size < 500)
+        return out.sortedByDescending { it.modified }
+    }
+
     /** ファイルを端末へ取得する。Google ドキュメントは取得できない（リンクで開く）。 */
     fun download(t: String, item: Item, dest: File) {
         val c = open(t, "$API/files/${enc(item.id)}?alt=media&supportsAllDrives=true", 60_000)
