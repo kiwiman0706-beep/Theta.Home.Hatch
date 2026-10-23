@@ -347,6 +347,10 @@ internal fun StatusStrip(model: HomeModel, openNasSettings: () -> Unit) {
             }, if (s == null || s.nas == Nas.UNSET) null else nasOk) {
                 if (s?.nas == Nas.OK) model.openNas("") else openNasSettings()
             }
+            if (model.safeMode) chip("SAFE MODE", "普通に戻す ›", false) {
+                actions.activity.startActivity(Intent(actions.activity, jp.yaegaki.theta.home.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
+                actions.activity.finish()
+            }
             if (!model.isDefaultHome) chip("HOME", "未設定 ›", false) { requestHomeRole(actions) }
             val u = model.update
             if (u.newer && u.latest != null) {

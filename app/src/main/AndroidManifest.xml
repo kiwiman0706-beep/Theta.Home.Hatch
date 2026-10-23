@@ -89,6 +89,28 @@
             </intent-filter>
         </activity>
 
+        <!-- レスキュー：ホームが落ち続ける・固まったときの画面とクイック設定のタイル。本体と別のプロセス -->
+        <activity
+            android:name=".rescue.RescueActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:label="ホームのレスキュー"
+            android:process=":rescue"
+            android:taskAffinity="jp.yaegaki.theta.home.rescue"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
+
+        <service
+            android:name=".rescue.RescueTile"
+            android:exported="true"
+            android:icon="@drawable/ic_rescue"
+            android:label="ホームのレスキュー"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:process=":rescue">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
         <!-- ほかのアプリの「ホーム画面に追加」（ショートカット）を受けて、置くタブを選ぶ -->
         <activity
             android:name=".PinShortcutActivity"

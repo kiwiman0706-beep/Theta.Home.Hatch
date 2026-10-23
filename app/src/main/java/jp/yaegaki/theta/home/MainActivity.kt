@@ -37,9 +37,23 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** レスキュー画面へ回したとき（このアクティビティは何もしないで閉じる）。 */
+    private var rescued = false
+    private val healthy = android.os.Handler(android.os.Looper.getMainLooper())
+    private val markHealthy = Runnable { jp.yaegaki.theta.home.rescue.Rescue.onHomeHealthy(this) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        // 落ちる・固まるのが続いていたら、ホームの代わりにレスキュー画面
+        val safe = intent?.getBooleanExtra(jp.yaegaki.theta.home.rescue.Rescue.EXTRA_SAFE, false) == true
+        if (jp.yaegaki.theta.home.rescue.Rescue.onHomeStart(this) && !safe) {
+            rescued = true
+            startActivity(Intent(this, jp.yaegaki.theta.home.rescue.RescueActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            finish()
+            return
+        }
+        if (safe) model.safeMode = true
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
             addAction(Intent.ACTION_PACKAGE_REMOVED)
@@ -76,11 +90,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        widgets.start()
+        if (rescued) return
+        if (!model.safeMode) widgets.start()
     }
 
     override fun onResume() {
         super.onResume()
+        if (rescued) return
+        // 8 秒動けば「無事に起動した」
+        healthy.removeCallbacks(markHealthy)
+        healthy.postDelayed(markHealthy, 8000)
         model.refreshEvents()
         model.refreshHatchInstalled()
         model.reloadClips()
@@ -93,11 +112,20 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
-        widgets.stop()
+        if (!rescued) {
+            healthy.removeCallbacks(markHealthy)
+            // 普通に裏へ回った（落ちた・固まったのではない）
+            jp.yaegaki.theta.home.rescue.Rescue.onHomeHealthy(this)
+            widgets.stop()
+        }
         super.onStop()
     }
 
     override fun onDestroy() {
+        if (rescued) {
+            super.onDestroy()
+            return
+        }
         unregisterReceiver(packages)
         runCatching { getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(network) }
         super.onDestroy()

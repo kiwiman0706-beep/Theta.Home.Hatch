@@ -90,6 +90,14 @@ fun SettingsPanel(model: HomeModel) {
                 Toggle("起動・復帰のときに新しい版を確かめる（1 日 1 回）", model.autoUpdate) { model.changeAutoUpdate(it) }
                 Note("新しい版があると、画面上部に「UPDATE」が出ます。押すと取得して SHA-256 を照合し、Android の確認画面へ進みます（2 回目からは確認を省けることがあります）。")
                 Gap(18.dp)
+                SectionTitle("RESCUE / もしものとき", Modifier.padding(horizontal = 10.dp))
+                FlowRow2 {
+                    PillButton("別のホームアプリを選ぶ", { jp.yaegaki.theta.home.rescue.Rescue.chooseHome(actions.activity) })
+                    PillButton("レスキュー画面を開く", { actions.start(Intent(actions.activity, jp.yaegaki.theta.home.rescue.RescueActivity::class.java)) })
+                    if (android.os.Build.VERSION.SDK_INT >= 33) PillButton("クイック設定にタイルを足す", { addRescueTile(actions) })
+                }
+                Note("ホームが固まったら、通知パネルのクイック設定「ホームのレスキュー」から別のホームを選べます。起動してすぐ止まるのが続いたときは、自動でレスキュー画面になります。")
+                Gap(18.dp)
                 SectionTitle("NAS・GOOGLE DRIVE・ウィジェット", Modifier.padding(horizontal = 10.dp))
                 FlowRow2 {
                     PillButton(if (model.nas.configured()) "NAS の接続先：${model.nas.base()}" else "NAS を登録", { nasDialog = true })
@@ -337,3 +345,20 @@ private fun Toggle(label: String, value: Boolean, onChange: (Boolean) -> Unit) {
 }
 
 private fun <T> List<T>.move(from: Int, to: Int): List<T> = toMutableList().also { it.add(to, it.removeAt(from)) }
+
+/** クイック設定に「ホームのレスキュー」タイルを足すよう、Android に頼む（Android 13 以降）。 */
+private fun addRescueTile(actions: Actions) {
+    if (android.os.Build.VERSION.SDK_INT < 33) return
+    val ctx = actions.activity
+    val sbm = ctx.getSystemService(android.app.StatusBarManager::class.java) ?: return
+    runCatching {
+        sbm.requestAddTileService(
+            android.content.ComponentName(ctx, jp.yaegaki.theta.home.rescue.RescueTile::class.java),
+            "ホームのレスキュー",
+            android.graphics.drawable.Icon.createWithResource(ctx, jp.yaegaki.theta.home.R.drawable.ic_rescue),
+            ctx.mainExecutor,
+        ) { r ->
+            actions.toast(if (r == android.app.StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED || r == android.app.StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED) "クイック設定にあります" else "足しませんでした（通知パネルの編集からも足せます）")
+        }
+    }.onFailure { actions.toast("足せませんでした。通知パネルのクイック設定の編集から「ホームのレスキュー」を足してください") }
+}

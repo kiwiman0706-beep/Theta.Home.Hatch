@@ -45,6 +45,7 @@ class ScreenshotTest {
         val app = ApplicationProvider.getApplicationContext<HomeApp>()
         // 前のテストの設定（テーマ・カテゴリー）を持ち越さない
         app.store.prefs.edit().clear().commit()
+        jp.yaegaki.theta.home.rescue.Rescue.reset(app)
         app.store.themeMode = theme
         app.store.iconMode = iconMode
         app.store.autoUpdate = false

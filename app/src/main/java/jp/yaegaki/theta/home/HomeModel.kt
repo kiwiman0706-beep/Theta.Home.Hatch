@@ -98,6 +98,9 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     /** 画面に並べて出しっぱなしにしているドロワー。 */
     var docked by mutableStateOf<List<String>>(emptyList()); private set
     var lastOpened by mutableStateOf<String?>(null); private set
+    /** セーフモード（レスキュー画面から）：ウィジェット・天気を読み込まない。 */
+    var safeMode by mutableStateOf(false)
+
     var settingsOpen by mutableStateOf(false)
     var query by mutableStateOf("")
     var focusSearch by mutableStateOf(0); private set
@@ -199,6 +202,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     /** 30 分以内に取ったものがあれば取り直さない。 */
     fun refreshWeather(force: Boolean = false) {
+        if (safeMode) return
         val place = weatherPlace ?: return
         val f = forecast
         if (weatherLoading || !force && f != null && System.currentTimeMillis() - f.fetchedAt < 30 * 60_000) return

@@ -15,8 +15,13 @@ class HomeApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // 落ちたときの記録はいちばん最初に（レスキュー画面を出すかの判断に使う）
+        jp.yaegaki.theta.home.rescue.Rescue.install(this)
+        // レスキューのプロセス（":rescue"）では、本体の準備をしない（本体が壊れていても開けるように）
+        if (getProcessName().endsWith(":rescue")) return
         store = Store(this)
         widgets = WidgetController(this)
+        jp.yaegaki.theta.home.rescue.Rescue.watchMainThread(this)
     }
 
     fun toast(message: String) {

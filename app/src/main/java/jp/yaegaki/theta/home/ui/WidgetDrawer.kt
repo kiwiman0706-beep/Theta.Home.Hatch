@@ -84,7 +84,9 @@ private fun WidgetCellView(model: HomeModel, t: WidgetTab, c: WidgetCell, index:
     // ドロワーは端に付いているので、角を内側（画面の中央側）へなぞると広がる
     val grow = if (model.railLeft) 1 else -1
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        if (info == null) {
+        if (model.safeMode) {
+            Note("セーフモードなので、ウィジェットは止めています。")
+        } else if (info == null) {
             Note("このウィジェットは使えなくなりました（アプリが消えたなど）。")
         } else {
             Box(Modifier.size(w.dp, h.dp)) {

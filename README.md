@@ -4,7 +4,7 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**0.13.1-alpha（versionCode 15）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.14.0-alpha（versionCode 16）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
@@ -119,6 +119,17 @@ DSBooks と同じく、Synology の DSM File Station API でつなぐ（設定 �
 | Hatch | シリーズの起動、GitHub Releases から取得 → SHA-256 照合 → インストール確認画面へ |
 
 物理キーボード：Alt＋1〜9 でフォルダのタブ、Alt＋C 予定・M メール・L LINE・P 人・A アプリ・B 栞・X Clip・R 記録・H Hatch。ホームで文字を打つとすぐ検索、Esc で閉じる。
+
+## もしものとき（レスキュー）
+
+ベータ版なので、更新で固まる・落ちることがありえます。
+
+- **通知パネルのクイック設定「ホームのレスキュー」**（設定 → RESCUE の「クイック設定にタイルを足す」、または通知パネルの編集から）。本体と別のプロセスで動くので、ホームが固まっていても開ける
+- 起動してすぐ止まるのが続くと、自動でレスキュー画面になる
+- レスキュー画面から：別のホームアプリを選ぶ／セーフモード（ウィジェットと天気を止める）／最新版を入れる
+- それでもだめなら：通知パネルの歯車 → アプリ → 標準のアプリ → ホームアプリ で選び直す
+
+![](docs/screenshots/rescue.png)
 
 ## 入れ方
 
