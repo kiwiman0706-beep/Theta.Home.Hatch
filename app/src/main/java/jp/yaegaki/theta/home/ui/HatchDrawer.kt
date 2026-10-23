@@ -6,7 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,7 +24,7 @@ import jp.yaegaki.theta.home.hatch.HatchInstaller
 @Composable
 fun HatchDrawer(model: HomeModel) {
     DrawerList {
-        items(HatchCatalog.apps, key = { it.id }) { a -> HatchRow(model, a, model.hatch[a.id] ?: HatchStatus()) }
+        itemsIndexed(HatchCatalog.apps, key = { _, it -> it.id }) { zi, a -> HatchRow(model, a, model.hatch[a.id] ?: HatchStatus(), zi) }
         item {
             Note("GitHub Releases の最新版を確認し、APK を取得 → SHA-256 を照合 → Android のインストール確認画面へ進みます。初回は「この提供元のアプリを許可」を求められます。")
         }
@@ -32,7 +32,7 @@ fun HatchDrawer(model: HomeModel) {
 }
 
 @Composable
-private fun HatchRow(model: HomeModel, a: HatchApp, s: HatchStatus) {
+private fun HatchRow(model: HomeModel, a: HatchApp, s: HatchStatus, zebra: Int) {
     val p = LocalPalette.current
     val actions = LocalActions.current
     val ctx = actions.activity
@@ -57,7 +57,7 @@ private fun HatchRow(model: HomeModel, a: HatchApp, s: HatchStatus) {
         model.downloadHatch(a) { file -> runCatching { HatchInstaller.install(ctx, file) }.onFailure { actions.toast("インストールを始められませんでした") } }
     }
 
-    RowButton(onClick = {
+    RowButton(zebra = zebra, onClick = {
         val launch = a.packageName?.let { ctx.packageManager.getLaunchIntentForPackage(it) }
         when {
             launch != null -> actions.start(launch)

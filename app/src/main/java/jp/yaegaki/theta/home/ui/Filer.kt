@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -349,8 +350,8 @@ private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSel
         loc == "recent" -> {
             DrawerList {
                 if (model.recents.isEmpty()) item { Note("フォルダから開いたファイルがここに並びます") }
-                items(model.recents, key = { it.uri }) { r ->
-                    RowButton(onClick = { actions.start(Files.openIntent(Uri.parse(r.uri), r.mime)) }) {
+                itemsIndexed(model.recents, key = { _, it -> it.uri }) { zi, r ->
+                    RowButton(zebra = zi, onClick = { actions.start(Files.openIntent(Uri.parse(r.uri), r.mime)) }) {
                         Badge(r.name.substringAfterLast('.', "FILE").uppercase(Locale.ROOT).take(4))
                         TwoLines(r.name, "${r.where} · ${shortTime(r.time)}", Modifier.weight(1f))
                     }
@@ -466,9 +467,9 @@ private fun Listing(
                 }
             }
             if (!loading && error == null && rows.isEmpty()) item { Note("空のフォルダです") }
-            items(rows, key = { it.key }) { r ->
+            itemsIndexed(rows, key = { _, it -> it.key }) { zi, r ->
                 Box {
-                    RowButton(
+                    RowButton(zebra = zi, 
                         onClick = { onTap(r) },
                         onLongClick = { menuFor = r.key },
                         label = if (r.isDir) "フォルダを開く" else "ファイルを開く",
@@ -618,8 +619,8 @@ private fun SearchResults(model: HomeModel) {
     }
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         SectionTitle("検索結果 ${hits.size} 件")
-        hits.forEach { h ->
-            RowButton(onClick = h.go) {
+        hits.forEachIndexed { zi, h ->
+            RowButton(zebra = zi, onClick = h.go) {
                 Text(h.kind, color = p.muted, fontSize = 11.sp, modifier = Modifier.width(56.dp))
                 Text(h.name, color = p.fg, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 Text(h.where, color = p.muted, fontSize = 12.sp, maxLines = 1)

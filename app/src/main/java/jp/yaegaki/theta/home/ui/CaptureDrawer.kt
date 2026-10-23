@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -101,9 +102,9 @@ fun CaptureDrawer(model: HomeModel) {
             }
             Spacer(Modifier.height(12.dp))
         }
-        items(model.captures, key = { it.second.absolutePath }) { (kind, f) ->
+        itemsIndexed(model.captures, key = { _, it -> it.second.absolutePath }) { zi, (kind, f) ->
             Column {
-                RowButton(onClick = { expanded = if (expanded == f.absolutePath) null else f.absolutePath }) {
+                RowButton(zebra = zi, onClick = { expanded = if (expanded == f.absolutePath) null else f.absolutePath }) {
                     Badge(kind.label)
                     TwoLines(f.name, "${shortTime(f.lastModified())} · ${Files.sizeText(f.length())}", Modifier.weight(1f))
                 }

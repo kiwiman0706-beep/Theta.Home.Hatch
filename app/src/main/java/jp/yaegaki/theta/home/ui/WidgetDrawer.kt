@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -155,8 +156,8 @@ fun AddWidgetDialog(model: HomeModel, onDismiss: () -> Unit) {
         title = { Text("ウィジェットのタブを追加（${profileName(model.profile)}）") },
         text = {
             LazyColumn(Modifier.heightIn(max = 460.dp)) {
-                items(providers, key = { it.provider.flattenToString() }) { info ->
-                    RowButton(onClick = { onDismiss(); add(info) }) {
+                itemsIndexed(providers, key = { _, it -> it.provider.flattenToString() }) { zi, info ->
+                    RowButton(zebra = zi, onClick = { onDismiss(); add(info) }) {
                         val pm = activity.packageManager
                         val appLabel = runCatching { pm.getApplicationLabel(pm.getApplicationInfo(info.provider.packageName, 0)).toString() }.getOrDefault("")
                         TwoLines(host.label(info), appLabel, Modifier.weight(1f))

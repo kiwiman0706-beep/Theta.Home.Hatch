@@ -34,6 +34,8 @@ data class Palette(
     val onAccent: Color,
     val widget: Color,
     val launch: Color,
+    /** リストの縞模様。地の色に薄く重ねる。 */
+    val zebra: Color,
 ) {
     fun group(g: Int) = when (g) {
         0 -> accent
@@ -54,6 +56,7 @@ val DarkPalette = Palette(
     onAccent = Color(0xFF0A0A0B),
     widget = Color(0xFFEDEDED),
     launch = Color(0xFF7A7A7E),
+    zebra = Color(0x0FFFFFFF),
 )
 
 /** 明るい地の計器盤：紙のような地に墨色の文字、オレンジは文字にも使えるよう濃いめ。 */
@@ -69,6 +72,7 @@ val LightPalette = Palette(
     onAccent = Color(0xFFFFFFFF),
     widget = Color(0xFF121212),
     launch = Color(0xFF6A6A6A),
+    zebra = Color(0x0D000000),
 )
 
 val LocalPalette = staticCompositionLocalOf { DarkPalette }

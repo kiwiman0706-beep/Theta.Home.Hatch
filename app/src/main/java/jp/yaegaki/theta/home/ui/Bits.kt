@@ -48,7 +48,7 @@ import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 
-/** 押せる行。長押しも受ける。最低 48dp の高さ。 */
+/** 押せる行。長押しも受ける。最低 48dp の高さ。zebra に並び順（0 始まり）を渡すと、奇数行に薄い地を敷く（縞模様）。 */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RowButton(
@@ -56,11 +56,13 @@ fun RowButton(
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
     label: String? = null,
+    zebra: Int = -1,
     content: @Composable RowScope.() -> Unit,
 ) {
     Row(
         modifier
             .fillMaxWidth()
+            .background(if (zebra % 2 == 1) LocalPalette.current.zebra else Color.Transparent)
             .defaultMinSize(minHeight = 48.dp)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick, onClickLabel = label, role = Role.Button)
             .padding(horizontal = 10.dp, vertical = 8.dp),

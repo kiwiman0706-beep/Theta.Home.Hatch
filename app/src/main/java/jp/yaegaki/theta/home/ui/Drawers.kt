@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -125,7 +126,7 @@ fun DrawerList(content: LazyListScope.() -> Unit) {
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
         content = content,
     )
 }
@@ -194,8 +195,8 @@ private fun CalendarDrawer(model: HomeModel) {
             }
         }
         if (dayEvents.isEmpty()) item { Note("予定はありません") }
-        items(dayEvents, key = { "${it.eventId}-${it.begin}" }) { e ->
-            RowButton(onClick = { actions.start(Calendar.openIntent(e)) }) {
+        itemsIndexed(dayEvents, key = { _, it -> "${it.eventId}-${it.begin}" }) { zi, e ->
+            RowButton(zebra = zi, onClick = { actions.start(Calendar.openIntent(e)) }) {
                 Text(if (e.allDay) "終日" else timeFmt.format(Date(e.begin)), color = p.fg, fontSize = 15.sp, modifier = Modifier.width(48.dp))
                 Box(Modifier.width(3.dp).height(32.dp).background(if (e.color != 0) Color(e.color) else p.widget))
                 TwoLines(e.title, e.location, Modifier.weight(1f))
@@ -244,8 +245,8 @@ private fun NoticeDrawer(mail: Boolean) {
         } else if (list.isEmpty()) {
             item { Note(if (mail) "新しいメールの通知はありません" else "新しいトークの通知はありません") }
         }
-        items(list, key = { it.key }) { n ->
-            RowButton(onClick = {
+        itemsIndexed(list, key = { _, it -> it.key }) { zi, n ->
+            RowButton(zebra = zi, onClick = {
                 if (!HatchNotificationListener.open(ctx, n)) {
                     ctx.packageManager.getLaunchIntentForPackage(n.packageName)?.let(actions.start)
                 }
@@ -293,9 +294,9 @@ private fun PeopleDrawer(model: HomeModel) {
     val list = model.people.filter { q.isBlank() || it.name.contains(q, ignoreCase = true) }
     DrawerList {
         item { Field(q, { q = it }, "名前で絞り込み", Modifier.padding(bottom = 8.dp)) }
-        items(list, key = { it.id }) { person ->
+        itemsIndexed(list, key = { _, it -> it.id }) { zi, person ->
             Column {
-                RowButton(onClick = { expanded = if (expanded == person.id) null else person.id }) {
+                RowButton(zebra = zi, onClick = { expanded = if (expanded == person.id) null else person.id }) {
                     Initial(person.initial)
                     TwoLines(person.name, listOfNotNull(person.phone, person.email).joinToString(" · ").ifEmpty { null }, Modifier.weight(1f))
                     if (person.starred) Text("★", color = p.accent, fontSize = 13.sp)
@@ -375,10 +376,11 @@ private fun AppsDrawer(model: HomeModel) {
                     Ticks(Modifier.weight(1f).height(5.dp))
                 }
             }
-            list.forEach { app ->
+            list.forEachIndexed { zi, app ->
                 item(key = "$id:${app.key}") {
                     Box {
                         RowButton(
+                            zebra = zi,
                             onClick = { actions.start(Apps.launchIntent(app)) },
                             onLongClick = { menuFor = app.key },
                             label = "開く",
@@ -432,9 +434,9 @@ private fun BookmarkDrawer(model: HomeModel) {
     var menuFor by remember { mutableStateOf<String?>(null) }
     DrawerList {
         if (model.bookmarks.isEmpty()) item { Note("まだありません。下の「＋ 追加」か、ブラウザーの共有メニュー →「Clip に保存」→ Clip から「栞へ」で登録できます。") }
-        items(model.bookmarks, key = { it.id }) { b ->
+        itemsIndexed(model.bookmarks, key = { _, it -> it.id }) { zi, b ->
             Box {
-                RowButton(onClick = { actions.start(Intent(Intent.ACTION_VIEW, Uri.parse(b.url))) }, onLongClick = { menuFor = b.id }) {
+                RowButton(zebra = zi, onClick = { actions.start(Intent(Intent.ACTION_VIEW, Uri.parse(b.url))) }, onLongClick = { menuFor = b.id }) {
                     Initial(b.name.take(1))
                     TwoLines(b.name, Uri.parse(b.url).host ?: b.url, Modifier.weight(1f))
                 }
@@ -480,9 +482,9 @@ private fun ClipDrawer(model: HomeModel) {
         item {
             DashedBox("ほかのアプリの共有メニューで「Clip に保存」を選ぶと、テキスト・URL・ファイルがここに一時保存されます（DeskHatch の Clip と同じ考え方）。", Modifier.padding(bottom = 10.dp))
         }
-        items(model.clips, key = { it.id }) { c ->
+        itemsIndexed(model.clips, key = { _, it -> it.id }) { zi, c ->
             Column {
-                RowButton(onClick = { expanded = if (expanded == c.id) null else c.id }) {
+                RowButton(zebra = zi, onClick = { expanded = if (expanded == c.id) null else c.id }) {
                     Badge(
                         when {
                             c.isFile -> c.fileName!!.substringAfterLast('.', "FILE").uppercase(Locale.ROOT).take(4)

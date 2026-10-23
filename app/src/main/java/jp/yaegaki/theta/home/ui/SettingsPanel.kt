@@ -72,7 +72,7 @@ fun SettingsPanel(model: HomeModel) {
                 model.categories.forEachIndexed { i, c ->
                     var menu by remember(c.id) { mutableStateOf(false) }
                     Box {
-                        RowButton(onClick = { menu = true }) {
+                        RowButton(zebra = i, onClick = { menu = true }) {
                             Text("%02d".format(i + 1), color = p.faint, fontSize = 12.sp)
                             Text(c.name, color = p.fg, fontSize = 15.sp, modifier = Modifier.weight(1f))
                             Text("%d 個".format(model.appCategories.count { it.value == c.id }), color = p.muted, fontSize = 12.sp)
@@ -102,7 +102,7 @@ fun SettingsPanel(model: HomeModel) {
             itemsIndexed(model.tabs, key = { _, t -> t.id }) { i, t ->
                 var menu by remember { mutableStateOf(false) }
                 Box {
-                    RowButton(onClick = { menu = true }) {
+                    RowButton(zebra = i, onClick = { menu = true }) {
                         Dot(p.group(t.kind.group))
                         TwoLines(
                             t.label,
