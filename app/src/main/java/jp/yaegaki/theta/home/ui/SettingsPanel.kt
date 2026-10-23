@@ -45,6 +45,8 @@ fun SettingsPanel(model: HomeModel) {
     var importing by remember { mutableStateOf(false) }
     var sorting by remember { mutableStateOf(false) }
     var renamingCategory by remember { mutableStateOf<jp.yaegaki.theta.home.data.Category?>(null) }
+    var renamingPreset by remember { mutableStateOf<String?>(null) }
+    var importConfirm by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(start = 22.dp, end = 8.dp, top = 18.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -86,6 +88,36 @@ fun SettingsPanel(model: HomeModel) {
                     }
                 }
                 FlowRow2 { PillButton("仕分けガイドを開く", { sorting = true }, primary = model.categories.isEmpty()) }
+                Gap(18.dp)
+                SectionTitle("仕分けの候補（規定のカテゴリー）", Modifier.padding(horizontal = 10.dp))
+                Note("仕分けガイドの最初に並ぶ候補。● は初めから選んでおくもの。押すと名前の変更・削除など。")
+                model.categoryPresets.forEachIndexed { i, name ->
+                    var menu by remember(name) { mutableStateOf(false) }
+                    Box {
+                        RowButton(zebra = i, onClick = { menu = true }) {
+                            Text(if (name in model.categoryDefaults) "●" else "○", color = if (name in model.categoryDefaults) p.accent else p.faint, fontSize = 12.sp)
+                            Text(name, color = p.fg, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        }
+                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            DropdownMenuItem(text = { Text("名前を変える") }, onClick = { menu = false; renamingPreset = name })
+                            DropdownMenuItem(text = { Text(if (name in model.categoryDefaults) "初めから選ばない" else "初めから選んでおく") }, onClick = { menu = false; model.toggleDefault(name) })
+                            if (i > 0) DropdownMenuItem(text = { Text("上へ") }, onClick = { menu = false; model.movePreset(name, -1) })
+                            if (i < model.categoryPresets.lastIndex) DropdownMenuItem(text = { Text("下へ") }, onClick = { menu = false; model.movePreset(name, 1) })
+                            DropdownMenuItem(text = { Text("候補から消す") }, onClick = { menu = false; model.deletePreset(name) })
+                        }
+                    }
+                }
+                FlowRow2 {
+                    PillButton("＋ 候補を追加", { renamingPreset = "" })
+                    PillButton("初期の候補に戻す", { model.resetPresets() })
+                }
+                Gap(18.dp)
+                SectionTitle("BACKUP / 設定の書き出し・読み込み", Modifier.padding(horizontal = 10.dp))
+                Note("タブ・テーマ・カテゴリーと仕分け・候補・栞・ウィジェットの並び・NAS の接続先（パスワードを除く）・アプリの一覧を 1 つのファイルに。新しいスマホで読み込むと、入っていないアプリを一覧にして Play ストアへ案内します。")
+                FlowRow2 {
+                    PillButton("設定を書き出す", { actions.createDocument(jp.yaegaki.theta.home.data.Backup.fileName(), "application/json") { model.exportSettings(it) } }, primary = true)
+                    PillButton("設定を読み込む", { importConfirm = true })
+                }
                 Gap(18.dp)
                 SectionTitle("見た目", Modifier.padding(horizontal = 10.dp))
                 Toggle("タブを左端に置く", model.railLeft) { model.changeRailLeft(it) }
@@ -133,7 +165,7 @@ fun SettingsPanel(model: HomeModel) {
                     FlowRow2 { PillButton("＋ タブを追加", { adding = true }) }
                     DropdownMenu(expanded = adding, onDismissRequest = { adding = false }) {
                         TabKind.entries.forEach { k ->
-                            DropdownMenuItem(text = { Text(if (k == TabKind.FOLDER) "フォルダ" else k.defaultLabel) }, onClick = { adding = false; model.addTab(k) })
+                            DropdownMenuItem(text = { Text(k.defaultLabel) }, onClick = { adding = false; model.addTab(k) })
                         }
                     }
                 }
@@ -148,6 +180,36 @@ fun SettingsPanel(model: HomeModel) {
     if (nasDialog) NasDialog(model) { nasDialog = false }
     if (importing) ImportWidgetsDialog(model) { importing = false }
     if (sorting) SortGuide(model) { sorting = false }
+    renamingPreset?.let { old ->
+        var name by remember(old) { mutableStateOf(old) }
+        AlertDialog(
+            onDismissRequest = { renamingPreset = null },
+            title = { Text(if (old.isEmpty()) "候補を追加" else "候補の名前") },
+            text = { Field(name, { name = it.take(12) }, "名前") },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (old.isEmpty()) model.addPreset(name) else model.renamePreset(old, name)
+                    renamingPreset = null
+                }, enabled = name.isNotBlank()) { Text("保存") }
+            },
+            dismissButton = { TextButton(onClick = { renamingPreset = null }) { Text("やめる") } },
+        )
+    }
+    if (importConfirm) {
+        AlertDialog(
+            onDismissRequest = { importConfirm = false },
+            title = { Text("設定を読み込む") },
+            text = { Text("今の設定（タブ・カテゴリー・栞など）は、読み込んだファイルの内容で置き換わります。ウィジェットはこの端末のものを残します。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    importConfirm = false
+                    actions.openDocument(arrayOf("application/json", "text/plain", "application/octet-stream")) { model.importSettings(it) }
+                }) { Text("ファイルを選ぶ") }
+            },
+            dismissButton = { TextButton(onClick = { importConfirm = false }) { Text("やめる") } },
+        )
+    }
+
     renamingCategory?.let { c ->
         var name by remember(c.id) { mutableStateOf(c.name) }
         AlertDialog(

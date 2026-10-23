@@ -83,6 +83,10 @@ class Actions(
     val captureVideo: (Uri, (Boolean) -> Unit) -> Unit,
     val export: (source: Uri, name: String, mime: String?) -> Unit,
     val forResult: (Intent, (Boolean) -> Unit) -> Unit,
+    /** ファイルを作る場所を選ぶ（書き出し用）。 */
+    val createDocument: (name: String, mime: String, (Uri) -> Unit) -> Unit,
+    /** ファイルを選ぶ（読み込み用）。 */
+    val openDocument: (mimes: Array<String>, (Uri) -> Unit) -> Unit,
     val toast: (String) -> Unit,
 )
 
@@ -149,6 +153,7 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity) {
                 }
                 if (!model.railLeft) Rail(model, railW)
             }
+            model.importReport?.let { r -> ImportReportDialog(model, r) { model.importReport = null } }
         }
     }
 }
@@ -252,7 +257,7 @@ private fun Rail(model: HomeModel, width: Dp) {
         Spacer(Modifier.height(12.dp))
         model.widgetTabs.forEach { w ->
             val id = "w:${w.id}"
-            RailTab(model, id, w.label.take(6), 1, active = model.open == id || id in model.docked, shortcut = null, left = left)
+            RailTab(model, id, w.label.take(10), 1, active = model.open == id || id in model.docked, shortcut = null, left = left)
         }
         var adding by remember { mutableStateOf(false) }
         Box(
@@ -316,6 +321,9 @@ private fun rememberActions(model: HomeModel, activity: ComponentActivity): Acti
     var cameraDone by remember { mutableStateOf<((Boolean) -> Unit)?>(null) }
     var resultDone by remember { mutableStateOf<((Boolean) -> Unit)?>(null) }
     var exportSource by remember { mutableStateOf<Uri?>(null) }
+    var docDone by remember { mutableStateOf<((Uri) -> Unit)?>(null) }
+    val createDoc = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> if (uri != null) docDone?.invoke(uri) }
+    val openDoc = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) docDone?.invoke(uri) }
 
     val folder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         val id = folderTab
@@ -358,6 +366,8 @@ private fun rememberActions(model: HomeModel, activity: ComponentActivity): Acti
             captureVideo = { uri, done -> cameraDone = done; runCatching { video.launch(uri) }.onFailure { done(false) } },
             export = { src, name, _ -> exportSource = src; export.launch(name) },
             forResult = { intent, done -> resultDone = done; runCatching { result.launch(intent) }.onFailure { done(false) } },
+            createDocument = { name, _, done -> docDone = done; createDoc.launch(name) },
+            openDocument = { mimes, done -> docDone = done; openDoc.launch(mimes) },
             toast = { Toast.makeText(activity, it, Toast.LENGTH_SHORT).show() },
         )
     }

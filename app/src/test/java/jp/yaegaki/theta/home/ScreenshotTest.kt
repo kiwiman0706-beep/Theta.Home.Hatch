@@ -82,7 +82,7 @@ class ScreenshotTest {
     fun foldMain() {
         launch()
         shot("fold5-main-filer")
-        compose.onNodeWithContentDescription("Hatch（Alt+H）").performClick()
+        compose.onNodeWithContentDescription("HATCH（Alt+H）").performClick()
         compose.mainClock.advanceTimeBy(600)
         shot("fold5-main-hatch")
     }
@@ -92,7 +92,7 @@ class ScreenshotTest {
     fun foldMainLight() {
         launch("light")
         shot("fold5-main-light")
-        compose.onNodeWithContentDescription("アプリ（Alt+A）").performClick()
+        compose.onNodeWithContentDescription("APPS（Alt+A）").performClick()
         compose.mainClock.advanceTimeBy(600)
         shot("fold5-main-light-apps")
     }
@@ -102,7 +102,7 @@ class ScreenshotTest {
     fun foldCover() {
         launch()
         shot("fold5-cover-filer")
-        compose.onNodeWithContentDescription("記録（Alt+R）").performClick()
+        compose.onNodeWithContentDescription("CAPTURE（Alt+R）").performClick()
         compose.mainClock.advanceTimeBy(600)
         shot("fold5-cover-capture")
     }
@@ -111,7 +111,7 @@ class ScreenshotTest {
     @Config(qualifiers = "w360dp-h860dp-xxhdpi")
     fun sorter() {
         launch()
-        compose.onNodeWithContentDescription("アプリ（Alt+A）").performClick()
+        compose.onNodeWithContentDescription("APPS（Alt+A）").performClick()
         compose.mainClock.advanceTimeBy(600)
         shot("sort-apps-drawer")
         compose.onNodeWithText("仕分け 5").performClick()
@@ -124,7 +124,7 @@ class ScreenshotTest {
     @Config(qualifiers = "w360dp-h860dp-xxhdpi")
     fun sorterLight() {
         launch("light")
-        compose.onNodeWithContentDescription("アプリ（Alt+A）").performClick()
+        compose.onNodeWithContentDescription("APPS（Alt+A）").performClick()
         compose.mainClock.advanceTimeBy(600)
         compose.onNodeWithText("仕分け 5").performClick()
         startSorting()

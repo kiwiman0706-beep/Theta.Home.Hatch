@@ -373,7 +373,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun addTab(kind: TabKind) {
-        val label = if (kind == TabKind.FOLDER) "フォルダ" else kind.defaultLabel
+        val label = kind.defaultLabel
         updateTabs(tabs + TabSpec(Store.newId(), kind, label))
     }
 
@@ -448,8 +448,109 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         return key
     }
 
+    /** 仕分けガイドの候補（規定のカテゴリー）と、初めから選んでおくもの。 */
+    var categoryPresets by mutableStateOf(store.categoryPresets); private set
+    var categoryDefaults by mutableStateOf(store.categoryDefaults); private set
+
+    private fun savePresets(list: List<String>, defaults: List<String> = categoryDefaults) {
+        categoryPresets = list.distinct()
+        categoryDefaults = defaults.filter { it in categoryPresets }
+        store.categoryPresets = categoryPresets
+        store.categoryDefaults = categoryDefaults
+    }
+
+    fun addPreset(name: String) {
+        val n = name.trim()
+        if (n.isNotEmpty()) savePresets(categoryPresets + n, categoryDefaults + n)
+    }
+
+    /** 候補の名前を変える。同じ名前のカテゴリーがすでにあれば、そちらも同じ名前に変える。 */
+    fun renamePreset(old: String, name: String) {
+        val n = name.trim()
+        if (n.isEmpty() || n == old) return
+        savePresets(categoryPresets.map { if (it == old) n else it }, categoryDefaults.map { if (it == old) n else it })
+        val aliases = store.categoryAliases
+        val original = aliases.entries.firstOrNull { it.value == old }?.key ?: old
+        store.categoryAliases = aliases + (original to n)
+        categories.firstOrNull { it.name == old }?.let { renameCategory(it, n) }
+    }
+
+    /** 候補から外す。作ってあるカテゴリーと中のアプリはそのまま。 */
+    fun deletePreset(name: String) = savePresets(categoryPresets - name, categoryDefaults - name)
+
+    fun toggleDefault(name: String) =
+        savePresets(categoryPresets, if (name in categoryDefaults) categoryDefaults - name else categoryDefaults + name)
+
+    fun movePreset(name: String, delta: Int) {
+        val i = categoryPresets.indexOf(name)
+        val j = i + delta
+        if (i < 0 || j !in categoryPresets.indices) return
+        savePresets(categoryPresets.toMutableList().also { it.add(j, it.removeAt(i)) })
+    }
+
+    fun resetPresets() {
+        store.resetCategoryPresets()
+        categoryPresets = store.categoryPresets
+        categoryDefaults = store.categoryDefaults
+    }
+
+    // ---- 設定の書き出し・読み込み（引っ越し） ----
+
+    /** 読み込み後の案内（入っていないアプリなど）。閉じるまで出しておく。 */
+    var importReport by mutableStateOf<jp.yaegaki.theta.home.data.ImportReport?>(null)
+
+    fun exportSettings(uri: Uri) {
+        viewModelScope.launch {
+            val ok = runCatching {
+                withContext(Dispatchers.IO) {
+                    val text = jp.yaegaki.theta.home.data.Backup.export(ctx, store, apps)
+                    ctx.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(text.toByteArray()) }
+                }
+            }
+            (ctx as HomeApp).toast(if (ok.isSuccess) "設定を書き出しました" else "書き出せませんでした：${ok.exceptionOrNull()?.message}")
+        }
+    }
+
+    fun importSettings(uri: Uri) {
+        viewModelScope.launch {
+            val r = runCatching {
+                withContext(Dispatchers.IO) {
+                    val text = ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes().toString(Charsets.UTF_8) }
+                    jp.yaegaki.theta.home.data.Backup.import(ctx, store, text)
+                }
+            }
+            r.onSuccess { reloadFromStore(); importReport = it }
+                .onFailure { (ctx as HomeApp).toast("読み込めませんでした：${it.message}") }
+        }
+    }
+
+    /** 保存してある設定を読み直して画面に反映する。 */
+    fun reloadFromStore() {
+        tabs = store.tabs()
+        railLeft = store.railLeft
+        themeMode = store.themeMode
+        monoIcons = store.monoIcons
+        favoriteApps = store.favoriteApps
+        categories = store.categories()
+        appCategories = store.appCategories()
+        categoryPresets = store.categoryPresets
+        categoryDefaults = store.categoryDefaults
+        bookmarks = store.bookmarks()
+        widgetTabs = store.widgetTabs(profile)
+        folders.clear()
+        open = null
+        docked = emptyList()
+        location = store.location.ifEmpty { tabs.firstOrNull { it.kind == TabKind.FOLDER }?.let { "tab:${it.id}" } ?: "recent" }
+        tab(location.removePrefix("tab:"))?.let { if (it.kind == TabKind.FOLDER) showFolder(it, closeDrawer = false) }
+        refreshApps()
+        refreshStatus(force = true)
+    }
+
     fun suggestedCategory(app: AppEntry): Category? =
-        jp.yaegaki.theta.home.data.Categories.suggest(app)?.let { name -> categories.firstOrNull { it.name == name } }
+        jp.yaegaki.theta.home.data.Categories.suggest(app)?.let { name ->
+            val current = store.categoryAliases[name] ?: name
+            categories.firstOrNull { it.name == current }
+        }
     fun changeMonoIcons(v: Boolean) { monoIcons = v; store.monoIcons = v }
 
     fun toggleFavorite(app: AppEntry) {

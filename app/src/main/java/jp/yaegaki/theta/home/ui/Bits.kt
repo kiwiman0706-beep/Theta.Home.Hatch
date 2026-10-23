@@ -194,31 +194,22 @@ fun Field(
     )
 }
 
-/** 縦書きのタブ見出し。日本語は 1 文字ずつ縦に、英字は 90 度回して並べる。 */
+/** タブの見出し：横書きの文字を 90 度倒して置く（上から下へ読む）。日本語も同じく倒す。 */
 @Composable
 fun VerticalLabel(text: String, color: Color, fontSize: Int = 13) {
-    val ascii = text.all { it.code < 128 }
-    if (ascii) {
-        Text(
-            text, color = color, fontSize = fontSize.sp, maxLines = 1, letterSpacing = 1.5.sp, fontFamily = Hud.mono,
-            modifier = Modifier
-                .layout { measurable, constraints ->
-                    val placeable = measurable.measure(constraints.copy(minWidth = 0, maxWidth = constraints.maxHeight, minHeight = 0))
-                    layout(placeable.height, placeable.width) {
-                        placeable.placeWithLayer(
-                            x = -(placeable.width - placeable.height) / 2,
-                            y = (placeable.width - placeable.height) / 2,
-                        ) { rotationZ = 90f }
-                    }
-                },
-        )
-    } else {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            text.forEach { ch ->
-                Text(ch.toString(), color = color, fontSize = fontSize.sp, lineHeight = (fontSize + 3).sp)
-            }
-        }
-    }
+    Text(
+        text, color = color, fontSize = fontSize.sp, maxLines = 1, letterSpacing = 1.5.sp, fontFamily = Hud.mono,
+        modifier = Modifier
+            .layout { measurable, constraints ->
+                val placeable = measurable.measure(constraints.copy(minWidth = 0, maxWidth = constraints.maxHeight, minHeight = 0))
+                layout(placeable.height, placeable.width) {
+                    placeable.placeWithLayer(
+                        x = -(placeable.width - placeable.height) / 2,
+                        y = (placeable.width - placeable.height) / 2,
+                    ) { rotationZ = 90f }
+                }
+            },
+    )
 }
 
 /** 線で描く小さな記号（虫めがね・ピン・×・‹・＋）。アイコン用ライブラリに頼らない。 */

@@ -88,14 +88,15 @@ fun SortGuide(model: HomeModel, onDismiss: () -> Unit) {
 private fun PrepareStep(model: HomeModel, onNext: () -> Unit) {
     val p = LocalPalette.current
     val existing = model.categories.map { it.name }.toSet()
-    var picked by remember { mutableStateOf(if (existing.isEmpty()) Categories.defaults.toSet() else existing) }
+    var picked by remember { mutableStateOf(if (existing.isEmpty()) model.categoryDefaults.toSet() else existing) }
     var custom by remember { mutableStateOf("") }
-    val extra = picked.filter { it !in Categories.presets }
+    val presets = model.categoryPresets
+    val extra = picked.filter { it !in presets }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("振り分け先を選んでください。あとから仕分けの途中でも足せます。", color = p.muted, fontSize = 14.sp)
         SectionTitle("PRESET / 候補")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            (Categories.presets + extra + existing.filter { it !in Categories.presets && it !in extra }).distinct().forEach { name ->
+            (presets + extra + existing.filter { it !in presets && it !in extra }).distinct().forEach { name ->
                 val on = name in picked
                 ChoiceButton(name, on) { picked = if (on) picked - name else picked + name }
             }
@@ -109,7 +110,7 @@ private fun PrepareStep(model: HomeModel, onNext: () -> Unit) {
                 }
             })
         }
-        Note("選ばなかった候補のうち、すでに作ってあるカテゴリーは消しません（中のアプリもそのまま）。")
+        Note("選ばなかった候補のうち、すでに作ってあるカテゴリーは消しません（中のアプリもそのまま）。候補そのものは、設定の「仕分けの候補」で名前の変更・削除ができます。")
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PillButton("${picked.size} 個で仕分けを始める", {

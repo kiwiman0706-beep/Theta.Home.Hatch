@@ -12,16 +12,16 @@ import java.util.UUID
  * ウィジェットはタブ 1 つに 1 つ（[WidgetTab]）で、画面ごとに別に持つ。
  */
 enum class TabKind(val group: Int, val defaultLabel: String, val key: Char?) {
-    FOLDER(0, "フォルダ", null),
-    CALENDAR(1, "予定", 'C'),
-    MAIL(1, "メール", 'M'),
+    FOLDER(0, "FOLDER", null),
+    CALENDAR(1, "CALENDAR", 'C'),
+    MAIL(1, "MAIL", 'M'),
     LINE(1, "LINE", 'L'),
-    PEOPLE(1, "人", 'P'),
-    APPS(2, "アプリ", 'A'),
-    BOOKMARKS(2, "栞", 'B'),
-    CLIP(2, "Clip", 'X'),
-    CAPTURE(2, "記録", 'R'),
-    HATCH(2, "Hatch", 'H'),
+    PEOPLE(1, "PEOPLE", 'P'),
+    APPS(2, "APPS", 'A'),
+    BOOKMARKS(2, "LINKS", 'B'),
+    CLIP(2, "CLIP", 'X'),
+    CAPTURE(2, "CAPTURE", 'R'),
+    HATCH(2, "HATCH", 'H'),
 }
 
 /** folderUri は端末のフォルダ（SAF のツリー URI）か、NAS のフォルダ（"nas:" ＋ パス）。 */
@@ -66,10 +66,11 @@ class Store(context: Context) {
             (0 until a.length()).mapNotNull { i ->
                 val o = a.getJSONObject(i)
                 val kind = runCatching { TabKind.valueOf(o.getString("kind")) }.getOrNull() ?: return@mapNotNull null
+                val label = o.getString("label")
                 TabSpec(
                     id = o.getString("id"),
                     kind = kind,
-                    label = o.getString("label"),
+                    label = OLD_LABELS[label] ?: label,
                     folderUri = o.optString("folder").ifEmpty { null },
                 )
             }
@@ -96,6 +97,28 @@ class Store(context: Context) {
     fun categories(): List<Category> = objects("categories") { Category(it.getString("id"), it.getString("name")) }
 
     fun saveCategories(list: List<Category>) = putObjects("categories", list) { JSONObject().put("id", it.id).put("name", it.name) }
+
+    /** 仕分けガイドの候補（規定のカテゴリー）。名前の変更・削除・追加ができる。未設定なら初期の候補。 */
+    var categoryPresets: List<String>
+        get() = if (prefs.contains("catPresets")) strings("catPresets") else Categories.presets
+        set(v) = putStrings("catPresets", v)
+
+    /** 候補のうち、ガイドで初めから選んでおくもの。 */
+    var categoryDefaults: List<String>
+        get() = if (prefs.contains("catDefaults")) strings("catDefaults") else Categories.defaults
+        set(v) = putStrings("catDefaults", v)
+
+    /** 初期の候補名 → 変えた後の名前。おすすめ（初期の候補名で出る）を今の名前に読み替える。 */
+    var categoryAliases: Map<String, String>
+        get() = runCatching {
+            val o = JSONObject(prefs.getString("catAlias", "{}") ?: "{}")
+            o.keys().asSequence().associateWith { o.getString(it) }
+        }.getOrDefault(emptyMap())
+        set(v) = prefs.edit().putString("catAlias", JSONObject(v).toString()).apply()
+
+    fun resetCategoryPresets() {
+        prefs.edit().remove("catPresets").remove("catDefaults").remove("catAlias").apply()
+    }
 
     /** アプリ（ComponentName の文字列）→ カテゴリーの id。 */
     fun appCategories(): Map<String, String> = runCatching {
@@ -199,19 +222,26 @@ class Store(context: Context) {
     companion object {
         fun newId(): String = UUID.randomUUID().toString().take(8)
 
+        /** 0.5.x までの日本語の初期名。名前を変えていなければ英語の初期名に置き換える。 */
+        private val OLD_LABELS = mapOf(
+            "仕事" to "WORK", "個人" to "PRIVATE", "写真" to "PHOTO", "予定" to "CALENDAR", "メール" to "MAIL",
+            "人" to "PEOPLE", "アプリ" to "APPS", "栞" to "LINKS", "Clip" to "CLIP", "記録" to "CAPTURE", "Hatch" to "HATCH",
+            "Widget" to "WIDGET", "フォルダ" to "FOLDER",
+        )
+
         fun defaultTabs(): List<TabSpec> = listOf(
-            TabSpec("work", TabKind.FOLDER, "仕事"),
-            TabSpec("personal", TabKind.FOLDER, "個人"),
-            TabSpec("photo", TabKind.FOLDER, "写真"),
-            TabSpec("cal", TabKind.CALENDAR, "予定"),
-            TabSpec("mail", TabKind.MAIL, "メール"),
+            TabSpec("work", TabKind.FOLDER, "WORK"),
+            TabSpec("personal", TabKind.FOLDER, "PRIVATE"),
+            TabSpec("photo", TabKind.FOLDER, "PHOTO"),
+            TabSpec("cal", TabKind.CALENDAR, "CALENDAR"),
+            TabSpec("mail", TabKind.MAIL, "MAIL"),
             TabSpec("line", TabKind.LINE, "LINE"),
-            TabSpec("people", TabKind.PEOPLE, "人"),
-            TabSpec("apps", TabKind.APPS, "アプリ"),
-            TabSpec("marks", TabKind.BOOKMARKS, "栞"),
-            TabSpec("clip", TabKind.CLIP, "Clip"),
-            TabSpec("capture", TabKind.CAPTURE, "記録"),
-            TabSpec("hatch", TabKind.HATCH, "Hatch"),
+            TabSpec("people", TabKind.PEOPLE, "PEOPLE"),
+            TabSpec("apps", TabKind.APPS, "APPS"),
+            TabSpec("marks", TabKind.BOOKMARKS, "LINKS"),
+            TabSpec("clip", TabKind.CLIP, "CLIP"),
+            TabSpec("capture", TabKind.CAPTURE, "CAPTURE"),
+            TabSpec("hatch", TabKind.HATCH, "HATCH"),
         )
     }
 }

@@ -4,7 +4,7 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**0.5.1-alpha（versionCode 6）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.6.0-alpha（versionCode 7）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
@@ -47,6 +47,10 @@ DSBooks と同じく、Synology の DSM File Station API でつなぐ（設定 �
 | 1. カテゴリーを用意 | 2. 振り分け（ダーク） | 2. 振り分け（ライト） |
 | --- | --- | --- |
 | ![](docs/screenshots/sort-step1-categories.png) | ![](docs/screenshots/sort-step2-assign.png) | ![](docs/screenshots/sort-step2-assign-light.png) |
+
+## 引っ越し（設定の書き出し・読み込み）
+
+設定 →「BACKUP」の「設定を書き出す」で 1 つの JSON ファイルに。新しいスマホで「設定を読み込む」と、タブ・テーマ・カテゴリーと仕分け・仕分けの候補・栞・NAS の接続先が戻り、前のスマホにあって今ないアプリが一覧に出る（押すと Play ストア、Hatch シリーズは Hatch のドロワー）。フォルダの許可・ウィジェット・NAS のパスワードは端末ごとなので、やり直しを案内する。
 
 ## そのほか
 
