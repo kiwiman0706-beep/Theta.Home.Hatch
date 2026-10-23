@@ -3,6 +3,7 @@
 **背景（デスクトップ）にファイラーを置き、画面の端のタブでドロワーやウィジェットを切り替える** Android のホームアプリ。
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
+- **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases/latest)**（`ThetaHomeHatch-<版>.apk`）
 - 版：**0.5.0-alpha（versionCode 5）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
@@ -66,6 +67,12 @@ DSBooks と同じく、Synology の DSM File Station API でつなぐ（設定 �
 1. APK を端末で開いてインストール（「提供元不明のアプリ」の許可が必要）。0.2.0 を入れていれば上書きできる（同じ鍵）。
 2. まず普通のアプリとして開き、フォルダのタブにフォルダを割り当て、NAS を登録して動きを確かめる。
 3. 設定 →「既定のホームにする」。
+
+## リリース
+
+1. 手元で `./gradlew :app:assembleRelease`（鍵は `keystore.properties`）し、APK を `releases/ThetaHomeHatch-<版>.apk` として置く
+2. `releases/SHA256SUMS-<x.y.z>.txt`（`sha256sum` の出力）と `docs/release-notes/v<版>.md` を置いてコミット
+3. `v<版>` のタグを付けてプッシュすると、Actions（`release-apk`）がハッシュ・署名の証明書・版を確かめて Release を作る。`-` 付きの版はプレリリース
 
 ## ビルド
 

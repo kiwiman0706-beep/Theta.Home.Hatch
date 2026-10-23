@@ -1,0 +1,47 @@
+name: release-apk
+
+# v0.5.0-alpha のようなタグを付けると、releases/ に置いた署名済み APK を GitHub Release として公開する。
+# APK はここではビルドしない（署名鍵をリポジトリにも Actions にも置かないため）。
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      CERT_SHA256: c2b829ead59b1cc57fc29d5bedf979c2c9549277ba8fcbb711b7a7b7654dfae2
+    steps:
+      - uses: actions/checkout@v4
+      - name: 版と添付ファイルを決める
+        id: v
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          ver="${tag#v}"
+          apk="releases/ThetaHomeHatch-${ver}.apk"
+          sums="releases/SHA256SUMS-${ver%%-*}.txt"
+          notes="docs/release-notes/${tag}.md"
+          for f in "$apk" "$sums" "$notes"; do test -f "$f" || { echo "::error::$f がありません"; exit 1; }; done
+          echo "ver=$ver" >> "$GITHUB_OUTPUT"
+          echo "apk=$apk" >> "$GITHUB_OUTPUT"
+          echo "sums=$sums" >> "$GITHUB_OUTPUT"
+          echo "notes=$notes" >> "$GITHUB_OUTPUT"
+      - name: ハッシュと署名の証明書を確かめる
+        run: |
+          (cd releases && sha256sum -c "$(basename '${{ steps.v.outputs.sums }}')")
+          bt=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          certs=$("$bt/apksigner" verify --print-certs "${{ steps.v.outputs.apk }}")
+          echo "$certs"
+          echo "$certs" | grep -q "SHA-256 digest: ${CERT_SHA256}" || { echo "::error::署名の証明書が違います"; exit 1; }
+          "$bt/aapt2" dump badging "${{ steps.v.outputs.apk }}" | grep -q "versionName='${{ steps.v.outputs.ver }}'" || { echo "::error::APK の版がタグと違います"; exit 1; }
+      - name: Release を作る
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pre=""
+          case "$GITHUB_REF_NAME" in *-*) pre="--prerelease";; esac
+          gh release create "$GITHUB_REF_NAME" "${{ steps.v.outputs.apk }}" "${{ steps.v.outputs.sums }}" \
+            --title "Theta Home Hatch ${{ steps.v.outputs.ver }}" --notes-file "${{ steps.v.outputs.notes }}" $pre
