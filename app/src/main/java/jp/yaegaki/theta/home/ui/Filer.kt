@@ -256,11 +256,15 @@ internal fun TodayEvents(model: HomeModel, max: Int, modifier: Modifier = Modifi
     val actions = LocalActions.current
     val calTab = model.tabs.firstOrNull { it.kind == TabKind.CALENDAR }
     val list = model.todayEvents
+    var picking by remember { mutableStateOf(false) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("TODAY'S_EVENTS", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, letterSpacing = 1.5.sp)
             Text("%02d".format(list.size), color = p.accent, fontSize = 10.sp, fontFamily = Hud.mono)
+            if (model.has(Manifest.permission.READ_CALENDAR)) Text("CAL ⚙", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono,
+                modifier = Modifier.clickable(onClickLabel = "表示するカレンダー") { picking = true }.padding(horizontal = 6.dp, vertical = 2.dp))
         }
+        if (picking) CalendarPicker(model) { picking = false }
         when {
             !model.has(Manifest.permission.READ_CALENDAR) -> Text("予定の読み取りを許可すると、今日の予定が出ます", color = p.muted, fontSize = 13.sp,
                 modifier = Modifier.clickable { actions.requestPermissions(arrayOf(Manifest.permission.READ_CALENDAR)) { model.refreshEvents() } })

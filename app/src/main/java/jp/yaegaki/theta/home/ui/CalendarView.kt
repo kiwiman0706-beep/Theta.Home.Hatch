@@ -1,5 +1,6 @@
 package jp.yaegaki.theta.home.ui
 
+import androidx.compose.runtime.mutableStateOf
 import android.Manifest
 import android.content.Intent
 import android.provider.CalendarContract
@@ -89,6 +90,8 @@ fun CalendarDrawer(model: HomeModel) {
         return
     }
     var anchor by remember { mutableLongStateOf(Calendar.startOfDay()) }
+    var picking by remember { mutableStateOf(false) }
+    if (picking) CalendarPicker(model) { picking = false }
     val mode = model.calendarMode
     val today = Calendar.startOfDay()
     val (from, to) = when (mode) {
@@ -124,6 +127,7 @@ fun CalendarDrawer(model: HomeModel) {
                         .clickable(onClickLabel = "$label で見る") { model.changeCalendarMode(m) }.padding(horizontal = 10.dp, vertical = 7.dp))
             }
             Spacer(Modifier.weight(1f))
+            GlyphButton(Glyph.GEAR, "表示するカレンダー", { picking = true })
             Text("TODAY", color = p.accent, fontSize = 12.sp, fontFamily = Hud.mono,
                 modifier = Modifier.border(1.dp, p.accent).clickable(onClickLabel = "今日へ") { anchor = today }.padding(horizontal = 8.dp, vertical = 7.dp))
         }
@@ -148,9 +152,9 @@ fun CalendarDrawer(model: HomeModel) {
             },
         ) {
             when (mode) {
-                "month" -> MonthView(model.calendarEvents, from, to, anchor, today) { anchor = it; model.changeCalendarMode("day") }
-                "week" -> WeekView(model.calendarEvents, from, today, { anchor = it; model.changeCalendarMode("day") }) { actions.start(Calendar.openIntent(it)) }
-                else -> DayView(model.calendarEvents, anchor, today) { actions.start(Calendar.openIntent(it)) }
+                "month" -> MonthView(model.shownCalendarEvents, from, to, anchor, today) { anchor = it; model.changeCalendarMode("day") }
+                "week" -> WeekView(model.shownCalendarEvents, from, today, { anchor = it; model.changeCalendarMode("day") }) { actions.start(Calendar.openIntent(it)) }
+                else -> DayView(model.shownCalendarEvents, anchor, today) { actions.start(Calendar.openIntent(it)) }
             }
         }
     }
@@ -306,6 +310,54 @@ internal fun DayView(all: List<Event>, day: Long, today: Long, onEvent: (Event) 
                     Box(Modifier.offset(x = labelW, y = hourH * (mins / 60f)).fillMaxWidth().height(2.dp).background(p.accent))
                 }
             }
+        }
+    }
+}
+
+/**
+ * 表示するカレンダーを選ぶ。カレンダーのタブ（TAB）と、ホームの今日の予定（HOME）で別々に。
+ * アカウントごとにまとめて出す。
+ */
+@Composable
+fun CalendarPicker(model: HomeModel, onDismiss: () -> Unit) {
+    val p = LocalPalette.current
+    LaunchedEffect(Unit) { model.loadCalendarSources() }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("表示するカレンダー") },
+        text = {
+            Column(Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(Modifier.weight(1f))
+                    Text("TAB", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, modifier = Modifier.width(52.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Text("HOME", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, modifier = Modifier.width(52.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
+                if (model.calendarSources.isEmpty()) Note("カレンダーが見つかりません")
+                model.calendarSources.groupBy { it.account }.forEach { (account, list) ->
+                    Text(account.ifEmpty { "この端末" }, color = p.muted, fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp, bottom = 2.dp))
+                    list.forEach { c ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.width(4.dp).height(20.dp).background(if (c.color != 0) Color(c.color) else p.widget))
+                            Text(c.name, color = p.fg, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 8.dp))
+                            CheckBox(c.id !in model.hiddenTab) { model.setCalendarShown("tab", c.id, it) }
+                            CheckBox(c.id !in model.hiddenHome) { model.setCalendarShown("home", c.id, it) }
+                        }
+                    }
+                }
+                Note("TAB はカレンダーのタブ、HOME はホームの「今日の予定」。")
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("閉じる") } },
+    )
+}
+
+/** HUD 風の四角いチェック。 */
+@Composable
+private fun CheckBox(on: Boolean, onChange: (Boolean) -> Unit) {
+    val p = LocalPalette.current
+    Box(Modifier.width(52.dp).height(40.dp).clickable(onClickLabel = if (on) "出さない" else "出す") { onChange(!on) }, contentAlignment = Alignment.Center) {
+        Box(Modifier.width(20.dp).height(20.dp).border(1.5.dp, if (on) p.accent else p.line).background(if (on) p.accent else Color.Transparent), contentAlignment = Alignment.Center) {
+            if (on) Text("✓", color = p.onAccent, fontSize = 13.sp)
         }
     }
 }

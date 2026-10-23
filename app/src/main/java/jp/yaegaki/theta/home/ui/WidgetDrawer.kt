@@ -1,5 +1,8 @@
 package jp.yaegaki.theta.home.ui
 
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.clickable
 import android.appwidget.AppWidgetHostView
 import android.appwidget.AppWidgetProviderInfo
 import android.os.Build
@@ -174,23 +177,74 @@ fun AddWidgetDialog(model: HomeModel, intoTab: Int = -1, onDismiss: () -> Unit) 
         }
     }
 
+    // アプリごとにまとめる。アプリを押すと、そのアプリのウィジェット（絵と大きさ）が開く
+    val pm = activity.packageManager
+    val groups = remember(providers) {
+        providers.groupBy { it.provider.packageName }.map { (pkg, list) ->
+            val label = runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
+            Triple(pkg, label, list.sortedBy { host.label(it) })
+        }.sortedBy { it.second.lowercase() }
+    }
+    var q by remember { mutableStateOf("") }
+    var openPkg by remember { mutableStateOf<String?>(null) }
+    val p = LocalPalette.current
+    val shown = groups.filter { (_, label, list) -> q.isBlank() || label.contains(q, true) || list.any { host.label(it).contains(q, true) } }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (intoTab == -1) "ウィジェットのタブを追加（${profileName(model.profile)}）" else "このタブにウィジェットを足す") },
         text = {
-            if (providers.isEmpty()) Text("置けるウィジェットが見つかりませんでした。", color = LocalPalette.current.muted, fontSize = 14.sp)
-            else LazyColumn(Modifier.heightIn(max = 460.dp)) {
-                itemsIndexed(providers, key = { _, it -> it.provider.flattenToString() }) { zi, info ->
-                    RowButton(zebra = zi, onClick = { onDismiss(); add(info) }) {
-                        val pm = activity.packageManager
-                        val appLabel = runCatching { pm.getApplicationLabel(pm.getApplicationInfo(info.provider.packageName, 0)).toString() }.getOrDefault("")
-                        TwoLines(host.label(info), appLabel, Modifier.weight(1f))
+            if (providers.isEmpty()) Text("置けるウィジェットが見つかりませんでした。", color = p.muted, fontSize = 14.sp)
+            else Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Field(q, { q = it }, "アプリ名・ウィジェット名で探す")
+                LazyColumn(Modifier.heightIn(max = 460.dp)) {
+                    shown.forEachIndexed { zi, (pkg, label, list) ->
+                        val open = openPkg == pkg || q.isNotBlank() && !label.contains(q, true)
+                        item(key = pkg) {
+                            RowButton(zebra = zi, onClick = { openPkg = if (openPkg == pkg) null else pkg }) {
+                                val icon = remember(pkg) { runCatching { pm.getApplicationIcon(pkg) }.getOrNull() }
+                                icon?.let { androidx.compose.foundation.Image(androidx.compose.ui.graphics.painter.BitmapPainter(it.toBitmapSafe(96).asImageBitmap()), null, Modifier.size(28.dp)) }
+                                Text(label, color = p.fg, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                                Text("%d %s".format(list.size, if (open) "▲" else "▼"), color = p.faint, fontSize = 12.sp, fontFamily = Hud.mono)
+                            }
+                        }
+                        if (open || q.isNotBlank()) list.filter { q.isBlank() || label.contains(q, true) || host.label(it).contains(q, true) }.forEach { info ->
+                            item(key = info.provider.flattenToString()) {
+                                Row(
+                                    Modifier.fillMaxWidth().clickable { onDismiss(); add(info) }.padding(start = 24.dp, top = 6.dp, bottom = 6.dp, end = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                ) {
+                                    val preview = remember(info.provider) { runCatching { info.loadPreviewImage(activity, 0) ?: info.loadIcon(activity, 0) }.getOrNull() }
+                                    Box(Modifier.size(64.dp, 48.dp).background(p.raised), contentAlignment = Alignment.Center) {
+                                        preview?.let { androidx.compose.foundation.Image(androidx.compose.ui.graphics.painter.BitmapPainter(it.toBitmapSafe(256).asImageBitmap()), null, Modifier.fillMaxSize().padding(2.dp), contentScale = androidx.compose.ui.layout.ContentScale.Fit) }
+                                    }
+                                    Column(Modifier.weight(1f)) {
+                                        Text(host.label(info), color = p.fg, fontSize = 14.sp)
+                                        val d = activity.resources.displayMetrics.density
+                                        Text("${(info.minWidth / d).toInt()} × ${(info.minHeight / d).toInt()} dp〜", color = p.faint, fontSize = 11.sp, fontFamily = Hud.mono)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("閉じる") } },
     )
+}
+
+/** Drawable を絵にする（大きすぎるものは縮める）。 */
+private fun android.graphics.drawable.Drawable.toBitmapSafe(max: Int): android.graphics.Bitmap {
+    val w = intrinsicWidth.takeIf { it > 0 } ?: max
+    val h = intrinsicHeight.takeIf { it > 0 } ?: max
+    val scale = minOf(1f, max.toFloat() / maxOf(w, h))
+    val bw = maxOf(1, (w * scale).toInt())
+    val bh = maxOf(1, (h * scale).toInt())
+    val b = android.graphics.Bitmap.createBitmap(bw, bh, android.graphics.Bitmap.Config.ARGB_8888)
+    setBounds(0, 0, bw, bh)
+    draw(android.graphics.Canvas(b))
+    return b
 }
 
 /** もう一方の画面（閉じた／開いた）のウィジェットのタブを、この画面に持ってくる。 */

@@ -176,8 +176,31 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         get() {
             val from = Calendar.startOfDay()
             val to = Calendar.addDays(from, 1)
-            return events.filter { it.overlaps(from, to) }.sortedWith(compareBy({ !it.allDay }, { it.localBegin }))
+            return events.filter { it.overlaps(from, to) && it.calendarId !in hiddenHome }.sortedWith(compareBy({ !it.allDay }, { it.localBegin }))
         }
+
+    /** 出さないカレンダー：カレンダーのタブ（tab）と今日の予定（home）で別々。 */
+    var hiddenTab by mutableStateOf(store.hiddenCalendars("tab")); private set
+    var hiddenHome by mutableStateOf(store.hiddenCalendars("home")); private set
+    var calendarSources by mutableStateOf<List<jp.yaegaki.theta.home.data.CalendarSource>>(emptyList()); private set
+
+    fun loadCalendarSources() {
+        if (!has(Manifest.permission.READ_CALENDAR)) return
+        io { Calendar.sources(ctx) }.then { calendarSources = it }
+    }
+
+    fun setCalendarShown(where: String, id: Long, shown: Boolean) {
+        if (where == "tab") {
+            hiddenTab = if (shown) hiddenTab - id else hiddenTab + id
+            store.saveHiddenCalendars("tab", hiddenTab)
+        } else {
+            hiddenHome = if (shown) hiddenHome - id else hiddenHome + id
+            store.saveHiddenCalendars("home", hiddenHome)
+        }
+    }
+
+    /** カレンダーのタブに出す予定（出さないカレンダーを除く）。 */
+    val shownCalendarEvents: List<Event> get() = calendarEvents.filter { it.calendarId !in hiddenTab }
 
     var calendarMode by mutableStateOf(store.calendarMode); private set
     fun changeCalendarMode(m: String) { calendarMode = m; store.calendarMode = m }

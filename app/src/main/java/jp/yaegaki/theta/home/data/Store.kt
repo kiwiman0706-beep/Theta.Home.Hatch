@@ -280,6 +280,11 @@ class Store(context: Context) {
     val weatherAt: Long
         get() = prefs.getLong("weatherAt", 0)
 
+    /** 出さないカレンダーの id。where は "tab"（カレンダーのタブ）か "home"（今日の予定）。 */
+    fun hiddenCalendars(where: String): Set<Long> = strings("calHidden_$where").mapNotNull { it.toLongOrNull() }.toSet()
+
+    fun saveHiddenCalendars(where: String, ids: Set<Long>) = putStrings("calHidden_$where", ids.map { it.toString() })
+
     /** カレンダーのドロワーの表示："month"・"week"・"day"。 */
     var calendarMode: String
         get() = prefs.getString("calMode", "month") ?: "month"

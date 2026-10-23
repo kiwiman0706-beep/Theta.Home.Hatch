@@ -14,6 +14,7 @@ data class Event(
     val allDay: Boolean,
     val location: String?,
     val color: Int,
+    val calendarId: Long = 0,
 ) {
     /** 終日の予定は UTC の 0 時で記録されるため、端末の時刻帯の同じ日付に読み替えた開始時刻。 */
     val localBegin: Long
@@ -25,6 +26,9 @@ data class Event(
     /** [from, to) に少しでも掛かるか。 */
     fun overlaps(from: Long, to: Long): Boolean = localBegin < to && maxOf(localEnd, localBegin + 1) > from
 }
+
+/** 端末にあるカレンダー 1 つ（Google のアカウントごとの「仕事」「家族」など）。 */
+data class CalendarSource(val id: Long, val name: String, val account: String, val color: Int)
 
 /** 端末のカレンダー（Google カレンダーと同期済みのものを含む）から予定を読む。READ_CALENDAR が必要。 */
 object Calendar {
@@ -65,6 +69,7 @@ object Calendar {
             CalendarContract.Instances.ALL_DAY,
             CalendarContract.Instances.EVENT_LOCATION,
             CalendarContract.Instances.DISPLAY_COLOR,
+            CalendarContract.Instances.CALENDAR_ID,
         )
         val out = ArrayList<Event>()
         context.contentResolver.query(uri, cols, null, null, "${CalendarContract.Instances.BEGIN} ASC")?.use { c ->
@@ -77,11 +82,27 @@ object Calendar {
                     allDay = c.getInt(4) == 1,
                     location = c.getString(5)?.ifBlank { null },
                     color = c.getInt(6),
+                    calendarId = c.getLong(7),
                 )
                 out += e
             }
         }
         return out.sortedBy { it.localBegin }
+    }
+
+    /** 端末にあるカレンダーの一覧。 */
+    fun sources(context: Context): List<CalendarSource> {
+        val out = ArrayList<CalendarSource>()
+        runCatching {
+            context.contentResolver.query(
+                CalendarContract.Calendars.CONTENT_URI,
+                arrayOf(CalendarContract.Calendars._ID, CalendarContract.Calendars.CALENDAR_DISPLAY_NAME, CalendarContract.Calendars.ACCOUNT_NAME, CalendarContract.Calendars.CALENDAR_COLOR),
+                null, null, "${CalendarContract.Calendars.ACCOUNT_NAME} ASC, ${CalendarContract.Calendars.CALENDAR_DISPLAY_NAME} ASC",
+            )?.use { c ->
+                while (c.moveToNext()) out += CalendarSource(c.getLong(0), c.getString(1) ?: "（無題）", c.getString(2) ?: "", c.getInt(3))
+            }
+        }
+        return out
     }
 
     fun openIntent(e: Event): Intent =
