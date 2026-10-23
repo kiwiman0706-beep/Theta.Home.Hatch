@@ -269,9 +269,11 @@ private fun Rail(model: HomeModel, width: Dp) {
                     val px = with(density) { 48.dp.toPx() }
                     if (!left && total < -px || left && total > px) model.openLast()
                 }) { _, d -> total += d }
-            }
-            .verticalScroll(rememberScrollState())
-            .padding(vertical = 12.dp),
+            },
+        horizontalAlignment = if (left) Alignment.Start else Alignment.End,
+    ) {
+    Column(
+        Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = 12.dp, bottom = 8.dp),
         horizontalAlignment = if (left) Alignment.Start else Alignment.End,
         verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
@@ -302,6 +304,32 @@ private fun Rail(model: HomeModel, width: Dp) {
         ) { GlyphIcon(Glyph.PLUS, p.accent) }
         if (adding) AddTabDialog(model, onWidget = { adding = false; addingWidget = true }) { adding = false }
         if (addingWidget) AddWidgetDialog(model) { addingWidget = false }
+    }
+    StartButton(model)
+    }
+}
+
+/**
+ * 端のタブのいちばん下に固定の「START」：すべてのアプリ。タブをスクロールしても隠れず、タブを全部外してもアプリを開ける。
+ */
+@Composable
+private fun StartButton(model: HomeModel) {
+    val p = LocalPalette.current
+    val on = model.open == model.appsId()
+    Column(
+        Modifier
+            .padding(top = 4.dp, bottom = 10.dp)
+            .width(40.dp)
+            .background(if (on) p.accent else p.raised)
+            .border(1.dp, p.accent)
+            .clickable(role = Role.Button, onClickLabel = "すべてのアプリを開く") { model.toggle(model.appsId()) }
+            .semantics { contentDescription = "START すべてのアプリ（Alt+A）"; selected = on }
+            .padding(vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        GlyphIcon(Glyph.GRID, if (on) p.onAccent else p.accent, size = 16.dp)
+        Text("ALL", color = if (on) p.onAccent else p.accent, fontSize = 9.sp, fontFamily = Hud.mono)
     }
 }
 

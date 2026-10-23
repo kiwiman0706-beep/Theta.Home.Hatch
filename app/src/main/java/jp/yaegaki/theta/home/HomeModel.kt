@@ -847,7 +847,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     /** 新しい版があるか確かめる。force でなければ自動更新がオンのときだけ、1 日 1 回まで。 */
     fun checkUpdate(force: Boolean = false) {
         if (update.checking) return
-        if (!force && (!autoUpdate || System.currentTimeMillis() - store.lastUpdateCheck < 24L * 3600_000)) return
+        // 使いながら版を重ねているので、1 時間ごとに確かめる（GitHub への問い合わせは軽い）
+        if (!force && (!autoUpdate || System.currentTimeMillis() - store.lastUpdateCheck < 3600_000)) return
         update = update.copy(checking = true, error = null)
         viewModelScope.launch {
             val r = runCatching { jp.yaegaki.theta.home.hatch.SelfUpdate.latest() }

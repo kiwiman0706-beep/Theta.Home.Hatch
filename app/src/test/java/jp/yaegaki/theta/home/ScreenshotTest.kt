@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.foundation.background
 import androidx.compose.ui.test.performScrollTo
@@ -147,6 +148,23 @@ class ScreenshotTest {
         launch("light") { photos(it, "list:2") }
         compose.mainClock.advanceTimeBy(1000)
         shot("filer-list-thumbs")
+    }
+
+    /** 端のタブを全部外しても、下の固定の START から全アプリを開ける。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun startButton() {
+        launch()
+        compose.waitForIdle()
+        scenario!!.onActivity { a ->
+            val m = androidx.lifecycle.ViewModelProvider(a)[HomeModel::class.java]
+            m.tabs.toList().forEach { m.removeTab(it.id) }
+        }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("START すべてのアプリ（Alt+A）").assertIsDisplayed().performClick()
+        compose.mainClock.advanceTimeBy(600)
+        compose.onNodeWithText("名前で絞り込み").assertExists()
+        shot("start-button")
     }
 
     /** 長押し→ドラッグで並べ替え：アプリ（カテゴリーのタブ）と端のタブ。動かさずに離すとメニュー。 */
