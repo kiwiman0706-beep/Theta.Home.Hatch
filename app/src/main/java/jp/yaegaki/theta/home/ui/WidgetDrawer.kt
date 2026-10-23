@@ -79,7 +79,7 @@ fun WidgetTabDrawer(model: HomeModel, t: WidgetTab) {
                     Modifier
                         .align(if (model.railLeft) Alignment.BottomEnd else Alignment.BottomStart)
                         .size(40.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(0.dp))
                         .background(p.accent.copy(alpha = 0.85f))
                         .semantics { contentDescription = "なぞって大きさを変える" }
                         .pointerInput(t.id, grow) {

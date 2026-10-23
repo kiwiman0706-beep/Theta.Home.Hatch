@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
@@ -115,8 +117,32 @@ fun Filer(model: HomeModel) {
                 }
             }
         }
+        FilerFooter(model)
     }
     if (nasDialog) NasDialog(model) { nasDialog = false }
+}
+
+/** 下端の帯：今の場所・件数・画面の種類。 */
+@Composable
+private fun FilerFooter(model: HomeModel) {
+    val p = LocalPalette.current
+    val loc = model.location
+    val tab = model.tab(loc.removePrefix("tab:"))
+    val (where, count) = when {
+        loc == "nas" -> "NAS" + model.nasState.path.ifEmpty { "/" } to model.nasState.entries.size
+        loc == "recent" -> "RECENT" to model.recents.size
+        tab != null -> tab.label to (model.folders[tab.id]?.entries?.size ?: 0)
+        else -> "----" to 0
+    }
+    Column(Modifier.padding(top = 6.dp)) {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+            Readout("LOC", where, Modifier.weight(1f, fill = false))
+            Readout("ITEMS", "%03d".format(count))
+            Readout("SCREEN", if (model.profile == "wide") "WIDE" else "NARROW", accent = true)
+            Stripes(Modifier.weight(1f).height(10.dp), color = p.line)
+        }
+    }
 }
 
 @Composable
@@ -132,29 +158,47 @@ private fun FilerHeader(model: HomeModel) {
     LaunchedEffect(model.focusSearch) { if (model.focusSearch > 0) runCatching { focus.requestFocus() } }
     val next = if (model.has(Manifest.permission.READ_CALENDAR)) model.events.firstOrNull() else null
     val calTab = model.tabs.firstOrNull { it.kind == TabKind.CALENDAR }
+    val d = Date(now)
+    val nextText = next?.let { (if (it.allDay) "ALL DAY" else SimpleDateFormat("HH:mm", Locale.US).format(Date(it.begin))) + "  " + it.title }
 
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        Column {
-            Text(SimpleDateFormat("H:mm", Locale.JAPAN).format(Date(now)), color = p.fg, fontSize = if (layout.compact) 40.sp else 52.sp, fontWeight = FontWeight.Light, lineHeight = if (layout.compact) 44.sp else 56.sp)
-            Text(SimpleDateFormat("M/d E", Locale.JAPAN).format(Date(now)), color = p.muted, fontSize = 12.sp)
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            if (next != null) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Box(Modifier.size(6.dp).background(p.accent))
+                    Text("SYS.TIME", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, letterSpacing = 2.sp)
+                }
                 Text(
-                    (if (next.allDay) "終日" else SimpleDateFormat("H:mm", Locale.JAPAN).format(Date(next.begin))) + "  " + next.title,
-                    color = p.fg, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.clickable(onClickLabel = "予定を開く") { calTab?.let { model.toggle(it.id) } }.padding(vertical = 4.dp),
+                    SimpleDateFormat("HH:mm", Locale.US).format(d), color = p.fg, fontFamily = Hud.display, fontWeight = FontWeight.Light,
+                    fontSize = if (layout.compact) 52.sp else 72.sp, lineHeight = if (layout.compact) 56.sp else 76.sp, letterSpacing = 1.sp,
                 )
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Field(model.query, { model.query = it }, "検索", Modifier.weight(1f).focusRequester(focus), leading = { GlyphIcon(Glyph.SEARCH, p.muted) })
-                GlyphButton(Glyph.GEAR, "設定", { model.settingsOpen = true })
+            Column(Modifier.padding(bottom = 8.dp)) {
+                Text(SimpleDateFormat("yyyy.MM.dd", Locale.US).format(d), color = p.fg, fontSize = 14.sp, fontFamily = Hud.mono)
+                Text(SimpleDateFormat("EEE", Locale.US).format(d).uppercase(Locale.US) + " / " + SimpleDateFormat("E曜日", Locale.JAPAN).format(d), color = p.accent, fontSize = 12.sp, fontFamily = Hud.mono)
             }
+            if (!layout.compact && nextText != null) {
+                Readout("NEXT_EVENT", nextText, Modifier.weight(1f).padding(bottom = 8.dp).clickable(onClickLabel = "予定を開く") { calTab?.let { model.toggle(it.id) } }, accent = true)
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
+            if (!layout.compact) {
+                Column(Modifier.padding(bottom = 8.dp), horizontalAlignment = Alignment.End) {
+                    Text("THETA // HOME.HATCH", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, letterSpacing = 1.sp)
+                    Stripes(Modifier.width(96.dp).height(8.dp))
+                }
+            }
+        }
+        Ticks(Modifier.fillMaxWidth().height(6.dp))
+        if (layout.compact && nextText != null) {
+            Readout("NEXT_EVENT", nextText, Modifier.clickable(onClickLabel = "予定を開く") { calTab?.let { model.toggle(it.id) } }, accent = true)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Field(model.query, { model.query = it }, "SEARCH  検索", Modifier.weight(1f).focusRequester(focus), leading = { GlyphIcon(Glyph.SEARCH, p.accent) })
+            GlyphButton(Glyph.GEAR, "設定", { model.settingsOpen = true })
         }
     }
 }
-
-private val OkColor = Color(0xFF6FCF97)
 
 /** ネットワーク・Tailscale・NAS の状態。つながっていなければ、Tailscale を開く・再接続の手助けを出す。 */
 @Composable
@@ -162,34 +206,38 @@ private fun StatusStrip(model: HomeModel, openNasSettings: () -> Unit) {
     val p = LocalPalette.current
     val actions = LocalActions.current
     val s = model.status
+    /** 計器の 1 区画：左に状態の帯（白＝正常・オレンジ＝問題・灰＝不明）、項目名と値。 */
     @Composable
     fun chip(label: String, state: String, ok: Boolean?, onClick: () -> Unit) {
+        val bar = when (ok) { true -> p.fg; false -> p.accent; null -> p.faint }
         Row(
-            Modifier.clip(RoundedCornerShape(16.dp)).background(p.raised).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 7.dp),
+            Modifier.border(1.dp, if (ok == false) p.accent else p.line).clickable(onClick = onClick).height(IntrinsicSize.Min),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Dot(when (ok) { true -> OkColor; false -> p.accent; null -> p.faint })
-            Text("$label $state", color = p.fg, fontSize = 12.sp)
+            Box(Modifier.width(4.dp).fillMaxHeight().background(bar))
+            Column(Modifier.padding(horizontal = 10.dp, vertical = 5.dp)) {
+                Text(label, color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, letterSpacing = 1.5.sp)
+                Text(state, color = if (ok == false) p.accent else p.fg, fontSize = 13.sp, fontFamily = Hud.mono)
+            }
         }
     }
     val nasOk = s?.nas == Nas.OK
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            chip("ネット", if (s == null) "…" else if (s.network) "OK" else "なし", s?.network) { model.refreshStatus(force = true) }
-            chip("Tailscale", when {
-                s == null -> "…"
+            chip("NET", if (s == null) "----" else if (s.network) "ONLINE" else "OFFLINE", s?.network) { model.refreshStatus(force = true) }
+            chip("TAILSCALE", when {
+                s == null -> "----"
                 !s.tailscale -> "未導入"
-                s.vpn -> "オン"
-                else -> "オフ"
+                s.vpn -> "ON"
+                else -> "OFF"
             }, if (s == null || !s.tailscale) null else s.vpn) { openTailscale(actions) }
             chip("NAS", when {
-                model.checking -> "確認中"
-                s == null -> "…"
-                s.nas == Nas.OK -> "接続"
+                model.checking -> "SCAN…"
+                s == null -> "----"
+                s.nas == Nas.OK -> "LINKED"
                 s.nas == Nas.UNSET -> "未登録"
-                s.nas == Nas.AUTH -> "ログイン失敗"
-                else -> "届かない"
+                s.nas == Nas.AUTH -> "AUTH ERR"
+                else -> "NO LINK"
             }, if (s == null || s.nas == Nas.UNSET) null else nasOk) {
                 if (s?.nas == Nas.OK) model.openNas("") else openNasSettings()
             }
@@ -216,14 +264,15 @@ fun openTailscale(actions: Actions) {
 private fun Places(model: HomeModel, modifier: Modifier, openNasSettings: () -> Unit) {
     val p = LocalPalette.current
     Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        SectionTitle("場所", Modifier.padding(start = 10.dp, bottom = 4.dp))
+        SectionTitle("LOCATION / 場所", Modifier.padding(start = 4.dp, bottom = 6.dp))
+        var n = 0
         model.tabs.filter { it.kind == TabKind.FOLDER }.forEach { t ->
-            PlaceButton(t.label, if (t.nasPath != null) "NAS" else if (t.folderUri == null) "未割り当て" else "端末", isActive(model, t)) { model.showFolder(t) }
+            PlaceButton(++n, t.label, if (t.nasPath != null) "NAS" else if (t.folderUri == null) "未割り当て" else "LOCAL", isActive(model, t)) { model.showFolder(t) }
         }
-        PlaceButton("NAS", if (model.nas.configured()) "共有フォルダ" else "未登録", model.location == "nas" && model.nasTab == null) {
+        PlaceButton(++n, "NAS", if (model.nas.configured()) "SHARED" else "未登録", model.location == "nas" && model.nasTab == null) {
             if (model.nas.configured()) model.openNas("") else openNasSettings()
         }
-        PlaceButton("最近", "開いたファイル", model.location == "recent") { model.showRecent() }
+        PlaceButton(++n, "最近", "RECENT", model.location == "recent") { model.showRecent() }
         Gap(10.dp)
         Note("フォルダは端のタブとも同じ。設定でタブを増やせます。")
     }
@@ -233,16 +282,21 @@ private fun isActive(model: HomeModel, t: TabSpec) =
     model.location == "tab:${t.id}" || model.location == "nas" && model.nasTab == t.id
 
 @Composable
-private fun PlaceButton(title: String, sub: String, active: Boolean, onClick: () -> Unit) {
+private fun PlaceButton(index: Int, title: String, sub: String, active: Boolean, onClick: () -> Unit) {
     val p = LocalPalette.current
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(if (active) p.raised else Color.Transparent)
-            .clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 9.dp),
+        Modifier.fillMaxWidth().background(if (active) p.raised else Color.Transparent)
+            .border(1.dp, if (active) p.accent else Color.Transparent)
+            .clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Box(Modifier.width(3.dp).height(26.dp).background(if (active) p.accent else Color.Transparent))
-        TwoLines(title, sub, Modifier.weight(1f), bold = active)
+        Text("%02d".format(index), color = if (active) p.accent else p.faint, fontSize = 12.sp, fontFamily = Hud.mono)
+        Column(Modifier.weight(1f)) {
+            Text(title, color = if (active) p.accent else p.fg, fontSize = 18.sp, fontFamily = Hud.display, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(sub, color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, letterSpacing = 1.sp)
+        }
+        if (active) Box(Modifier.size(6.dp).background(p.accent))
     }
 }
 
@@ -254,7 +308,7 @@ private fun PlaceChips(model: HomeModel) {
         fun chip(label: String, active: Boolean, onClick: () -> Unit) {
             Text(
                 label, color = if (active) p.onAccent else p.fg, fontSize = 13.sp,
-                modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(if (active) p.accent else p.raised).clickable(onClick = onClick)
+                modifier = Modifier.clip(RoundedCornerShape(0.dp)).background(if (active) p.accent else p.raised).clickable(onClick = onClick)
                     .padding(horizontal = 14.dp, vertical = 8.dp),
             )
         }
@@ -418,7 +472,7 @@ private fun Listing(
                         onClick = { onTap(r) },
                         onLongClick = { menuFor = r.key },
                         label = if (r.isDir) "フォルダを開く" else "ファイルを開く",
-                        modifier = if (preview && selected?.key == r.key) Modifier.background(p.raised, RoundedCornerShape(12.dp)) else Modifier,
+                        modifier = if (preview && selected?.key == r.key) Modifier.background(p.raised, RoundedCornerShape(0.dp)) else Modifier,
                     ) {
                         Badge(r.badge, highlight = r.isDir)
                         TwoLines(r.name, if (r.isDir) null else listOfNotNull(if (r.modified > 0) shortTime(r.modified) else null, Files.sizeText(r.size)).joinToString(" · "), Modifier.weight(1f))
@@ -447,12 +501,16 @@ private fun Preview(model: HomeModel, r: Row?, modifier: Modifier) {
     val p = LocalPalette.current
     val actions = LocalActions.current
     val ctx = actions.activity
-    Column(modifier.clip(RoundedCornerShape(14.dp)).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(modifier.border(1.dp, p.line).corners(p.accent).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("PREVIEW", color = p.accent, fontSize = 11.sp, fontFamily = Hud.mono, letterSpacing = 2.sp)
+            Stripes(Modifier.weight(1f).height(6.dp), color = p.line)
+        }
         if (r == null) {
             Note("ファイルを選ぶと、ここに中身が出ます")
             return@Column
         }
-        Text(r.name, color = p.fg, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(r.name, color = p.fg, fontSize = 20.sp, fontFamily = Hud.display)
         Text(listOfNotNull(if (r.modified > 0) shortTime(r.modified) else null, Files.sizeText(r.size)).joinToString(" · "), color = p.muted, fontSize = 12.sp)
         val e = r.entry
         if (e != null && e.mime?.startsWith("image/") == true) {

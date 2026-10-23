@@ -3,13 +3,17 @@
 **背景（デスクトップ）にファイラーを置き、画面の端のタブでドロワーやウィジェットを切り替える** Android のホームアプリ。
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
-- 版：**0.3.0-alpha（versionCode 3）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.4.0-alpha（versionCode 4）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
 | Fold5 メイン：背景のファイラー | Hatch のドロワー | カバー画面 | タブレット |
 | --- | --- | --- | --- |
 | ![](docs/screenshots/fold5-main-filer.png) | ![](docs/screenshots/fold5-main-hatch.png) | ![](docs/screenshots/fold5-cover-filer.png) | ![](docs/screenshots/tablet-home.png) |
+
+## 見た目
+
+計器盤（HUD）風：黒地にオレンジ 1 色、細い線、四角い角。見出し・時計は Oswald、ラベル・数字は等幅の Share Tech Mono（同梱、SIL Open Font License、[docs/licenses](docs/licenses)）。日本語は端末の書体。設定の「グレーの配色」で明るい地にもできる。
 
 ## 画面の構成
 

@@ -78,14 +78,16 @@ fun DrawerFrame(model: HomeModel, id: String, docked: Boolean) {
         1 -> "WIDGET"
         else -> "LAUNCH"
     }
+    val code = if (t != null) "%02d".format(model.tabs.indexOf(t) + 1) else "W%02d".format(model.widgetTabs.indexOf(w) + 1)
     Column(Modifier.fillMaxSize()) {
+        Stripes(Modifier.fillMaxWidth().height(5.dp), color = p.group(group))
         Row(
-            Modifier.fillMaxWidth().padding(start = 22.dp, end = 8.dp, top = 18.dp, bottom = 10.dp),
+            Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 14.dp, bottom = 6.dp),
             verticalAlignment = Alignment.Top,
         ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(kicker, color = p.group(group), fontSize = 11.sp, letterSpacing = 2.sp)
-                Text(title, color = p.fg, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Column(Modifier.weight(1f)) {
+                Text("[ $kicker ] // $code", color = p.group(group), fontSize = 11.sp, letterSpacing = 2.sp, fontFamily = Hud.mono)
+                Text(title, color = p.fg, fontSize = 30.sp, fontFamily = Hud.display, lineHeight = 36.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (docked) {
                 GlyphButton(Glyph.PIN, "ピン留めを外す", { model.unpin(id) }, filled = true)
@@ -94,6 +96,7 @@ fun DrawerFrame(model: HomeModel, id: String, docked: Boolean) {
             }
             if (!docked) GlyphButton(Glyph.CLOSE, "閉じる", { model.close() })
         }
+        Ticks(Modifier.fillMaxWidth().padding(horizontal = 20.dp).height(6.dp))
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (w != null) {
@@ -178,7 +181,7 @@ private fun CalendarDrawer(model: HomeModel) {
                     Column(
                         Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(0.dp))
                             .background(if (on) p.accent else p.raised)
                             .clickable(onClickLabel = "この日の予定") { day = i }
                             .padding(vertical = 8.dp),
@@ -471,7 +474,7 @@ private fun copy(ctx: Context, text: String) {
 @Composable
 fun Card(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val p = LocalPalette.current
-    Box(modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).border(1.dp, p.line, RoundedCornerShape(14.dp))) { content() }
+    Box(modifier.fillMaxWidth().clip(RoundedCornerShape(0.dp)).border(1.dp, p.line, RoundedCornerShape(0.dp))) { content() }
 }
 
 @Composable
@@ -481,7 +484,7 @@ fun Divider() {
 
 @Composable
 fun Dot(color: Color) {
-    Box(Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).background(color))
+    Box(Modifier.size(8.dp).clip(RoundedCornerShape(0.dp)).background(color))
 }
 
 @Composable

@@ -16,6 +16,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.material3.Text
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -256,7 +259,7 @@ private fun Rail(model: HomeModel, width: Dp) {
             Modifier
                 .width(40.dp)
                 .height(44.dp)
-                .clip(if (left) RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp) else RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp))
+                .clip(if (left) RoundedCornerShape(0.dp) else RoundedCornerShape(0.dp))
                 .background(p.raised)
                 .combinedClickable(role = Role.Button, onClick = { adding = true })
                 .semantics { contentDescription = "ウィジェットのタブを追加" },
@@ -279,12 +282,12 @@ private fun shortcut(model: HomeModel, t: TabSpec) = t.kind.key?.let { "Alt+$it"
 private fun RailTab(model: HomeModel, id: String, label: String, group: Int, active: Boolean, shortcut: String?, left: Boolean) {
     val p = LocalPalette.current
     val groupColor = p.group(group)
-    val shape = if (left) RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp) else RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
+    val code = model.tabs.indexOfFirst { it.id == id }.let { if (it >= 0) "%02d".format(it + 1) else "W" + (model.widgetTabs.indexOfFirst { w -> "w:${w.id}" == id } + 1) }
     Box(
         Modifier
             .width(40.dp)
-            .clip(shape)
-            .background(if (active) p.accent else p.raised)
+            .background(if (active) p.accent else p.bg)
+            .border(1.dp, if (active) p.accent else p.line)
             .combinedClickable(role = Role.Tab, onClick = { model.toggle(id) })
             .semantics {
                 contentDescription = label + (shortcut?.let { "（$it）" } ?: "")
@@ -295,10 +298,12 @@ private fun RailTab(model: HomeModel, id: String, label: String, group: Int, act
             Modifier
                 .align(if (left) Alignment.CenterEnd else Alignment.CenterStart)
                 .width(3.dp)
-                .height(28.dp)
-                .background(groupColor),
+                .height(20.dp)
+                .background(if (active) p.onAccent else groupColor),
         )
-        Box(Modifier.padding(vertical = 12.dp).align(Alignment.Center)) {
+        Column(Modifier.padding(top = 4.dp, bottom = 10.dp).align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(code, color = if (active) p.onAccent else p.faint, fontSize = 9.sp, fontFamily = Hud.mono)
+            Gap(4.dp)
             VerticalLabel(label, if (active) p.onAccent else p.fg)
         }
     }

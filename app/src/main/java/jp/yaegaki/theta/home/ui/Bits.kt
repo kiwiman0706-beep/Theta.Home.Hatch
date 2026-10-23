@@ -44,6 +44,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
+import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
 
 /** 押せる行。長押しも受ける。最低 48dp の高さ。 */
 @OptIn(ExperimentalFoundationApi::class)
@@ -59,7 +62,6 @@ fun RowButton(
         modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 48.dp)
-            .clip(RoundedCornerShape(12.dp))
             .combinedClickable(onClick = onClick, onLongClick = onLongClick, onClickLabel = label, role = Role.Button)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -68,7 +70,7 @@ fun RowButton(
     )
 }
 
-/** 枠線だけの小さなボタン。primary はアクセント色で塗る。 */
+/** 角を 1 つ落とした矩形のボタン。primary はオレンジで塗る。 */
 @Composable
 fun PillButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = false, enabled: Boolean = true) {
     val p = LocalPalette.current
@@ -81,14 +83,14 @@ fun PillButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier,
     Box(
         modifier
             .defaultMinSize(minHeight = 40.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(Chamfer)
             .background(bg)
-            .border(1.dp, if (primary) p.accent else p.line, RoundedCornerShape(20.dp))
+            .border(1.dp, if (primary) p.accent else p.line, Chamfer)
             .combinedClickableCompat(enabled, onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = fg, fontSize = 13.sp, fontWeight = if (primary) FontWeight.Bold else FontWeight.Normal)
+        Text(text, color = fg, fontSize = 13.sp, fontFamily = Hud.mono, letterSpacing = 0.5.sp)
     }
 }
 
@@ -103,11 +105,12 @@ fun Badge(text: String, highlight: Boolean = false) {
     Box(
         Modifier
             .width(46.dp)
-            .border(1.dp, if (highlight) p.accent else p.line, RoundedCornerShape(6.dp))
+            .background(if (highlight) p.accent else Color.Transparent)
+            .border(1.dp, if (highlight) p.accent else p.line)
             .padding(vertical = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = if (highlight) p.accent else p.muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Text(text, color = if (highlight) p.onAccent else p.muted, fontSize = 11.sp, fontFamily = Hud.mono, maxLines = 1)
     }
 }
 
@@ -115,16 +118,21 @@ fun Badge(text: String, highlight: Boolean = false) {
 fun Initial(text: String, size: Dp = 40.dp) {
     val p = LocalPalette.current
     Box(
-        Modifier.size(size).clip(CircleShape).background(p.raised).border(1.dp, p.line, CircleShape),
+        Modifier.size(size).background(p.raised).border(1.dp, p.line).corners(p.accent, 6.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(text, color = p.fg, fontSize = (size.value * 0.38f).sp)
     }
 }
 
+/** 見出し：オレンジの小さな四角＋等幅の文字。 */
 @Composable
 fun SectionTitle(text: String, modifier: Modifier = Modifier) {
-    Text(text, color = LocalPalette.current.muted, fontSize = 12.sp, letterSpacing = 1.5.sp, modifier = modifier)
+    val p = LocalPalette.current
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(Modifier.size(6.dp).background(p.accent))
+        Text(text, color = p.muted, fontSize = 12.sp, letterSpacing = 1.5.sp, fontFamily = Hud.mono)
+    }
 }
 
 @Composable
@@ -158,7 +166,7 @@ fun Field(
         value = value,
         onValueChange = onChange,
         singleLine = singleLine,
-        textStyle = TextStyle(color = p.fg, fontSize = 15.sp),
+        textStyle = TextStyle(color = p.fg, fontSize = 15.sp, fontFamily = Hud.mono),
         cursorBrush = SolidColor(p.accent),
         visualTransformation = if (password) androidx.compose.ui.text.input.PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
         modifier = modifier.onFocusChanged { onFocus?.invoke(it.isFocused) },
@@ -167,9 +175,9 @@ fun Field(
                 Modifier
                     .fillMaxWidth()
                     .defaultMinSize(minHeight = 48.dp)
-                    .clip(RoundedCornerShape(if (singleLine) 24.dp else 14.dp))
+                    .clip(Chamfer)
                     .background(p.raised)
-                    .border(1.dp, p.line, RoundedCornerShape(if (singleLine) 24.dp else 14.dp))
+                    .border(1.dp, p.line, Chamfer)
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = if (singleLine) Alignment.CenterVertically else Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -190,7 +198,7 @@ fun VerticalLabel(text: String, color: Color, fontSize: Int = 13) {
     val ascii = text.all { it.code < 128 }
     if (ascii) {
         Text(
-            text, color = color, fontSize = fontSize.sp, maxLines = 1, letterSpacing = 1.sp,
+            text, color = color, fontSize = fontSize.sp, maxLines = 1, letterSpacing = 1.5.sp, fontFamily = Hud.mono,
             modifier = Modifier
                 .layout { measurable, constraints ->
                     val placeable = measurable.measure(constraints.copy(minWidth = 0, maxWidth = constraints.maxHeight, minHeight = 0))
@@ -221,23 +229,23 @@ fun GlyphIcon(g: Glyph, color: Color, size: Dp = 18.dp) {
 
 private fun DrawScope.drawGlyph(g: Glyph, color: Color) {
     val w = size.width
-    val s = Stroke(width = w * 0.11f, cap = StrokeCap.Round)
+    val s = Stroke(width = w * 0.09f, cap = StrokeCap.Square)
     when (g) {
         Glyph.SEARCH -> {
             drawCircle(color, radius = w * 0.3f, center = Offset(w * 0.44f, w * 0.44f), style = s)
-            drawLine(color, Offset(w * 0.66f, w * 0.66f), Offset(w * 0.9f, w * 0.9f), s.width, StrokeCap.Round)
+            drawLine(color, Offset(w * 0.66f, w * 0.66f), Offset(w * 0.9f, w * 0.9f), s.width, StrokeCap.Square)
         }
         Glyph.CLOSE -> {
-            drawLine(color, Offset(w * 0.22f, w * 0.22f), Offset(w * 0.78f, w * 0.78f), s.width, StrokeCap.Round)
-            drawLine(color, Offset(w * 0.78f, w * 0.22f), Offset(w * 0.22f, w * 0.78f), s.width, StrokeCap.Round)
+            drawLine(color, Offset(w * 0.22f, w * 0.22f), Offset(w * 0.78f, w * 0.78f), s.width, StrokeCap.Square)
+            drawLine(color, Offset(w * 0.78f, w * 0.22f), Offset(w * 0.22f, w * 0.78f), s.width, StrokeCap.Square)
         }
         Glyph.BACK -> {
-            drawLine(color, Offset(w * 0.62f, w * 0.18f), Offset(w * 0.3f, w * 0.5f), s.width, StrokeCap.Round)
-            drawLine(color, Offset(w * 0.3f, w * 0.5f), Offset(w * 0.62f, w * 0.82f), s.width, StrokeCap.Round)
+            drawLine(color, Offset(w * 0.62f, w * 0.18f), Offset(w * 0.3f, w * 0.5f), s.width, StrokeCap.Square)
+            drawLine(color, Offset(w * 0.3f, w * 0.5f), Offset(w * 0.62f, w * 0.82f), s.width, StrokeCap.Square)
         }
         Glyph.PLUS -> {
-            drawLine(color, Offset(w * 0.5f, w * 0.18f), Offset(w * 0.5f, w * 0.82f), s.width, StrokeCap.Round)
-            drawLine(color, Offset(w * 0.18f, w * 0.5f), Offset(w * 0.82f, w * 0.5f), s.width, StrokeCap.Round)
+            drawLine(color, Offset(w * 0.5f, w * 0.18f), Offset(w * 0.5f, w * 0.82f), s.width, StrokeCap.Square)
+            drawLine(color, Offset(w * 0.18f, w * 0.5f), Offset(w * 0.82f, w * 0.5f), s.width, StrokeCap.Square)
         }
         Glyph.PIN -> {
             val path = Path().apply {
@@ -245,7 +253,7 @@ private fun DrawScope.drawGlyph(g: Glyph, color: Color) {
                 lineTo(w * 0.78f, w * 0.58f); lineTo(w * 0.22f, w * 0.58f); lineTo(w * 0.4f, w * 0.42f); close()
             }
             drawPath(path, color, style = s)
-            drawLine(color, Offset(w * 0.5f, w * 0.58f), Offset(w * 0.5f, w * 0.9f), s.width, StrokeCap.Round)
+            drawLine(color, Offset(w * 0.5f, w * 0.58f), Offset(w * 0.5f, w * 0.9f), s.width, StrokeCap.Square)
         }
         Glyph.GEAR -> {
             drawCircle(color, radius = w * 0.16f, center = Offset(w / 2, w / 2), style = s)
@@ -254,7 +262,7 @@ private fun DrawScope.drawGlyph(g: Glyph, color: Color) {
                 val c = Offset(w / 2, w / 2)
                 val o1 = Offset(c.x + (w * 0.3f * Math.cos(a)).toFloat(), c.y + (w * 0.3f * Math.sin(a)).toFloat())
                 val o2 = Offset(c.x + (w * 0.44f * Math.cos(a)).toFloat(), c.y + (w * 0.44f * Math.sin(a)).toFloat())
-                drawLine(color, o1, o2, s.width, StrokeCap.Round)
+                drawLine(color, o1, o2, s.width, StrokeCap.Square)
             }
         }
     }
@@ -268,7 +276,6 @@ fun GlyphButton(g: Glyph, label: String, onClick: () -> Unit, tint: Color? = nul
     Box(
         Modifier
             .size(44.dp)
-            .clip(CircleShape)
             .background(if (filled) p.accent else Color.Transparent)
             .combinedClickable(onClick = onClick, onClickLabel = label, role = Role.Button)
             .semantics { contentDescription = label },
@@ -287,10 +294,69 @@ fun DashedBox(text: String, modifier: Modifier = Modifier) {
     Box(
         modifier
             .fillMaxWidth()
-            .border(1.dp, p.line, RoundedCornerShape(12.dp))
+            .border(1.dp, p.line)
+            .corners(p.accent, 10.dp)
             .padding(14.dp)
             .widthIn(max = 600.dp),
     ) {
         Text(text, color = p.muted, fontSize = 12.sp, lineHeight = 19.sp)
+    }
+}
+
+/** 左上だけ角を落とした形（計器のパネル風）。 */
+val Chamfer = CutCornerShape(topStart = 8.dp)
+
+/** 四隅にかぎ括弧（⌜ ⌝ ⌞ ⌟）を描く。 */
+fun Modifier.corners(color: Color, length: Dp = 12.dp, width: Dp = 1.5.dp) = drawWithContent {
+    drawContent()
+    val l = length.toPx()
+    val w = width.toPx()
+    val r = size.width
+    val b = size.height
+    listOf(
+        Offset(0f, 0f) to Offset(l, 0f), Offset(0f, 0f) to Offset(0f, l),
+        Offset(r, 0f) to Offset(r - l, 0f), Offset(r, 0f) to Offset(r, l),
+        Offset(0f, b) to Offset(l, b), Offset(0f, b) to Offset(0f, b - l),
+        Offset(r, b) to Offset(r - l, b), Offset(r, b) to Offset(r, b - l),
+    ).forEach { (a, c) -> drawLine(color, a, c, w) }
+}
+
+/** 斜線の帯（警告テープ風）。 */
+@Composable
+fun Stripes(modifier: Modifier, color: Color = LocalPalette.current.accent, gap: Dp = 7.dp) {
+    Canvas(modifier.clipToBounds()) {
+        val step = gap.toPx()
+        val w = step * 0.45f
+        var x = -size.height
+        while (x < size.width) {
+            drawLine(color, Offset(x, size.height), Offset(x + size.height, 0f), w)
+            x += step
+        }
+    }
+}
+
+/** 小さな計器の読み：上に灰色の項目名、下に値。 */
+@Composable
+fun Readout(label: String, value: String, modifier: Modifier = Modifier, accent: Boolean = false) {
+    val p = LocalPalette.current
+    Column(modifier) {
+        Text(label, color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, letterSpacing = 1.sp)
+        Text(value, color = if (accent) p.accent else p.fg, fontSize = 14.sp, fontFamily = Hud.mono)
+    }
+}
+
+/** 目盛り：細い縦線を等間隔に。 */
+@Composable
+fun Ticks(modifier: Modifier, color: Color = LocalPalette.current.line, every: Dp = 6.dp) {
+    Canvas(modifier) {
+        val step = every.toPx()
+        var x = 0f
+        var i = 0
+        while (x <= size.width) {
+            val h = if (i % 5 == 0) size.height else size.height * 0.5f
+            drawLine(color, Offset(x, size.height), Offset(x, size.height - h), 1f)
+            x += step
+            i++
+        }
     }
 }

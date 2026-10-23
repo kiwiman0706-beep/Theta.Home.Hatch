@@ -64,7 +64,7 @@ private fun HatchRow(model: HomeModel, a: HatchApp, s: HatchStatus) {
             a.releasesUrl != null -> actions.start(Intent(Intent.ACTION_VIEW, Uri.parse(a.releasesUrl)))
         }
     }) {
-        Box(Modifier.size(40.dp).border(1.dp, p.line, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(40.dp).border(1.dp, p.line, RoundedCornerShape(0.dp)), contentAlignment = Alignment.Center) {
             Text(a.short, color = p.muted, fontSize = 13.sp)
         }
         TwoLines(a.name, sub, Modifier.weight(1f))
