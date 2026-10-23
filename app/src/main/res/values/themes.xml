@@ -10,5 +10,11 @@
         <item name="android:windowNoDisplay">true</item>
     </style>
 
+    <!-- 他のアプリの上に確認だけ出す（ショートカットの置き場所を選ぶ） -->
+    <style name="Theme.HomeHatch.Overlay" parent="android:Theme.Translucent.NoTitleBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">true</item>
+    </style>
+
     <color name="home_bg">#FF0D0E10</color>
 </resources>

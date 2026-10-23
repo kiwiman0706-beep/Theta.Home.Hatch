@@ -256,15 +256,29 @@ val LocalIconLook = androidx.compose.runtime.staticCompositionLocalOf { IconLook
 @Composable
 fun AppIcon(app: AppEntry, size: Dp) {
     val ctx = LocalActions.current.activity
+    val px = with(LocalDensity.current) { size.roundToPx() }
+    LookIcon(app.key, app.label, size) { Apps.icon(ctx, app, maxOf(px, 192)) }
+}
+
+/** アプリのショートカット（LINE のトークルームなど）のアイコン。置いたときに保存した絵を、アプリと同じ見た目で。 */
+@Composable
+fun ShortcutIcon(sc: jp.yaegaki.theta.home.data.PinnedShortcut, size: Dp) {
+    val ctx = LocalActions.current.activity
+    LookIcon("sc:" + sc.id, sc.label, size) { jp.yaegaki.theta.home.data.Shortcuts.icon(ctx, sc.id) }
+}
+
+/** アイコンを、設定の見た目（そのまま・モノクロ・ツートーン）で描く。key は簡易加工の型を使い回すため。 */
+@Composable
+fun LookIcon(key: String, label: String, size: Dp, load: () -> android.graphics.Bitmap?) {
+    val ctx = LocalActions.current.activity
     val look = LocalIconLook.current
     val p = LocalPalette.current
-    val px = with(LocalDensity.current) { size.roundToPx() }
-    val icon by produceState<android.graphics.Bitmap?>(null, app.key, look) {
+    val icon by produceState<android.graphics.Bitmap?>(null, key, look) {
         value = withContext(Dispatchers.IO) {
-            val original = Apps.icon(ctx, app, maxOf(px, 192)) ?: return@withContext null
+            val original = load() ?: return@withContext null
             when (look.mode) {
-                IconStyle.GEMINI -> IconStyle.cached(ctx, app.key) ?: IconStyle.localMaskCached(app.key, original)
-                IconStyle.LOCAL -> IconStyle.localMaskCached(app.key, original)
+                IconStyle.GEMINI -> IconStyle.cached(ctx, key) ?: IconStyle.localMaskCached(key, original)
+                IconStyle.LOCAL -> IconStyle.localMaskCached(key, original)
                 else -> original
             }
         }
@@ -279,6 +293,6 @@ fun AppIcon(app: AppEntry, size: Dp) {
     val inset = if (look.mode == IconStyle.LOCAL || look.mode == IconStyle.GEMINI) 0.dp else 8.dp
     Box(Modifier.size(size).border(1.dp, p.line), contentAlignment = Alignment.Center) {
         icon?.let { Image(it.asImageBitmap(), contentDescription = null, colorFilter = filter, modifier = Modifier.size(size - inset)) }
-            ?: Text(app.label.take(1), color = p.fg, fontSize = (size.value * 0.4f).sp)
+            ?: Text(label.take(1), color = p.fg, fontSize = (size.value * 0.4f).sp)
     }
 }

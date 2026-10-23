@@ -1,5 +1,6 @@
 package jp.yaegaki.theta.home.ui
 
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.material3.TextButton
@@ -212,7 +213,14 @@ private fun Overlay(model: HomeModel, layout: Layout, available: Dp) {
                 },
         )
     }
-    Box(Modifier.fillMaxSize(), contentAlignment = if (fromRight) Alignment.CenterEnd else Alignment.CenterStart) {
+    // ウィジェットのタブは中身の高さだけの小さなパネル（上寄せ）。ほかは縦いっぱい
+    val small = shown != SETTINGS && model.widgetTab(shown) != null
+    Box(Modifier.fillMaxSize(), contentAlignment = when {
+        small && fromRight -> Alignment.TopEnd
+        small -> Alignment.TopStart
+        fromRight -> Alignment.CenterEnd
+        else -> Alignment.CenterStart
+    }) {
         AnimatedVisibility(
             visible = visibleId != null,
             enter = slideInHorizontally(tween(280)) { if (fromRight) it else -it },
@@ -221,7 +229,7 @@ private fun Overlay(model: HomeModel, layout: Layout, available: Dp) {
             Box(
                 Modifier
                     .width(if (shown == SETTINGS) layout.drawerWidth else drawerWidth(model, shown, layout, available))
-                    .fillMaxHeight()
+                    .then(if (small) Modifier.padding(top = 8.dp).wrapContentHeight() else Modifier.fillMaxHeight())
                     .background(p.panel)
                     .pointerInput(fromRight) {
                         var total = 0f

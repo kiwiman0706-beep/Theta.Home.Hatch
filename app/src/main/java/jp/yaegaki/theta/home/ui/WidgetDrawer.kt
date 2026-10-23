@@ -44,78 +44,81 @@ import jp.yaegaki.theta.home.HomeApp
 import jp.yaegaki.theta.home.HomeModel
 import jp.yaegaki.theta.home.MainActivity
 import jp.yaegaki.theta.home.data.WidgetTab
+import jp.yaegaki.theta.home.data.WidgetCell
+import androidx.compose.foundation.layout.Row
 
 private fun profileName(p: String) = if (p == "wide") "開いた画面" else "閉じた画面"
 
-/** ウィジェット 1 つのタブ。角をなぞって大きさを変える。大きさはこの画面（閉じた／開いた）だけに効く。 */
+/**
+ * ウィジェットのタブ。ウィジェットを縦に何個でも並べられる。
+ * ふだんはウィジェットだけ。編集（見出しの歯車）にすると、角をなぞって大きさ・上へ下へ・外す・足す・取り込む。
+ * 大きさはこの画面（閉じた／開いた）だけに効く。
+ */
 @Composable
-fun WidgetTabDrawer(model: HomeModel, t: WidgetTab) {
+fun WidgetTabDrawer(model: HomeModel, t: WidgetTab, editing: Boolean) {
+    var adding by remember { mutableStateOf(false) }
+    var importing by remember { mutableStateOf(false) }
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        t.cells.forEachIndexed { i, c -> WidgetCellView(model, t, c, i, editing) }
+        if (editing) FlowRow2 {
+            PillButton("＋ ウィジェットを足す", { adding = true }, primary = true)
+            PillButton("${profileName(model.otherProfile())}から取り込む", { importing = true })
+        }
+    }
+    if (adding) AddWidgetDialog(model, intoTab = t.id) { adding = false }
+    if (importing) ImportWidgetsDialog(model) { importing = false }
+}
+
+@Composable
+private fun WidgetCellView(model: HomeModel, t: WidgetTab, c: WidgetCell, index: Int, editing: Boolean) {
     val p = LocalPalette.current
-    val actions = LocalActions.current
-    val activity = actions.activity
+    val activity = LocalActions.current.activity
     val host = (activity.application as HomeApp).widgets
     val density = LocalDensity.current.density
     val config = LocalConfiguration.current
     val maxW = config.screenWidthDp - 46 - 16
     val maxH = config.screenHeightDp - 160
-    var w by remember(t.id) { mutableIntStateOf(t.w) }
-    var h by remember(t.id) { mutableIntStateOf(t.h) }
-    var renaming by remember { mutableStateOf(false) }
-    var importing by remember { mutableStateOf(false) }
-    val info = host.info(t.id)
+    var w by remember(c.id, c.w) { mutableIntStateOf(c.w) }
+    var h by remember(c.id, c.h) { mutableIntStateOf(c.h) }
+    val info = host.info(c.id)
     // ドロワーは端に付いているので、角を内側（画面の中央側）へなぞると広がる
     val grow = if (model.railLeft) 1 else -1
-
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (info == null) {
             Note("このウィジェットは使えなくなりました（アプリが消えたなど）。")
         } else {
             Box(Modifier.size(w.dp, h.dp)) {
                 AndroidView(
-                    factory = { host.view(activity, t.id)!! },
+                    factory = { host.view(activity, c.id)!! },
                     update = { v -> resize(v, w, h) },
                     modifier = Modifier.fillMaxSize(),
                 )
-                Box(
+                if (editing) Box(
                     Modifier
                         .align(if (model.railLeft) Alignment.BottomEnd else Alignment.BottomStart)
                         .size(40.dp)
                         .clip(RoundedCornerShape(0.dp))
                         .background(p.accent.copy(alpha = 0.85f))
                         .semantics { contentDescription = "なぞって大きさを変える" }
-                        .pointerInput(t.id, grow) {
-                            detectDragGestures(onDragEnd = { model.updateWidgetTab(t.copy(w = w, h = h)) }) { change, drag ->
+                        .pointerInput(c.id, grow) {
+                            detectDragGestures(onDragEnd = { model.updateWidgetCell(t.id, c.copy(w = w, h = h)) }) { change, drag ->
                                 change.consume()
                                 w = (w + grow * drag.x / density).toInt().coerceIn(120, maxW.coerceAtLeast(120))
                                 h = (h + drag.y / density).toInt().coerceIn(80, maxH.coerceAtLeast(80))
-                                model.resizeLive(t.id, w)
+                                model.resizeLive(c.id, w)
                             }
                         },
                     contentAlignment = Alignment.Center,
                 ) { Text("⤡", color = p.onAccent, fontSize = 18.sp) }
             }
-            Text("${w} × ${h} dp（${profileName(model.profile)}の大きさ）", color = p.faint, fontSize = 11.sp)
         }
-        FlowRow2 {
-            PillButton("名前", { renaming = true })
-            PillButton("左へ", { model.moveWidgetTab(t.id, -1) })
-            PillButton("右へ", { model.moveWidgetTab(t.id, 1) })
-            PillButton("このタブを外す", { model.removeWidgetTab(t.id) })
-            PillButton("${profileName(model.otherProfile())}から取り込む", { importing = true })
+        if (editing) Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("${info?.let { host.label(it) } ?: "?"}  ${w}×${h}", color = p.faint, fontSize = 11.sp, fontFamily = Hud.mono, modifier = Modifier.weight(1f))
+            if (index > 0) TextButton(onClick = { model.moveWidgetCell(t.id, c.id, -1) }) { Text("▲", color = p.fg) }
+            if (index < t.cells.lastIndex) TextButton(onClick = { model.moveWidgetCell(t.id, c.id, 1) }) { Text("▼", color = p.fg) }
+            TextButton(onClick = { model.removeWidgetCell(t.id, c.id) }) { Text("外す", color = p.accent) }
         }
     }
-
-    if (renaming) {
-        var name by remember { mutableStateOf(t.label) }
-        AlertDialog(
-            onDismissRequest = { renaming = false },
-            title = { Text("タブの名前") },
-            text = { Field(name, { name = it.take(10) }, "短い名前") },
-            confirmButton = { TextButton(onClick = { model.updateWidgetTab(t.copy(label = name.ifBlank { t.label }, w = w, h = h)); renaming = false }) { Text("保存") } },
-            dismissButton = { TextButton(onClick = { renaming = false }) { Text("やめる") } },
-        )
-    }
-    if (importing) ImportWidgetsDialog(model) { importing = false }
 }
 
 private fun resize(v: AppWidgetHostView, w: Int, h: Int) {
@@ -129,7 +132,7 @@ private fun resize(v: AppWidgetHostView, w: Int, h: Int) {
 
 /** ウィジェットを選んで、この画面のタブに足す。割り当ての許可と、必要ならウィジェットの設定画面を通る。 */
 @Composable
-fun AddWidgetDialog(model: HomeModel, onDismiss: () -> Unit) {
+fun AddWidgetDialog(model: HomeModel, intoTab: Int = -1, onDismiss: () -> Unit) {
     val actions = LocalActions.current
     val activity = actions.activity
     val app = activity.application as HomeApp
@@ -153,6 +156,7 @@ fun AddWidgetDialog(model: HomeModel, onDismiss: () -> Unit) {
     }
 
     fun add(info: AppWidgetProviderInfo) {
+        app.store.pendingWidgetTab = intoTab
         val id = runCatching { host.allocate() }.getOrElse {
             actions.toast("ウィジェットを用意できませんでした（${it.javaClass.simpleName}）")
             return
@@ -170,7 +174,7 @@ fun AddWidgetDialog(model: HomeModel, onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("ウィジェットのタブを追加（${profileName(model.profile)}）") },
+        title = { Text(if (intoTab == -1) "ウィジェットのタブを追加（${profileName(model.profile)}）" else "このタブにウィジェットを足す") },
         text = {
             if (providers.isEmpty()) Text("置けるウィジェットが見つかりませんでした。", color = LocalPalette.current.muted, fontSize = 14.sp)
             else LazyColumn(Modifier.heightIn(max = 460.dp)) {

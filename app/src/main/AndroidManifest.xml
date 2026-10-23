@@ -89,6 +89,18 @@
             </intent-filter>
         </activity>
 
+        <!-- ほかのアプリの「ホーム画面に追加」（ショートカット）を受けて、置くタブを選ぶ -->
+        <activity
+            android:name=".PinShortcutActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.HomeHatch.Overlay">
+            <intent-filter>
+                <action android:name="android.content.pm.action.CONFIRM_PIN_SHORTCUT" />
+            </intent-filter>
+        </activity>
+
         <!-- 共有メニューの「Clip に保存」 -->
         <activity
             android:name=".ShareToClipActivity"

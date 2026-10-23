@@ -1,5 +1,8 @@
 package jp.yaegaki.theta.home.ui
 
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.heightIn
 import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -85,16 +88,20 @@ fun DrawerFrame(model: HomeModel, id: String, docked: Boolean) {
         else -> "LAUNCH"
     }
     val code = if (t != null) "%02d".format(model.tabs.indexOf(t) + 1) else "W%02d".format(model.widgetTabs.indexOf(w) + 1)
-    Column(Modifier.fillMaxSize()) {
-        Stripes(Modifier.fillMaxWidth().height(5.dp), color = p.group(group))
+    // ウィジェットのタブは中身の高さだけ（ピン留めしたときは縦いっぱい）
+    val wrap = w != null && !docked
+    var editing by remember(id) { mutableStateOf(false) }
+    Column(if (wrap) Modifier.fillMaxWidth() else Modifier.fillMaxSize()) {
+        Stripes(Modifier.fillMaxWidth().height(4.dp), color = p.group(group))
+        // 見出しは 1 行：[ 種類 ] // 番号  名前  （編集）（ピン）（閉じる）
         Row(
-            Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 14.dp, bottom = 6.dp),
-            verticalAlignment = Alignment.Top,
+            Modifier.fillMaxWidth().padding(start = 14.dp, end = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Column(Modifier.weight(1f)) {
-                Text("[ $kicker ] // $code", color = p.group(group), fontSize = 11.sp, letterSpacing = 2.sp, fontFamily = Hud.mono)
-                Text(title, color = p.fg, fontSize = 30.sp, fontFamily = Hud.display, lineHeight = 36.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
+            Text("[$kicker]·$code", color = p.group(group), fontSize = 10.sp, letterSpacing = 1.sp, fontFamily = Hud.mono)
+            Text(title, color = p.fg, fontSize = 18.sp, fontFamily = Hud.display, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            if (w != null) GlyphButton(Glyph.GEAR, if (editing) "編集を終える" else "大きさ・並び・足す", { editing = !editing }, filled = editing)
             if (docked) {
                 GlyphButton(Glyph.PIN, "ピン留めを外す", { model.unpin(id) }, filled = true)
             } else if (layout.maxDocked > 0) {
@@ -102,11 +109,10 @@ fun DrawerFrame(model: HomeModel, id: String, docked: Boolean) {
             }
             if (!docked) GlyphButton(Glyph.CLOSE, "閉じる", { model.close() })
         }
-        Ticks(Modifier.fillMaxWidth().padding(horizontal = 20.dp).height(6.dp))
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-        Box(Modifier.weight(1f).fillMaxWidth()) {
+        Box(if (wrap) Modifier.fillMaxWidth() else Modifier.weight(1f).fillMaxWidth()) {
             if (w != null) {
-                WidgetTabDrawer(model, w)
+                WidgetTabDrawer(model, w, editing)
                 return@Box
             }
             when (t!!.kind) {
@@ -283,9 +289,10 @@ private fun PeopleDrawer(model: HomeModel) {
 /** アプリの一覧。カテゴリーごとに並べ、上の札で絞り込む。未分類があれば仕分けガイドへ。 */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AppMenu(model: HomeModel, app: jp.yaegaki.theta.home.data.AppEntry, expanded: Boolean, close: () -> Unit, move: () -> Unit) {
+private fun AppMenu(model: HomeModel, app: jp.yaegaki.theta.home.data.AppEntry, expanded: Boolean, close: () -> Unit, shortcuts: () -> Unit, move: () -> Unit) {
     val actions = LocalActions.current
     DropdownMenu(expanded = expanded, onDismissRequest = close) {
+        DropdownMenuItem(text = { Text("ショートカット（タブに置く）") }, onClick = { close(); shortcuts() })
         DropdownMenuItem(text = { Text("カテゴリーを変える") }, onClick = { close(); move() })
         DropdownMenuItem(text = { Text("アプリ情報") }, onClick = { actions.start(Apps.infoIntent(app.packageName)); close() })
         if (!Apps.isSystem(actions.activity, app.packageName)) {
@@ -295,6 +302,45 @@ private fun AppMenu(model: HomeModel, app: jp.yaegaki.theta.home.data.AppEntry, 
             DropdownMenuItem(text = { Text("アイコンを Gemini で作り直す") }, onClick = { close(); model.clearGeminiIcons(app); model.startGeminiIcons(app) })
         }
     }
+}
+
+@Composable
+private fun ShortcutMenu(model: HomeModel, sc: jp.yaegaki.theta.home.data.PinnedShortcut, expanded: Boolean, close: () -> Unit, rename: () -> Unit) {
+    DropdownMenu(expanded = expanded, onDismissRequest = close) {
+        DropdownMenuItem(text = { Text("名前を変える") }, onClick = { close(); rename() })
+        DropdownMenuItem(text = { Text("このショートカットを外す") }, onClick = { close(); model.removeShortcut(sc.id) })
+    }
+}
+
+/** アプリの持っているショートカット。押すと開き、「置く」でこのカテゴリーのタブに置く。既定のホームのときだけ読める。 */
+@Composable
+private fun AppShortcutsDialog(model: HomeModel, app: jp.yaegaki.theta.home.data.AppEntry, catId: String, onDismiss: () -> Unit) {
+    val p = LocalPalette.current
+    val ctx = LocalActions.current.activity
+    val ok = remember { jp.yaegaki.theta.home.data.Shortcuts.available(ctx) }
+    val list = remember(app.packageName) { if (ok) jp.yaegaki.theta.home.data.Shortcuts.forApp(ctx, app.packageName) else emptyList() }
+    val target = catId.ifEmpty { model.appCategories[app.key].orEmpty() }
+    val targetName = model.categories.firstOrNull { it.id == target }?.name ?: "未分類"
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(app.label) },
+        text = {
+            Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                when {
+                    !ok -> Text("ショートカットは、このアプリを既定のホームにすると使えます。", color = p.muted, fontSize = 13.sp)
+                    list.isEmpty() -> Text("このアプリにはショートカットがありません。LINE のトークルームなどは、そのアプリの「ホーム画面に追加」からも置けます。", color = p.muted, fontSize = 13.sp, lineHeight = 19.sp)
+                    else -> Text("「置く」で「$targetName」のタブに。LINE のトークルームなどは、そのアプリの「ホーム画面に追加」でも置けます。", color = p.muted, fontSize = 12.sp, lineHeight = 18.sp)
+                }
+                list.forEachIndexed { zi, s ->
+                    RowButton(zebra = zi, onClick = { jp.yaegaki.theta.home.data.Shortcuts.start(ctx, s); onDismiss() }) {
+                        Text(jp.yaegaki.theta.home.data.Shortcuts.label(s), color = p.fg, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        PillButton("置く", { model.addShortcut(s, target); onDismiss() })
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("閉じる") } },
+    )
 }
 
 /** アプリの一覧の大きさ（S・M・L・XL）ごとのアイコンの辺と、グリッドの 1 マスの幅。 */
@@ -325,7 +371,11 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
     val groups = (model.categories.map { c -> c.id to c.name } + ("" to "未分類"))
         .filter { (id, _) -> filter == null || filter == id }
         .map { (id, name) -> Triple(id, name, model.ordered(id, visible.filter { (model.appCategories[it.key] ?: "") == id || id == "" && model.categoryOf(it) == null }.distinct())) }
-        .filter { it.third.isNotEmpty() }
+        .filter { g -> g.third.isNotEmpty() || model.shortcuts.any { it.catId == g.first } }
+    val shortcutsOf = { catId: String -> model.shortcuts.filter { it.catId == catId && (q.isBlank() || it.label.contains(q, ignoreCase = true)) } }
+    var scMenu by remember { mutableStateOf<String?>(null) }
+    var scRenaming by remember { mutableStateOf<jp.yaegaki.theta.home.data.PinnedShortcut?>(null) }
+    var shortcutsFor by remember { mutableStateOf<Pair<jp.yaegaki.theta.home.data.AppEntry, String>?>(null) }
 
     DrawerList {
         item {
@@ -363,10 +413,11 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
             }
         }
         groups.forEach { (id, name, list) ->
+            val scs = shortcutsOf(id)
             item(key = "h:$id") {
                 Row(Modifier.padding(top = 10.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionTitle(name)
-                    Text("%02d".format(list.size), color = p.faint, fontSize = 11.sp)
+                    Text("%02d".format(list.size + scs.size), color = p.faint, fontSize = 11.sp)
                     Ticks(Modifier.weight(1f).height(5.dp))
                 }
             }
@@ -390,11 +441,52 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
                                 Text(app.label, color = p.fg, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(horizontal = 2.dp))
                             }
-                            AppMenu(model, app, menuFor == app.key, { menuFor = null }) { moving = app }
+                            AppMenu(model, app, menuFor == app.key, { menuFor = null }, { shortcutsFor = app to id }) { moving = app }
+                        }
+                    }
+                    // 置いたショートカット（LINE のトークルームなど）。アプリと同じマスに、角に小さな印
+                    scs.forEach { sc ->
+                        Box(Modifier.zIndex(if (reorder.dragging == "sc:" + sc.id) 10f else 0f)) {
+                            Column(
+                                Modifier.width(appCell[spec.size])
+                                    .reorderable(reorder, "sc:" + sc.id, "sc:$id", p.accent, onMenu = { scMenu = sc.id }) { from, to -> model.moveShortcutTo(from.removePrefix("sc:"), to.removePrefix("sc:")) }
+                                    .combinedClickable(onClick = { model.launchShortcut(sc) }, onLongClick = {}, onClickLabel = "開く")
+                                    .padding(vertical = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Box {
+                                    ShortcutIcon(sc, appIcon[spec.size])
+                                    Box(Modifier.align(Alignment.BottomEnd).size(10.dp).background(p.accent))
+                                }
+                                Text(sc.label, color = p.fg, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(horizontal = 2.dp))
+                            }
+                            ShortcutMenu(model, sc, scMenu == sc.id, { scMenu = null }) { scRenaming = sc }
                         }
                     }
                 }
-            } else list.forEachIndexed { zi, app ->
+            } else {
+                scs.forEachIndexed { zi, sc ->
+                    item(key = "sc:$id:${sc.id}") {
+                        Box(Modifier.zIndex(if (reorder.dragging == "sc:" + sc.id) 10f else 0f)) {
+                            RowButton(
+                                zebra = list.size + zi,
+                                onClick = { model.launchShortcut(sc) },
+                                onLongClick = {},
+                                label = "開く",
+                                modifier = Modifier.reorderable(reorder, "sc:" + sc.id, "sc:$id", p.accent, onMenu = { scMenu = sc.id }) { from, to -> model.moveShortcutTo(from.removePrefix("sc:"), to.removePrefix("sc:")) },
+                            ) {
+                                ShortcutIcon(sc, listIcon[spec.size])
+                                Text(sc.label, color = p.fg, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                Text("SHORTCUT", color = p.faint, fontSize = 9.sp, fontFamily = Hud.mono)
+                            }
+                            ShortcutMenu(model, sc, scMenu == sc.id, { scMenu = null }) { scRenaming = sc }
+                        }
+                    }
+                }
+            }
+            if (!spec.grid) list.forEachIndexed { zi, app ->
                 item(key = "$id:${app.key}") {
                     Box(Modifier.zIndex(if (reorder.dragging == app.key) 10f else 0f)) {
                         RowButton(
@@ -408,7 +500,7 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
                             Text(app.label, color = p.fg, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                             CountBadge(counts[app.packageName] ?: 0, Modifier)
                         }
-                        AppMenu(model, app, menuFor == app.key, { menuFor = null }) { moving = app }
+                        AppMenu(model, app, menuFor == app.key, { menuFor = null }, { shortcutsFor = app to id }) { moving = app }
                     }
                 }
             }
@@ -435,6 +527,17 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
         item { Note("長押しして動かすと並べ替え、動かさずに離すと「カテゴリーを変える」「アンインストール」など。") }
     }
 
+    shortcutsFor?.let { (app, catId) -> AppShortcutsDialog(model, app, catId) { shortcutsFor = null } }
+    scRenaming?.let { sc ->
+        var name by remember(sc.id) { mutableStateOf(sc.label) }
+        AlertDialog(
+            onDismissRequest = { scRenaming = null },
+            title = { Text("ショートカットの名前") },
+            text = { Field(name, { name = it.take(20) }, "名前") },
+            confirmButton = { TextButton(onClick = { model.renameShortcut(sc.id, name); scRenaming = null }, enabled = name.isNotBlank()) { Text("保存") } },
+            dismissButton = { TextButton(onClick = { scRenaming = null }) { Text("やめる") } },
+        )
+    }
     moving?.let { app ->
         var creating by remember { mutableStateOf("") }
         AlertDialog(

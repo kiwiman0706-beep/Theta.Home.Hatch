@@ -42,6 +42,7 @@ import jp.yaegaki.theta.home.nas.Nas
 import jp.yaegaki.theta.home.drive.GDrive
 import android.app.PendingIntent
 import jp.yaegaki.theta.home.data.WidgetTab
+import jp.yaegaki.theta.home.data.WidgetCell
 import jp.yaegaki.theta.home.data.Category
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -994,6 +995,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         folderViews = store.folderViews()
         queries = store.queries()
         appOrder = store.appOrder()
+        shortcuts = store.shortcuts()
         widgetTabs = store.widgetTabs(profile)
         folders.clear()
         open = null
@@ -1070,7 +1072,50 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         liveWidth[id] = w
     }
 
-    fun widgetWidth(t: WidgetTab) = liveWidth[t.id] ?: t.w
+    /** ドロワーの幅：中のウィジェットでいちばん広いもの。 */
+    fun widgetWidth(t: WidgetTab) = t.cells.maxOf { liveWidth[it.id] ?: it.w }
+
+    /** タブの中のウィジェット 1 つの大きさを変える。 */
+    fun updateWidgetCell(tabId: Int, cell: WidgetCell) {
+        liveWidth.remove(cell.id)
+        val t = widgetTabs.firstOrNull { it.id == tabId } ?: return
+        t.withCells(t.cells.map { if (it.id == cell.id) cell else it })?.let { n -> saveWidgetTabs(widgetTabs.map { if (it.id == tabId) n else it }) }
+    }
+
+    /** タブの中で上へ・下へ。1 つ目が入れ替わるとタブの id も変わるので、開いているドロワーも付け替える。 */
+    fun moveWidgetCell(tabId: Int, cellId: Int, delta: Int) {
+        val t = widgetTabs.firstOrNull { it.id == tabId } ?: return
+        val list = t.cells.toMutableList()
+        val i = list.indexOfFirst { it.id == cellId }
+        val j = i + delta
+        if (i < 0 || j !in list.indices) return
+        list.add(j, list.removeAt(i))
+        replaceWidgetTab(t, t.withCells(list))
+    }
+
+    /** タブの中のウィジェットを 1 つ外す。最後の 1 つならタブごと外す。 */
+    fun removeWidgetCell(tabId: Int, cellId: Int) {
+        val t = widgetTabs.firstOrNull { it.id == tabId } ?: return
+        val rest = t.cells.filter { it.id != cellId }
+        if (rest.isEmpty()) {
+            removeWidgetTab(tabId)
+            return
+        }
+        replaceWidgetTab(t, t.withCells(rest))
+        if (otherWidgetTabs().none { o -> o.cells.any { it.id == cellId } }) (ctx as HomeApp).widgets.release(cellId)
+    }
+
+    private fun replaceWidgetTab(old: WidgetTab, new: WidgetTab?) {
+        new ?: return
+        saveWidgetTabs(widgetTabs.map { if (it.id == old.id) new else it })
+        val o = "w:${old.id}"
+        val n = "w:${new.id}"
+        if (o != n) {
+            if (open == o) open = n
+            if (lastOpened == o) lastOpened = n
+            docked = docked.map { if (it == o) n else it }
+        }
+    }
 
     fun updateWidgetTab(t: WidgetTab) {
         liveWidth.remove(t.id)
@@ -1115,6 +1160,57 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         store.saveAppOrder(appOrder)
     }
 
+    // ---- アプリのショートカット（カテゴリーのタブに置く） ----
+
+    var shortcuts by mutableStateOf(store.shortcuts()); private set
+
+    /** ショートカットをカテゴリーに置く。固定（pin）もここでする。 */
+    fun addShortcut(info: android.content.pm.ShortcutInfo, catId: String) {
+        val sc = jp.yaegaki.theta.home.data.PinnedShortcut(Store.newId(), info.`package`, info.id, jp.yaegaki.theta.home.data.Shortcuts.label(info), catId)
+        jp.yaegaki.theta.home.data.Shortcuts.saveIcon(ctx, info, sc.id)
+        shortcuts = shortcuts.filter { !(it.packageName == sc.packageName && it.shortcutId == sc.shortcutId && it.catId == catId) } + sc
+        store.saveShortcuts(shortcuts)
+        repin(sc.packageName)
+        iconVersion++
+    }
+
+    /** ほかのアプリの「ホーム画面に追加」で受け取ったもの（固定は受け取った時点で済んでいる）。 */
+    fun reloadShortcuts() {
+        shortcuts = store.shortcuts()
+        iconVersion++
+    }
+
+    fun removeShortcut(id: String) {
+        val sc = shortcuts.firstOrNull { it.id == id } ?: return
+        shortcuts = shortcuts.filter { it.id != id }
+        store.saveShortcuts(shortcuts)
+        jp.yaegaki.theta.home.data.Shortcuts.iconFile(ctx, id).delete()
+        repin(sc.packageName)
+    }
+
+    fun renameShortcut(id: String, label: String) {
+        if (label.isBlank()) return
+        shortcuts = shortcuts.map { if (it.id == id) it.copy(label = label.trim()) else it }
+        store.saveShortcuts(shortcuts)
+    }
+
+    fun moveShortcutTo(from: String, to: String) {
+        val i = shortcuts.indexOfFirst { it.id == from }
+        val j = shortcuts.indexOfFirst { it.id == to }
+        if (i < 0 || j < 0 || i == j) return
+        shortcuts = shortcuts.toMutableList().also { it.add(j, it.removeAt(i)) }
+        store.saveShortcuts(shortcuts)
+    }
+
+    fun launchShortcut(sc: jp.yaegaki.theta.home.data.PinnedShortcut) {
+        if (!jp.yaegaki.theta.home.data.Shortcuts.start(ctx, sc)) (ctx as HomeApp).toast("開けませんでした（このアプリが既定のホームのときだけ開けます）")
+    }
+
+    /** そのアプリについて、置いているショートカットだけを固定にしておく。 */
+    private fun repin(pkg: String) {
+        jp.yaegaki.theta.home.data.Shortcuts.setPinned(ctx, pkg, shortcuts.filter { it.packageName == pkg }.map { it.shortcutId }.distinct())
+    }
+
     fun moveWidgetTab(id: Int, delta: Int) {
         val i = widgetTabs.indexOfFirst { it.id == id }
         val j = i + delta
@@ -1124,10 +1220,12 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     /** この画面のタブから外す。もう一方の画面でも使っていなければウィジェット自体を削除する。 */
     fun removeWidgetTab(id: Int) {
+        val t = widgetTabs.firstOrNull { it.id == id }
         saveWidgetTabs(widgetTabs.filter { it.id != id })
         if (open == "w:$id") open = null
         docked = docked - "w:$id"
-        if (otherWidgetTabs().none { it.id == id }) (ctx as HomeApp).widgets.release(id)
+        val others = otherWidgetTabs().flatMap { o -> o.cells.map { it.id } }.toSet()
+        t?.cells?.filter { it.id !in others }?.forEach { (ctx as HomeApp).widgets.release(it.id) }
     }
 
     /** もう一方の画面のウィジェットを取り込む。replace なら今の設定と置き換える。 */
@@ -1139,7 +1237,17 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             return
         }
         val d = ctx.resources.displayMetrics.density
-        addWidgetTab(WidgetTab(id, host.label(info), (info.minWidth / d).toInt().coerceIn(200, 600), (info.minHeight / d).toInt().coerceIn(120, 600)))
+        val cell = WidgetCell(id, (info.minWidth / d).toInt().coerceIn(200, 600), (info.minHeight / d).toInt().coerceIn(120, 600))
+        // 既にあるタブに足す途中なら、その下に並べる
+        val into = store.pendingWidgetTab.also { store.pendingWidgetTab = -1 }
+        val t = widgetTabs.firstOrNull { it.id == into }
+        if (t != null) {
+            saveWidgetTabs(widgetTabs.map { if (it.id == into) it.copy(extra = it.extra + cell) else it })
+            open = "w:${t.id}"
+            lastOpened = open
+            return
+        }
+        addWidgetTab(WidgetTab(id, host.label(info), cell.w, cell.h))
     }
 
     fun importWidgets(replace: Boolean) {
@@ -1147,7 +1255,10 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         val before = widgetTabs
         val next = if (replace) other else before + other.filter { o -> before.none { it.id == o.id } }
         saveWidgetTabs(next)
-        if (replace) before.filter { b -> next.none { it.id == b.id } }.forEach { (ctx as HomeApp).widgets.release(it.id) }
+        if (replace) {
+            val kept = next.flatMap { t -> t.cells.map { it.id } }.toSet()
+            before.flatMap { it.cells }.filter { it.id !in kept }.forEach { (ctx as HomeApp).widgets.release(it.id) }
+        }
         if (open?.startsWith("w:") == true && widgetTab(open) == null) open = null
     }
 

@@ -48,8 +48,19 @@ data class TabSpec(val id: String, val kind: TabKind, val label: String, val fol
 /** アプリのカテゴリー（仕分け先）。 */
 data class Category(val id: String, val name: String)
 
-/** ウィジェット 1 つ分のタブ。w・h は dp。 */
-data class WidgetTab(val id: Int, val label: String, val w: Int, val h: Int)
+/** タブの中のウィジェット 1 つ。w・h は dp。 */
+data class WidgetCell(val id: Int, val w: Int, val h: Int)
+
+/**
+ * ウィジェットのタブ。1 つ目のウィジェットの id がタブの id（"w:<id>"）。2 つ目からは extra に縦に並べる。
+ * w・h は 1 つ目の大きさ（dp）。
+ */
+data class WidgetTab(val id: Int, val label: String, val w: Int, val h: Int, val extra: List<WidgetCell> = emptyList()) {
+    val cells: List<WidgetCell> get() = listOf(WidgetCell(id, w, h)) + extra
+
+    /** cells から作り直す（1 つ目が消えたときは 2 つ目がタブの id になる）。 */
+    fun withCells(list: List<WidgetCell>): WidgetTab? = list.firstOrNull()?.let { f -> copy(id = f.id, w = f.w, h = f.h, extra = list.drop(1)) }
+}
 
 data class RecentFile(val uri: String, val name: String, val mime: String?, val where: String, val time: Long)
 
@@ -205,12 +216,21 @@ class Store(context: Context) {
     /** profile は "narrow"（Fold5 カバー・Titan など幅 600dp 未満）か "wide"。 */
     fun widgetTabs(profile: String): List<WidgetTab> {
         migrateWidgets()
-        return objects("wtabs_$profile") { WidgetTab(it.getInt("id"), it.getString("label"), it.getInt("w"), it.getInt("h")) }
+        return objects("wtabs_$profile") {
+            val extra = it.optJSONArray("extra")?.let { a -> (0 until a.length()).map { i -> a.getJSONObject(i).let { c -> WidgetCell(c.getInt("id"), c.getInt("w"), c.getInt("h")) } } }.orEmpty()
+            WidgetTab(it.getInt("id"), it.getString("label"), it.getInt("w"), it.getInt("h"), extra)
+        }
     }
 
     fun saveWidgetTabs(profile: String, list: List<WidgetTab>) = putObjects("wtabs_$profile", list) {
         JSONObject().put("id", it.id).put("label", it.label).put("w", it.w).put("h", it.h)
+            .put("extra", JSONArray(it.extra.map { c -> JSONObject().put("id", c.id).put("w", c.w).put("h", c.h) }))
     }
+
+    /** ウィジェットを足している途中のタブ（設定画面から戻ったときに使う）。-1 なら新しいタブ。 */
+    var pendingWidgetTab: Int
+        get() = prefs.getInt("pendingWidgetTab", -1)
+        set(v) = prefs.edit().putInt("pendingWidgetTab", v).apply()
 
     /** 0.2.0 の「Widget」タブにあったウィジェットを、両方の画面のタブへ移す。 */
     private fun migrateWidgets() {
@@ -272,6 +292,14 @@ class Store(context: Context) {
 
     fun saveAppOrder(map: Map<String, List<String>>) =
         prefs.edit().putString("appOrder", JSONObject(map.mapValues { JSONArray(it.value) }).toString()).apply()
+
+    fun shortcuts(): List<PinnedShortcut> = objects("shortcuts") {
+        PinnedShortcut(it.getString("id"), it.getString("pkg"), it.getString("sid"), it.getString("label"), it.optString("cat"))
+    }
+
+    fun saveShortcuts(list: List<PinnedShortcut>) = putObjects("shortcuts", list) {
+        JSONObject().put("id", it.id).put("pkg", it.packageName).put("sid", it.shortcutId).put("label", it.label).put("cat", it.catId)
+    }
 
     fun recents(): List<RecentFile> = objects("recents") {
         RecentFile(it.getString("uri"), it.getString("name"), it.optString("mime").ifEmpty { null }, it.getString("where"), it.getLong("time"))
