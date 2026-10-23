@@ -1,31 +1,68 @@
-# THETA Home Hatch
+# Theta Home Hatch
 
-画面の端のタブでウィジェットや道具を切り替え、**背景（デスクトップ）にはファイラーを置く** Android のホームアプリ。
-スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして整理された形で置く。
+**背景（デスクトップ）にファイラーを置き、画面の端のタブでドロワーやウィジェットを切り替える** Android のホームアプリ。
+スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
-- 版：**0.1.1-alpha（versionCode 2）**／package `com.theta.homehatch`／Android 8.0（API 26）以上
-- 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2
-- 土台：ChatGPT で作った 0.1.0-alpha（ネイティブ Java、Android 標準の View）。0.1.1 はそれを標準の Gradle 手順でビルドし直したもので、**機能は 0.1.0 と同じ**
-- **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（`./gradlew :app:testDebugUnitTest` → `app/build/screenshots/`）
+- 版：**0.3.0-alpha（versionCode 3）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
+- **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
-使い方は [はじめに.txt](はじめに.txt)、ChatGPT 版の説明は [docs/CHATGPT_README.md](docs/CHATGPT_README.md)、これからの計画は [docs/PLAN.md](docs/PLAN.md)。
+| Fold5 メイン：背景のファイラー | Hatch のドロワー | カバー画面 | タブレット |
+| --- | --- | --- | --- |
+| ![](docs/screenshots/fold5-main-filer.png) | ![](docs/screenshots/fold5-main-hatch.png) | ![](docs/screenshots/fold5-cover-filer.png) | ![](docs/screenshots/tablet-home.png) |
+
+## 画面の構成
+
+- **背景＝ファイラー**：上に時計・次の予定・検索、ネットワーク／Tailscale／NAS の状態。下に場所（フォルダのタブ・NAS・最近）とファイルの一覧。幅 860dp 以上では選んだファイルの中身（画像・文字）を右に出す。
+- **端のタブ**
+  - フォルダのタブ（仕事・個人・写真、追加可）：押すと**背景のファイラーがそのフォルダに切り替わる**。端末のフォルダ（SAF）か NAS のフォルダを割り当てる。
+  - 予定・メール・LINE・人・アプリ・栞・Clip・記録・Hatch：**ファイラーの上にスライドイン**するドロワー。
+  - ウィジェット：**1 タブに 1 つ**。下の「＋」で足す。角をなぞって大きさを変えられ、ドロワーの幅もウィジェットに合わせる。並びと大きさは**閉じた画面（幅 600dp 未満）と開いた画面で別々**。もう一方の画面の設定を「置き換える／今のタブに足す」で取り込める（ウィジェットのドロワー内か設定から）。
+- ピン留め：Fold5 メイン（690dp 以上）で 1 枚、横向きタブレット（1180dp 以上）で 2 枚、ドロワーを横に並べて出しておける。
+
+## NAS と Tailscale
+
+DSBooks と同じく、Synology の DSM File Station API でつなぐ（設定 →「NAS を登録」、またはファイラーの NAS）。外出先からは Tailscale 経由のアドレス（100.x.x.x や 〇〇.ts.net）を入れる。
+
+- 状態の表示：ネット（端末の回線）、Tailscale（VPN がオンか・未導入か）、NAS（接続・届かない・ログイン失敗・未登録）。回線が変わったときとアプリに戻ったときに調べ直す。
+- つながらないときは理由を分けて案内し、「Tailscale を開く」「再接続」を出す。Tailscale を勝手にオンにはしない。VPN が無いだけで Tailscale がオフとは断定しない。
+- NAS の中を辿り、開く・共有のときは端末へ取得してから渡す（取得したものは新しい 30 個だけ残す）。NAS のフォルダを長押し →「〇〇のタブにする」で、フォルダのタブに割り当てられる。
+- パスワードは端末の鍵（Android Keystore）で暗号化して保存。2 段階認証のアカウントには未対応。
+- Tailscale 経由の http を通すため、平文の通信を許可している（Tailscale の通信路自体は暗号化されている）。
+
+## そのほか
+
+| ドロワー | 内容 |
+| --- | --- |
+| 予定 | 端末のカレンダーから 7 日分 |
+| メール・LINE | 通知へのアクセスを許可すると、届いた通知を並べ、押すとその画面（LINE なら該当トーク）を開く |
+| 人 | 連絡先。電話・メール・LINE・詳細 |
+| アプリ | アイコンなしの文字の一覧 |
+| 栞・Clip | URL の登録、共有メニューの「Clip に保存」で受け取る一時置き場 |
+| 記録 | 録音・写真・動画・手書き（S ペン優先・筆圧・消しゴム）・テキスト |
+| Hatch | シリーズの起動、GitHub Releases から取得 → SHA-256 照合 → インストール確認画面へ |
+
+物理キーボード：Alt＋1〜9 でフォルダのタブ、Alt＋C 予定・M メール・L LINE・P 人・A アプリ・B 栞・X Clip・R 記録・H Hatch。ホームで文字を打つとすぐ検索、Esc で閉じる。
 
 ## 入れ方
 
-ChatGPT 版 0.1.0 とは署名の鍵が違うため、**上書きできません。0.1.0 を一度アンインストールしてから**入れてください（アプリ内の録音・手書きなどの記録も消えるので、必要なものは先に「書き出す」）。
+1. APK を端末で開いてインストール（「提供元不明のアプリ」の許可が必要）。0.2.0 を入れていれば上書きできる（同じ鍵）。
+2. まず普通のアプリとして開き、フォルダのタブにフォルダを割り当て、NAS を登録して動きを確かめる。
+3. 設定 →「既定のホームにする」。
 
 ## ビルド
 
-`./gradlew :app:assembleDebug`（Android SDK Platform 36 / Build Tools 35.0.0、Java 17 以上）。
-
-- テスト・lint・画面の見本：`./gradlew :app:testDebugUnitTest :app:lintDebug`
-- リリース署名：リポジトリの外に置いた鍵の情報を `keystore.properties`（gitignore 済み）に書いて `./gradlew :app:assembleRelease`。**鍵と鍵の情報はコミットしない。**
+`./gradlew :app:assembleDebug`。テスト・lint・画面の見本は `./gradlew :app:testDebugUnitTest :app:lintDebug`（見本は `app/build/screenshots/`）。リリース署名はリポジトリの外の鍵を `keystore.properties`（gitignore 済み）で渡して `./gradlew :app:assembleRelease`。**鍵と鍵の情報はコミットしない。**
 
 ## 構成
 
 | 場所 | 内容 |
 | --- | --- |
-| `app/src/main/java/com/theta/homehatch/MainActivity.java` | ホーム・ファイラー・タブ・ドロワー・記録・ウィジェット |
-| `…/RecordingService.java` | 録音（通知に停止ボタン） |
-| `…/CaptureProvider.java` | 記録ファイルをほかのアプリへ渡す |
-| `reference/` | ChatGPT 版の調査メモ（参考動画 4 本の分析）とモックアップ |
+| `app/src/main/java/jp/yaegaki/theta/home/` | `HomeModel`（状態）、`MainActivity`、`ShareToClipActivity` |
+| `…/ui/Filer.kt` | 背景のファイラー、状態表示、NAS の登録 |
+| `…/ui/HomeRoot.kt` | 端のタブ、ドロワーのスライドイン、ピン留め |
+| `…/ui/WidgetDrawer.kt` | 1 タブ 1 ウィジェット、大きさの変更、取り込み |
+| `…/nas/` | Synology への接続（`Nas.java`）、パスワードの暗号化（`Secret.java`） |
+| `…/data/`・`capture/`・`notify/`・`hatch/`・`widgets/` | フォルダ・予定・連絡先、記録、通知、Hatch、ウィジェットのホスト |
+| `docs/PLAN.md` | 経緯と計画 |
+| `reference/` | ChatGPT 版 0.1.0-alpha のソース・調査メモ・モックアップ（参照用） |

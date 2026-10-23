@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <files-path name="capture" path="Capture/" />
+    <files-path name="clip" path="Clip/" />
+    <cache-path name="nas" path="nas/" />
+</paths>
