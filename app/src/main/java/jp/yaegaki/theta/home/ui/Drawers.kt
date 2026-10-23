@@ -1,5 +1,12 @@
 package jp.yaegaki.theta.home.ui
 
+import androidx.compose.foundation.horizontalScroll
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.heightIn
@@ -257,12 +264,28 @@ private fun PeopleDrawer(model: HomeModel) {
     var q by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf<Long?>(null) }
     val list = model.people.filter { q.isBlank() || it.name.contains(q, ignoreCase = true) }
+    val favorites = list.filter { it.starred }
     DrawerList {
         item { Field(q, { q = it }, "名前で絞り込み", Modifier.padding(bottom = 8.dp)) }
+        // スター付きの人は、顔写真を大きめに横へ並べる
+        if (favorites.isNotEmpty()) item(key = "fav") {
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                favorites.forEach { f ->
+                    Column(
+                        Modifier.width(72.dp).clickable(onClickLabel = "電話・メールなど") { expanded = if (expanded == f.id) null else f.id },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Face(f, 64.dp, highlight = expanded == f.id)
+                        Text(f.name, color = p.fg, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
         itemsIndexed(list, key = { _, it -> it.id }) { zi, person ->
             Column {
                 RowButton(zebra = zi, onClick = { expanded = if (expanded == person.id) null else person.id }) {
-                    Initial(person.initial)
+                    Face(person, 44.dp)
                     TwoLines(person.name, listOfNotNull(person.phone, person.email).joinToString(" · ").ifEmpty { null }, Modifier.weight(1f))
                     if (person.starred) Text("★", color = p.accent, fontSize = 13.sp)
                 }
@@ -282,6 +305,29 @@ private fun PeopleDrawer(model: HomeModel) {
         }
         if (list.isEmpty()) item { Note("連絡先がありません") }
     }
+}
+
+/** 連絡先の顔写真。無ければ頭文字。 */
+@Composable
+private fun Face(person: jp.yaegaki.theta.home.data.Person, size: androidx.compose.ui.unit.Dp, highlight: Boolean = false) {
+    val p = LocalPalette.current
+    val ctx = LocalActions.current.activity
+    val photo by produceState<android.graphics.Bitmap?>(null, person.photo) {
+        value = person.photo?.let { uri ->
+            withContext(Dispatchers.IO) {
+                runCatching { ctx.contentResolver.openInputStream(Uri.parse(uri))?.use { android.graphics.BitmapFactory.decodeStream(it) } }.getOrNull()
+            }
+        }
+    }
+    val b = photo
+    if (b == null) {
+        Initial(person.initial, size)
+        return
+    }
+    Image(
+        b.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Crop,
+        modifier = Modifier.size(size).border(if (highlight) 2.dp else 1.dp, if (highlight) p.accent else p.line).corners(p.accent, 6.dp),
+    )
 }
 
 // ---- アプリ ----

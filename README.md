@@ -4,7 +4,7 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**0.14.0-alpha（versionCode 16）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.14.1-alpha（versionCode 17）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
@@ -112,7 +112,7 @@ DSBooks と同じく、Synology の DSM File Station API でつなぐ（設定 �
 | --- | --- |
 | 予定 | 端末のカレンダーから 7 日分 |
 | メール・LINE | 通知へのアクセスを許可すると、届いた通知を並べ、押すとその画面（LINE なら該当トーク）を開く |
-| 人 | 連絡先。電話・メール・LINE・詳細 |
+| 人 | 連絡先（顔写真つき、スター付きは上に大きく）。電話・メール・LINE・詳細 |
 | アプリ | アイコンなしの文字の一覧 |
 | 栞・Clip | URL の登録、共有メニューの「Clip に保存」で受け取る一時置き場 |
 | 記録 | 録音・写真・動画・手書き（S ペン優先・筆圧・消しゴム）・テキスト |

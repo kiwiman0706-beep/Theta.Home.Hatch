@@ -12,6 +12,8 @@ data class Person(
     val starred: Boolean,
     val phone: String?,
     val email: String?,
+    /** 連絡先の顔写真（小さい版）。無ければ null。 */
+    val photo: String? = null,
 ) {
     val initial: String get() = name.trim().take(1).ifEmpty { "?" }
 }
@@ -28,6 +30,7 @@ object Contacts {
             ContactsContract.Contacts.LOOKUP_KEY,
             ContactsContract.Contacts.DISPLAY_NAME_PRIMARY,
             ContactsContract.Contacts.STARRED,
+            ContactsContract.Contacts.PHOTO_THUMBNAIL_URI,
         )
         cr.query(
             ContactsContract.Contacts.CONTENT_URI, cols,
@@ -36,7 +39,7 @@ object Contacts {
         )?.use { c ->
             while (c.moveToNext() && people.size < limit) {
                 val id = c.getLong(0)
-                people[id] = Person(id, c.getString(1) ?: "", c.getString(2) ?: "", c.getInt(3) == 1, null, null)
+                people[id] = Person(id, c.getString(1) ?: "", c.getString(2) ?: "", c.getInt(3) == 1, null, null, c.getString(4))
             }
         }
         if (people.isEmpty()) return emptyList()
