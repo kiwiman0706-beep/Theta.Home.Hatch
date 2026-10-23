@@ -108,7 +108,11 @@ class MainActivity : ComponentActivity() {
         if (requestCode == REQ_WIDGET_CONFIGURE) {
             val id = (application as HomeApp).store.pendingWidget
             if (id == -1) return
-            if (resultCode == RESULT_OK) model.addWidget(id) else widgets.release(id)
+            if (resultCode == RESULT_OK) model.addWidget(id)
+            else {
+                widgets.release(id)
+                (application as HomeApp).toast("ウィジェットの設定をやめたので、置きませんでした")
+            }
             (application as HomeApp).store.pendingWidget = -1
         }
     }

@@ -44,6 +44,7 @@ fun SettingsPanel(model: HomeModel) {
     var renaming by remember { mutableStateOf<TabSpec?>(null) }
     var adding by remember { mutableStateOf(false) }
     var nasDialog by remember { mutableStateOf(false) }
+    var addingWidget by remember { mutableStateOf(false) }
     var driveDialog by remember { mutableStateOf(false) }
     var importing by remember { mutableStateOf(false) }
     var sorting by remember { mutableStateOf(false) }
@@ -227,17 +228,13 @@ fun SettingsPanel(model: HomeModel) {
                 }
             }
             item {
-                Box {
-                    FlowRow2 { PillButton("＋ タブを追加", { adding = true }) }
-                    DropdownMenu(expanded = adding, onDismissRequest = { adding = false }) {
-                        TabKind.entries.forEach { k ->
-                            DropdownMenuItem(text = { Text(k.defaultLabel) }, onClick = { adding = false; model.addTab(k) })
-                        }
-                    }
-                }
+                FlowRow2 { PillButton("＋ タブを追加", { adding = true }) }
+                if (adding) AddTabDialog(model, onWidget = { adding = false; addingWidget = true }) { adding = false }
+                if (addingWidget) AddWidgetDialog(model) { addingWidget = false }
                 Gap(18.dp)
                 Note("物理キーボード：Alt＋1〜9 でフォルダのタブ、Alt＋C 予定・M メール・L LINE・P 人・A アプリ・B 栞・X Clip・R 記録・H Hatch。ホームで文字を打つとすぐ検索、Esc で閉じる。")
-                Note("ウィジェットのタブは、端のタブの下の「＋」で足します。並びと大きさは閉じた画面と開いた画面で別々です。")
+                Note("タブは端のタブの下の「＋」でも足せます（ウィジェット・アプリのカテゴリー・フォルダ・ドロワー）。長押しで並べ替え・名前・外す。ウィジェットの並びと大きさは閉じた画面と開いた画面で別々です。")
+                Note("アプリの一覧は、画面上部の検索の横のボタン（Alt＋A）で開きます。")
                 Note("Theta Home Hatch ${BuildConfigInfo.versionName(actions.activity)}")
             }
         }

@@ -22,6 +22,8 @@ enum class TabKind(val group: Int, val defaultLabel: String, val key: Char?) {
     CLIP(2, "CLIP", 'X'),
     CAPTURE(2, "CAPTURE", 'R'),
     HATCH(2, "HATCH", 'H'),
+    /** アプリのカテゴリー 1 つ分のアプリ。TabSpec.folderUri にカテゴリーの id を入れる。 */
+    CATEGORY(2, "CATEGORY", null),
 }
 
 /** folderUri は端末のフォルダ（SAF のツリー URI）か、NAS のフォルダ（"nas:" ＋ パス）。 */
@@ -88,7 +90,7 @@ class Store(context: Context) {
 
     fun tabs(): List<TabSpec> {
         val raw = prefs.getString("tabs", null) ?: return defaultTabs()
-        return runCatching {
+        val list = runCatching {
             val a = JSONArray(raw)
             // 0.2.0 の「Widget」タブ（複数を縦に並べる）のような、今は無い種類は読み飛ばす
             (0 until a.length()).mapNotNull { i ->
@@ -103,6 +105,12 @@ class Store(context: Context) {
                 )
             }
         }.getOrElse { defaultTabs() }
+        // 0.10.0 から、アプリの一覧はタブではなく画面上部のボタンで開く（タブは「＋」で戻せる）
+        if (!prefs.getBoolean("appsTabMoved", false)) {
+            prefs.edit().putBoolean("appsTabMoved", true).apply()
+            if (list.any { it.kind == TabKind.APPS }) return list.filter { it.kind != TabKind.APPS }.also(::saveTabs)
+        }
+        return list
     }
 
     fun saveTabs(tabs: List<TabSpec>) {
@@ -307,7 +315,6 @@ class Store(context: Context) {
             TabSpec("mail", TabKind.MAIL, "MAIL"),
             TabSpec("line", TabKind.LINE, "LINE"),
             TabSpec("people", TabKind.PEOPLE, "PEOPLE"),
-            TabSpec("apps", TabKind.APPS, "APPS"),
             TabSpec("marks", TabKind.BOOKMARKS, "LINKS"),
             TabSpec("clip", TabKind.CLIP, "CLIP"),
             TabSpec("capture", TabKind.CAPTURE, "CAPTURE"),

@@ -232,6 +232,7 @@ private fun FilerHeader(model: HomeModel) {
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Field(model.query, { model.query = it }, "SEARCH  検索", Modifier.weight(1f).focusRequester(focus), leading = { GlyphIcon(Glyph.SEARCH, p.accent) })
+            GlyphButton(Glyph.GRID, "APPS（Alt+A）", { model.toggle(model.appsId()) }, tint = if (model.open == model.appsId()) p.accent else null)
             GlyphButton(Glyph.GEAR, "設定", { model.settingsOpen = true })
         }
     }

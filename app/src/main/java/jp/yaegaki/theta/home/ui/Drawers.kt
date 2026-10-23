@@ -20,6 +20,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import jp.yaegaki.theta.home.data.ViewSpec
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -111,6 +114,7 @@ fun DrawerFrame(model: HomeModel, id: String, docked: Boolean) {
                 TabKind.LINE -> NoticeDrawer(mail = false)
                 TabKind.PEOPLE -> PeopleDrawer(model)
                 TabKind.APPS -> AppsDrawer(model)
+                TabKind.CATEGORY -> AppsDrawer(model, only = t.folderUri.orEmpty())
                 TabKind.BOOKMARKS -> BookmarkDrawer(model)
                 TabKind.CLIP -> ClipDrawer(model)
                 TabKind.CAPTURE -> CaptureDrawer(model)
@@ -324,15 +328,40 @@ private fun PeopleDrawer(model: HomeModel) {
 /** アプリの一覧。カテゴリーごとに並べ、上の札で絞り込む。未分類があれば仕分けガイドへ。 */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AppsDrawer(model: HomeModel) {
+private fun AppMenu(model: HomeModel, app: jp.yaegaki.theta.home.data.AppEntry, expanded: Boolean, close: () -> Unit, move: () -> Unit) {
+    val actions = LocalActions.current
+    DropdownMenu(expanded = expanded, onDismissRequest = close) {
+        DropdownMenuItem(text = { Text("カテゴリーを変える") }, onClick = { close(); move() })
+        DropdownMenuItem(text = { Text("アプリ情報") }, onClick = { actions.start(Apps.infoIntent(app.packageName)); close() })
+        if (!Apps.isSystem(actions.activity, app.packageName)) {
+            DropdownMenuItem(text = { Text("アンインストール") }, onClick = { actions.start(Apps.uninstallIntent(app.packageName)); close() })
+        }
+        if (model.iconMode == jp.yaegaki.theta.home.data.IconStyle.GEMINI && model.hasGeminiKey) {
+            DropdownMenuItem(text = { Text("アイコンを Gemini で作り直す") }, onClick = { close(); model.clearGeminiIcons(app); model.startGeminiIcons(app) })
+        }
+    }
+}
+
+/** アプリの一覧の大きさ（S・M・L・XL）ごとのアイコンの辺と、グリッドの 1 マスの幅。 */
+private val listIcon = listOf(24.dp, 32.dp, 40.dp, 52.dp)
+private val appIcon = listOf(36.dp, 44.dp, 56.dp, 72.dp)
+private val appCell = listOf(64.dp, 76.dp, 92.dp, 112.dp)
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun AppsDrawer(model: HomeModel, only: String? = null) {
     val p = LocalPalette.current
     val actions = LocalActions.current
     var q by remember { mutableStateOf("") }
-    var filter by remember { mutableStateOf<String?>(null) } // null=すべて、"" = 未分類、それ以外はカテゴリー id
+    var filter by remember { mutableStateOf<String?>(only) } // null=すべて、"" = 未分類、それ以外はカテゴリー id
+    if (only != null && filter != only) filter = only
     var menuFor by remember { mutableStateOf<String?>(null) }
     var moving by remember { mutableStateOf<jp.yaegaki.theta.home.data.AppEntry?>(null) }
     var sorting by remember { mutableStateOf(false) }
     val unsorted = model.apps.count { model.categoryOf(it) == null }
+    // 見せ方（一覧・グリッド・大きさ）は、全体とカテゴリーのタブごとに覚える。カテゴリーのタブは初めからグリッド
+    val viewKey = if (only != null) "apps:$only" else "apps"
+    val spec = model.viewFor(listOf(viewKey), mostlyMedia = only != null)
     val visible = model.apps.filter { q.isBlank() || it.label.contains(q, ignoreCase = true) }
     // カテゴリーの並び順で見出しを付ける。未分類は最後
     val groups = (model.categories.map { c -> c.id to c.name } + ("" to "未分類"))
@@ -344,10 +373,17 @@ private fun AppsDrawer(model: HomeModel) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 8.dp)) {
                 Field(q, { q = it }, "名前で絞り込み", Modifier.weight(1f))
-                PillButton(if (unsorted > 0) "仕分け %d".format(unsorted) else "仕分け", { sorting = true }, primary = unsorted > 0)
+                if (only == null) PillButton(if (unsorted > 0) "仕分け %d".format(unsorted) else "仕分け", { sorting = true }, primary = unsorted > 0)
+                GlyphButton(if (spec.grid) Glyph.LIST else Glyph.GRID, if (spec.grid) "一覧で見る" else "グリッドで見る", { model.setView(viewKey, spec.copy(grid = !spec.grid)) })
+                Box(Modifier.size(44.dp).clickable(onClickLabel = "大きさを変える") { model.setView(viewKey, spec.copy(size = (spec.size + 1) % ViewSpec.SIZES)) }, contentAlignment = Alignment.Center) {
+                    Text(ViewSpec.NAMES[spec.size], color = p.muted, fontSize = 12.sp, fontFamily = Hud.mono, modifier = Modifier.border(1.dp, p.line).padding(horizontal = 5.dp, vertical = 2.dp))
+                }
             }
         }
-        item {
+        if (only != null && model.categories.none { it.id == only }) item {
+            Note("このタブのカテゴリーは消されました。タブを長押しして外してください。")
+        }
+        if (only == null) item {
             FlowRow(Modifier.padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 @Composable
                 fun chip(label: String, id: String?) {
@@ -363,7 +399,7 @@ private fun AppsDrawer(model: HomeModel) {
                 if (unsorted > 0) chip("未分類 $unsorted", "")
             }
         }
-        if (model.categories.isEmpty()) {
+        if (only == null && model.categories.isEmpty()) {
             item {
                 DashedBox("アプリが多いときは「仕分け」で、カテゴリーを用意してから 1 つずつ振り分けられます。", Modifier.padding(bottom = 8.dp))
             }
@@ -376,7 +412,26 @@ private fun AppsDrawer(model: HomeModel) {
                     Ticks(Modifier.weight(1f).height(5.dp))
                 }
             }
-            list.forEachIndexed { zi, app ->
+            if (spec.grid) item(key = "g:$id") {
+                FlowRow(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    list.forEach { app ->
+                        Box {
+                            Column(
+                                Modifier.width(appCell[spec.size])
+                                    .combinedClickable(onClick = { actions.start(Apps.launchIntent(app)) }, onLongClick = { menuFor = app.key }, onClickLabel = "開く")
+                                    .padding(vertical = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                AppIcon(app, appIcon[spec.size])
+                                Text(app.label, color = p.fg, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(horizontal = 2.dp))
+                            }
+                            AppMenu(model, app, menuFor == app.key, { menuFor = null }) { moving = app }
+                        }
+                    }
+                }
+            } else list.forEachIndexed { zi, app ->
                 item(key = "$id:${app.key}") {
                     Box {
                         RowButton(
@@ -385,19 +440,10 @@ private fun AppsDrawer(model: HomeModel) {
                             onLongClick = { menuFor = app.key },
                             label = "開く",
                         ) {
-                            AppIcon(app, 32.dp)
+                            AppIcon(app, listIcon[spec.size])
                             Text(app.label, color = p.fg, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         }
-                        DropdownMenu(expanded = menuFor == app.key, onDismissRequest = { menuFor = null }) {
-                            DropdownMenuItem(text = { Text("カテゴリーを変える") }, onClick = { menuFor = null; moving = app })
-                            DropdownMenuItem(text = { Text("アプリ情報") }, onClick = { actions.start(Apps.infoIntent(app.packageName)); menuFor = null })
-                            if (!Apps.isSystem(actions.activity, app.packageName)) {
-                                DropdownMenuItem(text = { Text("アンインストール") }, onClick = { actions.start(Apps.uninstallIntent(app.packageName)); menuFor = null })
-                            }
-                            if (model.iconMode == jp.yaegaki.theta.home.data.IconStyle.GEMINI && model.hasGeminiKey) {
-                                DropdownMenuItem(text = { Text("アイコンを Gemini で作り直す") }, onClick = { menuFor = null; model.clearGeminiIcons(app); model.startGeminiIcons(app) })
-                            }
-                        }
+                        AppMenu(model, app, menuFor == app.key, { menuFor = null }) { moving = app }
                     }
                 }
             }

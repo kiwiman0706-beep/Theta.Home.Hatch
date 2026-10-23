@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.activity.compose.setContent
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -143,6 +144,36 @@ class ScreenshotTest {
         launch("light") { photos(it, "list:2") }
         compose.mainClock.advanceTimeBy(1000)
         shot("filer-list-thumbs")
+    }
+
+    /** 端のタブの「＋」でウィジェットの追加の画面が出る。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun addWidgetOpens() {
+        launch()
+        compose.onNodeWithContentDescription("タブを追加").performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("＋ ウィジェットを選ぶ").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("ウィジェットのタブを追加", substring = true).assertExists()
+    }
+
+    /** アプリのカテゴリーをタブにして開く（グリッド）。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun categoryTab() {
+        launch()
+        compose.waitForIdle()
+        scenario!!.onActivity { a ->
+            val model = androidx.lifecycle.ViewModelProvider(a)[HomeModel::class.java]
+            val c = model.addCategory("ツール")
+            model.apps.forEach { model.assign(it, c) }
+            model.addCategoryTab(c)
+        }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("ツール").performScrollTo().performClick()
+        compose.mainClock.advanceTimeBy(600)
+        shot("category-tab")
     }
 
     /** 検索フォルダ（仮想フォルダ）を作る画面。 */

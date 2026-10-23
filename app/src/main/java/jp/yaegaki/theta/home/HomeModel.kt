@@ -164,7 +164,11 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     // ---- ドロワー ----
 
-    fun tab(id: String?) = tabs.firstOrNull { it.id == id }
+    /** アプリの一覧は、タブが無くても画面上部のボタン（Alt＋A）から開ける。 */
+    fun tab(id: String?) = tabs.firstOrNull { it.id == id } ?: if (id == APPS_ID) TabSpec(APPS_ID, TabKind.APPS, "APPS") else null
+
+    /** アプリの一覧を開く ID（APPS のタブがあればそれ）。 */
+    fun appsId(): String = tabs.firstOrNull { it.kind == TabKind.APPS }?.id ?: APPS_ID
 
     fun widgetTab(id: String?) = widgetTabs.firstOrNull { "w:${it.id}" == id }
 
@@ -207,7 +211,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             tabs.filter { it.kind == TabKind.FOLDER }.getOrNull(upper - '1')
         } else {
             tabs.firstOrNull { it.kind.key == upper }
-        } ?: return false
+        } ?: if (upper == 'A') tab(APPS_ID)!! else return false
         if (t.kind == TabKind.FOLDER) showFolder(t) else toggle(t.id)
         return true
     }
@@ -569,9 +573,39 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         if (list.none { it.id == open }) open = null
     }
 
-    fun addTab(kind: TabKind) {
-        val label = kind.defaultLabel
-        updateTabs(tabs + TabSpec(Store.newId(), kind, label))
+    fun addTab(kind: TabKind): TabSpec {
+        val t = TabSpec(Store.newId(), kind, kind.defaultLabel)
+        updateTabs(tabs + t)
+        return t
+    }
+
+    /** アプリのカテゴリーをタブにする。名前はカテゴリーの名前（あとで変えられる）。 */
+    fun addCategoryTab(c: Category) {
+        updateTabs(tabs + TabSpec(Store.newId(), TabKind.CATEGORY, c.name.uppercase(), folderUri = c.id))
+    }
+
+    fun moveTab(id: String, delta: Int) {
+        val i = tabs.indexOfFirst { it.id == id }
+        val j = i + delta
+        if (i < 0 || j !in tabs.indices) return
+        updateTabs(tabs.toMutableList().also { it.add(j, it.removeAt(i)) })
+    }
+
+    fun renameTab(id: String, label: String) {
+        if (label.isBlank()) return
+        updateTabs(tabs.map { if (it.id == id) it.copy(label = label.trim()) else it })
+    }
+
+    fun removeTab(id: String) {
+        updateTabs(tabs.filter { it.id != id })
+        if (open == id) open = null
+        docked = docked - id
+        if (location == "tab:$id") showRecent()
+    }
+
+    fun renameWidgetTab(id: Int, label: String) {
+        if (label.isBlank()) return
+        saveWidgetTabs(widgetTabs.map { if (it.id == id) it.copy(label = label.trim()) else it })
     }
 
     fun changeRailLeft(v: Boolean) { railLeft = v; store.railLeft = v }
@@ -968,7 +1002,10 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     /** 割り当てが済んだウィジェットを、この画面のタブとして足す。大きさはウィジェットの最小サイズから。 */
     fun addWidget(id: Int) {
         val host = (ctx as HomeApp).widgets
-        val info = host.info(id) ?: return
+        val info = host.info(id) ?: run {
+            (ctx as HomeApp).toast("ウィジェットを置けませんでした（割り当てに失敗）")
+            return
+        }
         val d = ctx.resources.displayMetrics.density
         addWidgetTab(WidgetTab(id, host.label(info), (info.minWidth / d).toInt().coerceIn(200, 600), (info.minHeight / d).toInt().coerceIn(120, 600)))
     }
@@ -1035,6 +1072,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     }
 
     companion object {
+        const val APPS_ID = "@apps"
+
         fun clipDir(context: Context): File = File(context.filesDir, "Clip").apply { mkdirs() }
 
         /** 共有メニューから受け取ったものを Clip に入れる。ファイルはアプリ内にコピーする。 */

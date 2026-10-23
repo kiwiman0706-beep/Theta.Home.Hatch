@@ -136,26 +136,44 @@ fun AddWidgetDialog(model: HomeModel, onDismiss: () -> Unit) {
     val host = app.widgets
     val providers = remember { host.providers() }
 
+    // 端末によって、設定画面を開けない・割り当てを断られるウィジェットがある。そのときも黙らずに知らせる
     fun configureOrAdd(id: Int) {
         if (host.needsConfigure(id)) {
             app.store.pendingWidget = id
-            host.startConfigure(activity, id, MainActivity.REQ_WIDGET_CONFIGURE)
+            val ok = runCatching { host.startConfigure(activity, id, MainActivity.REQ_WIDGET_CONFIGURE) }.isSuccess
+            if (!ok) {
+                // 設定画面を開けないときは、設定なしで置いてみる（Android 12 以降は設定が任意のものが多い）
+                app.store.pendingWidget = -1
+                model.addWidget(id)
+                actions.toast("ウィジェットの設定画面を開けなかったので、そのまま置きました")
+            }
         } else {
             model.addWidget(id)
         }
     }
 
     fun add(info: AppWidgetProviderInfo) {
-        val id = host.allocate()
-        if (host.bindIfAllowed(id, info)) configureOrAdd(id)
-        else actions.forResult(host.bindIntent(id, info)) { ok -> if (ok) configureOrAdd(id) else host.release(id) }
+        val id = runCatching { host.allocate() }.getOrElse {
+            actions.toast("ウィジェットを用意できませんでした（${it.javaClass.simpleName}）")
+            return
+        }
+        val bound = runCatching { host.bindIfAllowed(id, info) }.getOrDefault(false)
+        if (bound) configureOrAdd(id)
+        else actions.forResult(host.bindIntent(id, info)) { ok ->
+            if (ok) configureOrAdd(id)
+            else {
+                host.release(id)
+                actions.toast("ウィジェットの許可がありませんでした。もう一度選んで「許可」を押してください")
+            }
+        }
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("ウィジェットのタブを追加（${profileName(model.profile)}）") },
         text = {
-            LazyColumn(Modifier.heightIn(max = 460.dp)) {
+            if (providers.isEmpty()) Text("置けるウィジェットが見つかりませんでした。", color = LocalPalette.current.muted, fontSize = 14.sp)
+            else LazyColumn(Modifier.heightIn(max = 460.dp)) {
                 itemsIndexed(providers, key = { _, it -> it.provider.flattenToString() }) { zi, info ->
                     RowButton(zebra = zi, onClick = { onDismiss(); add(info) }) {
                         val pm = activity.packageManager

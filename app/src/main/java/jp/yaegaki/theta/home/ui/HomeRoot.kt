@@ -1,5 +1,11 @@
 package jp.yaegaki.theta.home.ui
 
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
 import android.app.role.RoleManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -271,17 +277,19 @@ private fun Rail(model: HomeModel, width: Dp) {
             RailTab(model, id, w.label.take(10), 1, active = model.open == id || id in model.docked, shortcut = null, left = left)
         }
         var adding by remember { mutableStateOf(false) }
+        var addingWidget by remember { mutableStateOf(false) }
         Box(
             Modifier
                 .width(40.dp)
                 .height(44.dp)
-                .clip(if (left) RoundedCornerShape(0.dp) else RoundedCornerShape(0.dp))
                 .background(p.raised)
+                .border(1.dp, p.line)
                 .combinedClickable(role = Role.Button, onClick = { adding = true })
-                .semantics { contentDescription = "ウィジェットのタブを追加" },
+                .semantics { contentDescription = "タブを追加" },
             contentAlignment = Alignment.Center,
-        ) { GlyphIcon(Glyph.PLUS, p.muted) }
-        if (adding) AddWidgetDialog(model) { adding = false }
+        ) { GlyphIcon(Glyph.PLUS, p.accent) }
+        if (adding) AddTabDialog(model, onWidget = { adding = false; addingWidget = true }) { adding = false }
+        if (addingWidget) AddWidgetDialog(model) { addingWidget = false }
     }
 }
 
@@ -299,12 +307,14 @@ private fun RailTab(model: HomeModel, id: String, label: String, group: Int, act
     val p = LocalPalette.current
     val groupColor = p.group(group)
     val code = model.tabs.indexOfFirst { it.id == id }.let { if (it >= 0) "%02d".format(it + 1) else "W" + (model.widgetTabs.indexOfFirst { w -> "w:${w.id}" == id } + 1) }
+    var menu by remember(id) { mutableStateOf(false) }
+    var renaming by remember(id) { mutableStateOf(false) }
     Box(
         Modifier
             .width(40.dp)
             .background(if (active) p.accent else p.bg)
             .border(1.dp, if (active) p.accent else p.line)
-            .combinedClickable(role = Role.Tab, onClick = { model.toggle(id) })
+            .combinedClickable(role = Role.Tab, onClick = { model.toggle(id) }, onLongClick = { menu = true }, onLongClickLabel = "並べ替え・名前・外す")
             .semantics {
                 contentDescription = label + (shortcut?.let { "（$it）" } ?: "")
                 selected = active
@@ -322,7 +332,93 @@ private fun RailTab(model: HomeModel, id: String, label: String, group: Int, act
             Gap(4.dp)
             VerticalLabel(label, if (active) p.onAccent else p.fg)
         }
+        TabMenu(model, id, menu, { menu = false }) { renaming = true }
     }
+    if (renaming) RenameTabDialog(model, id) { renaming = false }
+}
+
+/** タブの長押し：上へ・下へ・名前を変える・外す。ウィジェットのタブも同じ。 */
+@Composable
+private fun TabMenu(model: HomeModel, id: String, expanded: Boolean, close: () -> Unit, rename: () -> Unit) {
+    val actions = LocalActions.current
+    val t = model.tabs.firstOrNull { it.id == id }
+    val w = model.widgetTab(id)
+    DropdownMenu(expanded = expanded, onDismissRequest = close) {
+        DropdownMenuItem(text = { Text("▲ 上へ") }, onClick = { if (t != null) model.moveTab(id, -1) else if (w != null) model.moveWidgetTab(w.id, -1) })
+        DropdownMenuItem(text = { Text("▼ 下へ") }, onClick = { if (t != null) model.moveTab(id, 1) else if (w != null) model.moveWidgetTab(w.id, 1) })
+        if (t != null) {
+            DropdownMenuItem(text = { Text("⤒ いちばん上へ") }, onClick = { close(); model.moveTab(id, -model.tabs.indexOf(t)) })
+        }
+        DropdownMenuItem(text = { Text("名前を変える") }, onClick = { close(); rename() })
+        if (t?.kind == TabKind.FOLDER) DropdownMenuItem(text = { Text("端末のフォルダを選び直す") }, onClick = { close(); actions.pickFolder(id) })
+        DropdownMenuItem(text = { Text("このタブを外す") }, onClick = {
+            close()
+            if (t != null) model.removeTab(id) else if (w != null) model.removeWidgetTab(w.id)
+            actions.toast("外しました（下の「＋」で戻せます）")
+        })
+    }
+}
+
+@Composable
+private fun RenameTabDialog(model: HomeModel, id: String, onDismiss: () -> Unit) {
+    val t = model.tabs.firstOrNull { it.id == id }
+    val w = model.widgetTab(id)
+    var name by remember { mutableStateOf(t?.label ?: w?.label.orEmpty()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("タブの名前") },
+        text = { Field(name, { name = it.take(14) }, "名前") },
+        confirmButton = {
+            TextButton(onClick = {
+                if (t != null) model.renameTab(id, name) else if (w != null) model.renameWidgetTab(w.id, name)
+                onDismiss()
+            }, enabled = name.isNotBlank()) { Text("保存") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("やめる") } },
+    )
+}
+
+/**
+ * 端のタブの「＋」：ウィジェット・アプリのカテゴリー・フォルダ・ドロワーを足す。
+ * 置いてあるものは出さない（フォルダは何個でも足せる）。
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun AddTabDialog(model: HomeModel, onWidget: () -> Unit, onDismiss: () -> Unit) {
+    val actions = LocalActions.current
+    val usedCats = model.tabs.filter { it.kind == TabKind.CATEGORY }.mapNotNull { it.folderUri }.toSet()
+    val drawers = TabKind.entries.filter { it != TabKind.FOLDER && it != TabKind.CATEGORY && model.tabs.none { t -> t.kind == it } }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("タブを追加") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionTitle("WIDGET / ウィジェット")
+                PillButton("＋ ウィジェットを選ぶ", onWidget, primary = true)
+                SectionTitle("CATEGORY / アプリのカテゴリー")
+                val cats = model.categories.filter { it.id !in usedCats }
+                if (model.categories.isEmpty()) Note("アプリのドロワーの「仕分け」でカテゴリーを作ると、ここでタブにできます。")
+                else if (cats.isEmpty()) Note("カテゴリーはすべてタブになっています。")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    cats.forEach { c -> PillButton(c.name, { model.addCategoryTab(c); onDismiss() }) }
+                }
+                SectionTitle("FOLDER / フォルダ")
+                PillButton("＋ フォルダのタブ", {
+                    val t = model.addTab(TabKind.FOLDER)
+                    onDismiss()
+                    actions.pickFolder(t.id)
+                })
+                if (drawers.isNotEmpty()) {
+                    SectionTitle("DRAWER / ドロワー")
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        drawers.forEach { k -> PillButton(k.defaultLabel, { model.addTab(k); onDismiss() }) }
+                    }
+                }
+                Note("タブは長押しで、並べ替え・名前を変える・外す。")
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("閉じる") } },
+    )
 }
 
 @Composable
