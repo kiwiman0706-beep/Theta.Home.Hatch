@@ -35,6 +35,7 @@ import jp.yaegaki.theta.home.hatch.HatchInstaller
 import jp.yaegaki.theta.home.hatch.Release
 import jp.yaegaki.theta.home.nas.Nas
 import jp.yaegaki.theta.home.data.WidgetTab
+import jp.yaegaki.theta.home.data.Category
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -72,7 +73,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     var tabs by mutableStateOf(store.tabs()); private set
     var railLeft by mutableStateOf(store.railLeft); private set
-    var gray by mutableStateOf(store.grayTheme); private set
+    /** "dark"・"light"・"system"。 */
+    var themeMode by mutableStateOf(store.themeMode); private set
     var monoIcons by mutableStateOf(store.monoIcons); private set
 
     /** 重ねて開いているドロワー（タブ id）。 */
@@ -376,7 +378,78 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun changeRailLeft(v: Boolean) { railLeft = v; store.railLeft = v }
-    fun changeGray(v: Boolean) { gray = v; store.grayTheme = v }
+    fun changeTheme(mode: String) { themeMode = mode; store.themeMode = mode }
+
+    // ---- アプリのカテゴリーと仕分け ----
+
+    var categories by mutableStateOf(store.categories()); private set
+    var appCategories by mutableStateOf(store.appCategories()); private set
+    /** 仕分けで「あとで」にしたアプリ（この起動の間だけ）。 */
+    var skipped by mutableStateOf<Set<String>>(emptySet()); private set
+    /** 仕分けの「戻す」用：直前に振り分けた（またはあとでにした）アプリ。 */
+    private val sortHistory = ArrayList<String>()
+
+    fun categoryOf(app: AppEntry): Category? = appCategories[app.key]?.let { id -> categories.firstOrNull { it.id == id } }
+
+    /** まだどこにも振り分けていないアプリ。「あとで」にしたものは後ろへ回す。 */
+    fun unsorted(): List<AppEntry> = apps.filter { categoryOf(it) == null }.sortedBy { it.key in skipped }
+
+    fun addCategory(name: String): Category {
+        val n = name.trim()
+        categories.firstOrNull { it.name == n }?.let { return it }
+        val c = Category(Store.newId(), n)
+        categories = categories + c
+        store.saveCategories(categories)
+        return c
+    }
+
+    fun renameCategory(c: Category, name: String) {
+        categories = categories.map { if (it.id == c.id) it.copy(name = name.trim().ifEmpty { it.name }) else it }
+        store.saveCategories(categories)
+    }
+
+    fun moveCategory(c: Category, delta: Int) {
+        val i = categories.indexOf(c)
+        val j = i + delta
+        if (i < 0 || j !in categories.indices) return
+        categories = categories.toMutableList().also { it.add(j, it.removeAt(i)) }
+        store.saveCategories(categories)
+    }
+
+    /** カテゴリーを消す。入っていたアプリは未分類に戻る。 */
+    fun deleteCategory(c: Category) {
+        categories = categories - c
+        appCategories = appCategories.filterValues { it != c.id }
+        store.saveCategories(categories)
+        store.saveAppCategories(appCategories)
+    }
+
+    /** 候補の名前でカテゴリーをまとめて用意する（すでにあるものはそのまま）。 */
+    fun ensureCategories(names: List<String>) = names.forEach { addCategory(it) }
+
+    fun assign(app: AppEntry, c: Category?) {
+        appCategories = if (c == null) appCategories - app.key else appCategories + (app.key to c.id)
+        store.saveAppCategories(appCategories)
+        skipped = skipped - app.key
+        sortHistory += app.key
+    }
+
+    fun skip(app: AppEntry) {
+        skipped = skipped + app.key
+        sortHistory += app.key
+    }
+
+    /** 直前の仕分けを取り消す。取り消したアプリを返す。 */
+    fun undoSort(): String? {
+        val key = sortHistory.removeLastOrNull() ?: return null
+        appCategories = appCategories - key
+        store.saveAppCategories(appCategories)
+        skipped = skipped - key
+        return key
+    }
+
+    fun suggestedCategory(app: AppEntry): Category? =
+        jp.yaegaki.theta.home.data.Categories.suggest(app)?.let { name -> categories.firstOrNull { it.name == name } }
     fun changeMonoIcons(v: Boolean) { monoIcons = v; store.monoIcons = v }
 
     fun toggleFavorite(app: AppEntry) {

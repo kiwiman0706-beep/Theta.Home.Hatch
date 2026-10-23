@@ -320,43 +320,106 @@ private fun PeopleDrawer(model: HomeModel) {
 
 // ---- アプリ ----
 
+/** アプリの一覧。カテゴリーごとに並べ、上の札で絞り込む。未分類があれば仕分けガイドへ。 */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AppsDrawer(model: HomeModel) {
     val p = LocalPalette.current
     val actions = LocalActions.current
     var q by remember { mutableStateOf("") }
+    var filter by remember { mutableStateOf<String?>(null) } // null=すべて、"" = 未分類、それ以外はカテゴリー id
     var menuFor by remember { mutableStateOf<String?>(null) }
-    val list = model.apps.filter { q.isBlank() || it.label.contains(q, ignoreCase = true) }
+    var moving by remember { mutableStateOf<jp.yaegaki.theta.home.data.AppEntry?>(null) }
+    var sorting by remember { mutableStateOf(false) }
+    val unsorted = model.apps.count { model.categoryOf(it) == null }
+    val visible = model.apps.filter { q.isBlank() || it.label.contains(q, ignoreCase = true) }
+    // カテゴリーの並び順で見出しを付ける。未分類は最後
+    val groups = (model.categories.map { c -> c.id to c.name } + ("" to "未分類"))
+        .filter { (id, _) -> filter == null || filter == id }
+        .map { (id, name) -> Triple(id, name, visible.filter { (model.appCategories[it.key] ?: "") == id || id == "" && model.categoryOf(it) == null }.distinct()) }
+        .filter { it.third.isNotEmpty() }
+
     DrawerList {
-        item { Field(q, { q = it }, "名前で絞り込み", Modifier.padding(bottom = 8.dp)) }
-        var last = ""
-        list.forEach { app ->
-            val h = Apps.heading(app.label)
-            val showHead = h != last
-            last = h
-            item(key = app.key) {
-                Box {
-                    RowButton(
-                        onClick = { actions.start(Apps.launchIntent(app)) },
-                        onLongClick = { menuFor = app.key },
-                        label = "開く",
-                    ) {
-                        Text(if (showHead) h else "", color = p.faint, fontSize = 12.sp, modifier = Modifier.width(18.dp))
-                        Text(app.label, color = p.fg, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        if (app.key in model.favoriteApps) Text("ホーム", color = p.accent, fontSize = 11.sp)
-                    }
-                    DropdownMenu(expanded = menuFor == app.key, onDismissRequest = { menuFor = null }) {
-                        DropdownMenuItem(
-                            text = { Text(if (app.key in model.favoriteApps) "ホームから外す" else "ホームに置く") },
-                            onClick = { model.toggleFavorite(app); menuFor = null },
-                        )
-                        DropdownMenuItem(text = { Text("アプリ情報") }, onClick = { actions.start(Apps.infoIntent(app.packageName)); menuFor = null })
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 8.dp)) {
+                Field(q, { q = it }, "名前で絞り込み", Modifier.weight(1f))
+                PillButton(if (unsorted > 0) "仕分け %d".format(unsorted) else "仕分け", { sorting = true }, primary = unsorted > 0)
+            }
+        }
+        item {
+            FlowRow(Modifier.padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                @Composable
+                fun chip(label: String, id: String?) {
+                    val on = filter == id
+                    Text(
+                        label, color = if (on) p.onAccent else p.fg, fontSize = 12.sp,
+                        modifier = Modifier.background(if (on) p.accent else Color.Transparent).border(1.dp, if (on) p.accent else p.line)
+                            .clickable { filter = if (on && id != null) null else id }.padding(horizontal = 10.dp, vertical = 7.dp),
+                    )
+                }
+                chip("ALL %d".format(model.apps.size), null)
+                model.categories.forEach { c -> chip("${c.name} ${model.appCategories.count { it.value == c.id }}", c.id) }
+                if (unsorted > 0) chip("未分類 $unsorted", "")
+            }
+        }
+        if (model.categories.isEmpty()) {
+            item {
+                DashedBox("アプリが多いときは「仕分け」で、カテゴリーを用意してから 1 つずつ振り分けられます。", Modifier.padding(bottom = 8.dp))
+            }
+        }
+        groups.forEach { (id, name, list) ->
+            item(key = "h:$id") {
+                Row(Modifier.padding(top = 10.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SectionTitle(name)
+                    Text("%02d".format(list.size), color = p.faint, fontSize = 11.sp)
+                    Ticks(Modifier.weight(1f).height(5.dp))
+                }
+            }
+            list.forEach { app ->
+                item(key = "$id:${app.key}") {
+                    Box {
+                        RowButton(
+                            onClick = { actions.start(Apps.launchIntent(app)) },
+                            onLongClick = { menuFor = app.key },
+                            label = "開く",
+                        ) {
+                            AppIcon(app, 32.dp)
+                            Text(app.label, color = p.fg, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        }
+                        DropdownMenu(expanded = menuFor == app.key, onDismissRequest = { menuFor = null }) {
+                            DropdownMenuItem(text = { Text("カテゴリーを変える") }, onClick = { menuFor = null; moving = app })
+                            DropdownMenuItem(text = { Text("アプリ情報") }, onClick = { actions.start(Apps.infoIntent(app.packageName)); menuFor = null })
+                        }
                     }
                 }
             }
         }
-        item { Note("長押しで「ホームに置く」。ホームの下段に最大 8 個まで並びます。") }
+        item { Note("長押しで「カテゴリーを変える」。") }
     }
+
+    moving?.let { app ->
+        var creating by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { moving = null },
+            title = { Text(app.label) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        model.categories.forEach { c ->
+                            ChoiceButton(c.name, selected = model.categoryOf(app) == c, suggested = model.suggestedCategory(app) == c) { model.assign(app, c); moving = null }
+                        }
+                        ChoiceButton("未分類に戻す", selected = model.categoryOf(app) == null) { model.assign(app, null); moving = null }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Field(creating, { creating = it.take(12) }, "新しいカテゴリー", Modifier.weight(1f))
+                        PillButton("作る", { if (creating.isNotBlank()) { model.assign(app, model.addCategory(creating)); moving = null } }, enabled = creating.isNotBlank())
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { moving = null }) { Text("閉じる") } },
+        )
+    }
+    if (sorting) SortGuide(model) { sorting = false }
 }
 
 // ---- 栞 ----

@@ -56,18 +56,19 @@ val DarkPalette = Palette(
     launch = Color(0xFF7A7A7E),
 )
 
-val GrayPalette = Palette(
-    bg = Color(0xFFD6D6CE),
-    panel = Color(0xFFE3E3DC),
-    raised = Color(0xFFCACAC1),
-    fg = Color(0xFF1E201C),
-    muted = Color(0xFF474B43),
-    faint = Color(0xFF5A5E55),
-    line = Color(0xFF9A9E92),
-    accent = Color(0xFF1E201C),
-    onAccent = Color(0xFFE3E3DC),
-    widget = Color(0xFF34588F),
-    launch = Color(0xFF5C6058),
+/** 明るい地の計器盤：紙のような地に墨色の文字、オレンジは文字にも使えるよう濃いめ。 */
+val LightPalette = Palette(
+    bg = Color(0xFFF4F3EE),
+    panel = Color(0xFFFFFFFF),
+    raised = Color(0xFFE9E8E2),
+    fg = Color(0xFF121212),
+    muted = Color(0xFF474747),
+    faint = Color(0xFF5E5E5E),
+    line = Color(0xFFBDBCB4),
+    accent = Color(0xFFB8400C),
+    onAccent = Color(0xFFFFFFFF),
+    widget = Color(0xFF121212),
+    launch = Color(0xFF6A6A6A),
 )
 
 val LocalPalette = staticCompositionLocalOf { DarkPalette }
@@ -84,9 +85,9 @@ object Hud {
 }
 
 @Composable
-fun HomeTheme(gray: Boolean, content: @Composable () -> Unit) {
-    val p = if (gray) GrayPalette else DarkPalette
-    val scheme = if (gray) {
+fun HomeTheme(dark: Boolean, content: @Composable () -> Unit) {
+    val p = if (dark) DarkPalette else LightPalette
+    val scheme = if (!dark) {
         lightColorScheme(
             primary = p.accent, onPrimary = p.onAccent, background = p.bg, surface = p.panel,
             onSurface = p.fg, onBackground = p.fg, surfaceVariant = p.raised, onSurfaceVariant = p.muted,

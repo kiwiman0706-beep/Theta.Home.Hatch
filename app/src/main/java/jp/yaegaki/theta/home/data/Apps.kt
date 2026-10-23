@@ -11,7 +11,8 @@ import android.provider.Settings
 import java.text.Collator
 import java.util.Locale
 
-data class AppEntry(val component: ComponentName, val label: String) {
+/** systemCategory はアプリ自身が申告している種類（ApplicationInfo.CATEGORY_*、無ければ -1）。仕分けのおすすめに使う。 */
+data class AppEntry(val component: ComponentName, val label: String, val systemCategory: Int = -1) {
     val key: String get() = component.flattenToString()
     val packageName: String get() = component.packageName
 }
@@ -23,7 +24,13 @@ object Apps {
         val collator = Collator.getInstance(Locale.JAPANESE)
         return pm.queryIntentActivities(intent, 0)
             .filter { it.activityInfo.packageName != context.packageName }
-            .map { AppEntry(ComponentName(it.activityInfo.packageName, it.activityInfo.name), it.loadLabel(pm).toString()) }
+            .map {
+                AppEntry(
+                    ComponentName(it.activityInfo.packageName, it.activityInfo.name),
+                    it.loadLabel(pm).toString(),
+                    it.activityInfo.applicationInfo?.category ?: -1,
+                )
+            }
             .distinctBy { it.key }
             .sortedWith { a, b -> collator.compare(a.label, b.label) }
     }

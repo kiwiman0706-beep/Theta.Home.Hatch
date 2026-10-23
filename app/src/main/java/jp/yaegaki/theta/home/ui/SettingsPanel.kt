@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -42,6 +43,8 @@ fun SettingsPanel(model: HomeModel) {
     var adding by remember { mutableStateOf(false) }
     var nasDialog by remember { mutableStateOf(false) }
     var importing by remember { mutableStateOf(false) }
+    var sorting by remember { mutableStateOf(false) }
+    var renamingCategory by remember { mutableStateOf<jp.yaegaki.theta.home.data.Category?>(null) }
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(start = 22.dp, end = 8.dp, top = 18.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -65,9 +68,33 @@ fun SettingsPanel(model: HomeModel) {
                     PillButton("ウィジェット：${if (model.profile == "wide") "閉じた画面" else "開いた画面"}から取り込む", { importing = true })
                 }
                 Gap(18.dp)
+                SectionTitle("アプリのカテゴリー（押すと名前・並び・削除）", Modifier.padding(horizontal = 10.dp))
+                model.categories.forEachIndexed { i, c ->
+                    var menu by remember(c.id) { mutableStateOf(false) }
+                    Box {
+                        RowButton(onClick = { menu = true }) {
+                            Text("%02d".format(i + 1), color = p.faint, fontSize = 12.sp)
+                            Text(c.name, color = p.fg, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                            Text("%d 個".format(model.appCategories.count { it.value == c.id }), color = p.muted, fontSize = 12.sp)
+                        }
+                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            DropdownMenuItem(text = { Text("名前を変える") }, onClick = { menu = false; renamingCategory = c })
+                            if (i > 0) DropdownMenuItem(text = { Text("上へ") }, onClick = { menu = false; model.moveCategory(c, -1) })
+                            if (i < model.categories.lastIndex) DropdownMenuItem(text = { Text("下へ") }, onClick = { menu = false; model.moveCategory(c, 1) })
+                            DropdownMenuItem(text = { Text("消す（中のアプリは未分類に）") }, onClick = { menu = false; model.deleteCategory(c) })
+                        }
+                    }
+                }
+                FlowRow2 { PillButton("仕分けガイドを開く", { sorting = true }, primary = model.categories.isEmpty()) }
+                Gap(18.dp)
                 SectionTitle("見た目", Modifier.padding(horizontal = 10.dp))
                 Toggle("タブを左端に置く", model.railLeft) { model.changeRailLeft(it) }
-                Toggle("グレーの配色", model.gray) { model.changeGray(it) }
+                Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("THEME", color = p.faint, fontSize = 11.sp, letterSpacing = 1.5.sp, modifier = Modifier.width(56.dp))
+                    listOf("dark" to "ダーク", "light" to "ライト", "system" to "端末に合わせる").forEach { (mode, label) ->
+                        PillButton(label, { model.changeTheme(mode) }, primary = model.themeMode == mode)
+                    }
+                }
                 Toggle("ホームのアプリアイコンをモノクロに", model.monoIcons) { model.changeMonoIcons(it) }
                 Gap(18.dp)
                 SectionTitle("端のタブ（押すと名前の変更・並べ替え）", Modifier.padding(horizontal = 10.dp))
@@ -120,6 +147,17 @@ fun SettingsPanel(model: HomeModel) {
 
     if (nasDialog) NasDialog(model) { nasDialog = false }
     if (importing) ImportWidgetsDialog(model) { importing = false }
+    if (sorting) SortGuide(model) { sorting = false }
+    renamingCategory?.let { c ->
+        var name by remember(c.id) { mutableStateOf(c.name) }
+        AlertDialog(
+            onDismissRequest = { renamingCategory = null },
+            title = { Text("カテゴリーの名前") },
+            text = { Field(name, { name = it.take(12) }, "名前") },
+            confirmButton = { TextButton(onClick = { model.renameCategory(c, name); renamingCategory = null }) { Text("保存") } },
+            dismissButton = { TextButton(onClick = { renamingCategory = null }) { Text("やめる") } },
+        )
+    }
 
     renaming?.let { t ->
         var name by remember(t.id) { mutableStateOf(t.label) }

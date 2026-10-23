@@ -33,6 +33,9 @@ data class TabSpec(val id: String, val kind: TabKind, val label: String, val fol
     }
 }
 
+/** アプリのカテゴリー（仕分け先）。 */
+data class Category(val id: String, val name: String)
+
 /** ウィジェット 1 つ分のタブ。w・h は dp。 */
 data class WidgetTab(val id: Int, val label: String, val w: Int, val h: Int)
 
@@ -85,9 +88,24 @@ class Store(context: Context) {
         get() = prefs.getBoolean("railLeft", false)
         set(v) = prefs.edit().putBoolean("railLeft", v).apply()
 
-    var grayTheme: Boolean
-        get() = prefs.getBoolean("gray", false)
-        set(v) = prefs.edit().putBoolean("gray", v).apply()
+    /** "dark"・"light"・"system"（端末に合わせる）。0.4.0 までの「グレーの配色」はライトとして読む。 */
+    var themeMode: String
+        get() = prefs.getString("theme", null) ?: if (prefs.getBoolean("gray", false)) "light" else "dark"
+        set(v) = prefs.edit().putString("theme", v).apply()
+
+    fun categories(): List<Category> = objects("categories") { Category(it.getString("id"), it.getString("name")) }
+
+    fun saveCategories(list: List<Category>) = putObjects("categories", list) { JSONObject().put("id", it.id).put("name", it.name) }
+
+    /** アプリ（ComponentName の文字列）→ カテゴリーの id。 */
+    fun appCategories(): Map<String, String> = runCatching {
+        val o = JSONObject(prefs.getString("appCats", "{}") ?: "{}")
+        o.keys().asSequence().associateWith { o.getString(it) }
+    }.getOrDefault(emptyMap())
+
+    fun saveAppCategories(map: Map<String, String>) {
+        prefs.edit().putString("appCats", JSONObject(map).toString()).apply()
+    }
 
     var monoIcons: Boolean
         get() = prefs.getBoolean("monoIcons", true)

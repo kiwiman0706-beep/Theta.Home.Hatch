@@ -3,7 +3,7 @@
 **背景（デスクトップ）にファイラーを置き、画面の端のタブでドロワーやウィジェットを切り替える** Android のホームアプリ。
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
-- 版：**0.4.0-alpha（versionCode 4）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.5.0-alpha（versionCode 5）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
@@ -13,7 +13,7 @@
 
 ## 見た目
 
-計器盤（HUD）風：黒地にオレンジ 1 色、細い線、四角い角。見出し・時計は Oswald、ラベル・数字は等幅の Share Tech Mono（同梱、SIL Open Font License、[docs/licenses](docs/licenses)）。日本語は端末の書体。設定の「グレーの配色」で明るい地にもできる。
+計器盤（HUD）風：黒地にオレンジ 1 色、細い線、四角い角。見出し・時計は Oswald、ラベル・数字は等幅の Share Tech Mono（同梱、SIL Open Font License、[docs/licenses](docs/licenses)）。日本語は端末の書体。テーマはダーク・ライト・端末に合わせるから選べる（設定 → THEME）。
 
 ## 画面の構成
 
@@ -33,6 +33,19 @@ DSBooks と同じく、Synology の DSM File Station API でつなぐ（設定 �
 - NAS の中を辿り、開く・共有のときは端末へ取得してから渡す（取得したものは新しい 30 個だけ残す）。NAS のフォルダを長押し →「〇〇のタブにする」で、フォルダのタブに割り当てられる。
 - パスワードは端末の鍵（Android Keystore）で暗号化して保存。2 段階認証のアカウントには未対応。
 - Tailscale 経由の http を通すため、平文の通信を許可している（Tailscale の通信路自体は暗号化されている）。
+
+## アプリの仕分け
+
+アプリが多いときは、アプリのドロワーの「仕分け N」（N は未分類の数）か、設定の「仕分けガイドを開く」から。
+
+1. **カテゴリーを用意**：候補（仕事・連絡・写真・カメラ・音楽・動画・ニュース・地図・移動・お金・買い物・ツール・Hatch・ゲーム・設定・端末）から選び、足りなければ自分で作る。
+2. **1 つずつ振り分け**：アプリが 1 つずつ大きく出るので、振り分け先を押すと次へ進む。合うものが無ければ「＋ 新しいカテゴリー」でその場で作る。アプリの申告する種類（ゲーム・地図・写真など）や名前から、おすすめをオレンジの枠で示す。「戻す」「あとで」「ここで終わる」。
+
+アプリのドロワーはカテゴリーごとに並び、上の札で絞り込める。長押しで「カテゴリーを変える」。
+
+| 1. カテゴリーを用意 | 2. 振り分け（ダーク） | 2. 振り分け（ライト） |
+| --- | --- | --- |
+| ![](docs/screenshots/sort-step1-categories.png) | ![](docs/screenshots/sort-step2-assign.png) | ![](docs/screenshots/sort-step2-assign-light.png) |
 
 ## そのほか
 

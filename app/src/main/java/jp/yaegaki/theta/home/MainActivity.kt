@@ -12,7 +12,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import jp.yaegaki.theta.home.ui.HomeRoot
 import jp.yaegaki.theta.home.ui.HomeTheme
 
@@ -45,7 +49,20 @@ class MainActivity : ComponentActivity() {
         ContextCompat.registerReceiver(this, packages, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         getSystemService(ConnectivityManager::class.java)?.registerDefaultNetworkCallback(network)
         setContent {
-            HomeTheme(gray = model.gray) {
+            val dark = when (model.themeMode) {
+                "light" -> false
+                "dark" -> true
+                else -> isSystemInDarkTheme()
+            }
+            // ステータスバー・ナビゲーションバーの文字色もテーマに合わせる
+            val view = LocalView.current
+            SideEffect {
+                WindowCompat.getInsetsController(window, view).apply {
+                    isAppearanceLightStatusBars = !dark
+                    isAppearanceLightNavigationBars = !dark
+                }
+            }
+            HomeTheme(dark = dark) {
                 HomeRoot(model, this)
             }
         }
