@@ -4,13 +4,21 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**0.10.0-alpha（versionCode 11）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.11.0-alpha（versionCode 12）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
 | Fold5 メイン：背景のファイラー | Hatch のドロワー | カバー画面 | タブレット |
 | --- | --- | --- | --- |
 | ![](docs/screenshots/fold5-main-filer.png) | ![](docs/screenshots/fold5-main-hatch.png) | ![](docs/screenshots/fold5-cover-filer.png) | ![](docs/screenshots/tablet-home.png) |
+
+## 狭い画面のダッシュボード・カレンダー
+
+狭い画面（幅 600dp 未満：閉じた Fold5・Titan）の背景は、今日の予定・天気（Open-Meteo）・つながり・ファイル・端末のダッシュボード。ファイラーはフォルダのタブか「FILES」の場所を押すと開く。カレンダーのドロワーは月（日曜始まり、予定は全部）・週・日。
+
+| ダッシュボード | 月 | 日 |
+| --- | --- | --- |
+| ![](docs/screenshots/dashboard-narrow.png) | ![](docs/screenshots/calendar-month.png) | ![](docs/screenshots/calendar-day.png) |
 
 ## 見た目
 

@@ -31,6 +31,9 @@ import jp.yaegaki.theta.home.data.TabKind
 import jp.yaegaki.theta.home.data.TabSpec
 import jp.yaegaki.theta.home.data.ViewSpec
 import jp.yaegaki.theta.home.data.SavedQuery
+import jp.yaegaki.theta.home.data.Forecast
+import jp.yaegaki.theta.home.data.Weather
+import jp.yaegaki.theta.home.data.WeatherPlace
 import jp.yaegaki.theta.home.hatch.HatchApp
 import jp.yaegaki.theta.home.hatch.HatchCatalog
 import jp.yaegaki.theta.home.hatch.HatchInstaller
@@ -162,6 +165,90 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     fun refreshCaptures() = io { Capture.all(ctx) }.then { captures = it }
 
+    // ---- 今日の予定とカレンダー ----
+
+    /** 今日の予定（終わったものも含む。終日が先）。 */
+    val todayEvents: List<Event>
+        get() {
+            val from = Calendar.startOfDay()
+            val to = Calendar.addDays(from, 1)
+            return events.filter { it.overlaps(from, to) }.sortedWith(compareBy({ !it.allDay }, { it.localBegin }))
+        }
+
+    var calendarMode by mutableStateOf(store.calendarMode); private set
+    fun changeCalendarMode(m: String) { calendarMode = m; store.calendarMode = m }
+
+    /** カレンダーのドロワーで見ている期間の予定。 */
+    var calendarEvents by mutableStateOf<List<Event>>(emptyList()); private set
+    private var calendarRange: Pair<Long, Long>? = null
+
+    fun loadCalendar(from: Long, to: Long, force: Boolean = false) {
+        if (!has(Manifest.permission.READ_CALENDAR)) return
+        if (!force && calendarRange == (from to to)) return
+        calendarRange = from to to
+        io { Calendar.range(ctx, from, to) }.then { if (calendarRange == (from to to)) calendarEvents = it }
+    }
+
+    // ---- 天気（狭い画面のダッシュボード） ----
+
+    var weatherPlace by mutableStateOf(store.weatherPlace); private set
+    var forecast by mutableStateOf(store.weatherCache?.let { runCatching { Weather.parse(it, store.weatherAt) }.getOrNull() }); private set
+    var weatherError by mutableStateOf<String?>(null); private set
+    var weatherLoading by mutableStateOf(false); private set
+
+    /** 30 分以内に取ったものがあれば取り直さない。 */
+    fun refreshWeather(force: Boolean = false) {
+        val place = weatherPlace ?: return
+        val f = forecast
+        if (weatherLoading || !force && f != null && System.currentTimeMillis() - f.fetchedAt < 30 * 60_000) return
+        weatherLoading = true
+        viewModelScope.launch {
+            val r = runCatching {
+                withContext(Dispatchers.IO) {
+                    val p = if (place.useLocation) locate()?.let { (la, lo) -> place.copy(lat = la, lon = lo) } ?: place else place
+                    if (p != place) { weatherPlace = p; store.weatherPlace = p }
+                    Weather.fetch(p)
+                }
+            }
+            r.onSuccess { (fc, text) -> forecast = fc; weatherError = null; store.weatherCache = text }
+                .onFailure { weatherError = "天気を取れませんでした（${it.message ?: it.javaClass.simpleName}）" }
+            weatherLoading = false
+        }
+    }
+
+    fun chooseWeatherPlace(p: WeatherPlace) {
+        weatherPlace = p
+        store.weatherPlace = p
+        forecast = null
+        store.weatherCache = null
+        refreshWeather(force = true)
+    }
+
+    /** 端末のおおよその位置（ネットワーク）。許可が無い・取れないときは null。 */
+    @android.annotation.SuppressLint("MissingPermission")
+    private suspend fun locate(): Pair<Double, Double>? {
+        if (!has(Manifest.permission.ACCESS_COARSE_LOCATION)) return null
+        val lm = ctx.getSystemService(android.location.LocationManager::class.java) ?: return null
+        val provider = listOf(android.location.LocationManager.NETWORK_PROVIDER, android.location.LocationManager.GPS_PROVIDER, android.location.LocationManager.PASSIVE_PROVIDER)
+            .firstOrNull { runCatching { lm.isProviderEnabled(it) }.getOrDefault(false) } ?: return null
+        val loc = if (android.os.Build.VERSION.SDK_INT >= 30) {
+            kotlinx.coroutines.withTimeoutOrNull(8000) {
+                kotlinx.coroutines.suspendCancellableCoroutine<android.location.Location?> { cont ->
+                    val cancel = android.os.CancellationSignal()
+                    cont.invokeOnCancellation { cancel.cancel() }
+                    lm.getCurrentLocation(provider, cancel, ctx.mainExecutor) { cont.resumeWith(Result.success(it)) }
+                }
+            }
+        } else null
+        val l = loc ?: runCatching { lm.getLastKnownLocation(provider) }.getOrNull() ?: return null
+        return l.latitude to l.longitude
+    }
+
+    // ---- 狭い画面：背景はダッシュボード、ファイラーは開いたときだけ ----
+
+    /** 狭い画面でファイラーを出しているか（広い画面では常に背景がファイラー）。 */
+    var filerOpen by mutableStateOf(false)
+
     // ---- ドロワー ----
 
     /** アプリの一覧は、タブが無くても画面上部のボタン（Alt＋A）から開ける。 */
@@ -241,7 +328,10 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     /** フォルダのタブ：背景のファイラーをそのフォルダに切り替える（ドロワーは閉じる）。 */
     fun showFolder(t: TabSpec, closeDrawer: Boolean = true) {
-        if (closeDrawer) open = null
+        if (closeDrawer) {
+            open = null
+            filerOpen = true
+        }
         val nasPath = t.nasPath
         if (nasPath != null) {
             openNas(nasPath, t.id)
@@ -258,6 +348,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     fun showRecent() {
         open = null
+        filerOpen = true
         moveTo("recent")
     }
 
@@ -268,6 +359,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     fun openNas(path: String = nasState.path, fromTab: String? = null) {
         open = null
+        filerOpen = true
         nasTab = fromTab
         moveTo("nas")
         loadNas(path)
@@ -337,6 +429,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     fun openDrive(stack: List<Pair<String, String>> = driveState.stack.ifEmpty { listOf(GDrive.ROOT to "DRIVE") }, fromTab: String? = null) {
         open = null
+        filerOpen = true
         driveTab = fromTab
         moveTo("drive")
         if (drive.enabled) loadDrive(stack) else driveState = DriveState(stack)

@@ -18,19 +18,44 @@ data class Event(
     /** 終日の予定は UTC の 0 時で記録されるため、端末の時刻帯の同じ日付に読み替えた開始時刻。 */
     val localBegin: Long
         get() = if (allDay) begin - TimeZone.getDefault().getOffset(begin) else begin
+
+    val localEnd: Long
+        get() = if (allDay) end - TimeZone.getDefault().getOffset(end) else end
+
+    /** [from, to) に少しでも掛かるか。 */
+    fun overlaps(from: Long, to: Long): Boolean = localBegin < to && maxOf(localEnd, localBegin + 1) > from
 }
 
 /** 端末のカレンダー（Google カレンダーと同期済みのものを含む）から予定を読む。READ_CALENDAR が必要。 */
 object Calendar {
+    const val DAY = 24L * 3600_000
+
+    /** その日の 0 時（端末の時刻帯）。 */
+    fun startOfDay(t: Long = System.currentTimeMillis()): Long = java.util.Calendar.getInstance().apply {
+        timeInMillis = t
+        set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
+        set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    /** 日をまたいで足す（夏時間でもずれないよう暦で数える）。 */
+    fun addDays(t: Long, days: Int): Long = java.util.Calendar.getInstance().apply {
+        timeInMillis = t
+        add(java.util.Calendar.DAY_OF_MONTH, days)
+    }.timeInMillis
+
+    /** [from, to) に掛かる予定。終わったものも含む。 */
+    fun range(context: Context, from: Long, to: Long): List<Event> = query(context, from - DAY, to + DAY).filter { it.overlaps(from, to) }
+
+    /** 今日から days 日分。今日の終わった予定も含む（「今日の予定」に使う）。 */
     fun upcoming(context: Context, days: Int = 7): List<Event> {
-        val now = System.currentTimeMillis()
-        val dayStart = java.util.Calendar.getInstance().apply {
-            set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
-            set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
-        }.timeInMillis
+        val dayStart = startOfDay()
+        return range(context, dayStart, addDays(dayStart, days))
+    }
+
+    private fun query(context: Context, from: Long, to: Long): List<Event> {
         val uri = CalendarContract.Instances.CONTENT_URI.buildUpon().also {
-            ContentUris.appendId(it, dayStart - 24L * 3600_000)
-            ContentUris.appendId(it, dayStart + days * 24L * 3600_000)
+            ContentUris.appendId(it, from)
+            ContentUris.appendId(it, to)
         }.build()
         val cols = arrayOf(
             CalendarContract.Instances.EVENT_ID,
@@ -53,9 +78,7 @@ object Calendar {
                     location = c.getString(5)?.ifBlank { null },
                     color = c.getInt(6),
                 )
-                val localEnd = if (e.allDay) e.end - TimeZone.getDefault().getOffset(e.end) else e.end
-                // 終わった予定は出さない。終日の予定は今日の分まで残す。
-                if (if (e.allDay) localEnd > dayStart else e.end > now) out += e
+                out += e
             }
         }
         return out.sortedBy { it.localBegin }

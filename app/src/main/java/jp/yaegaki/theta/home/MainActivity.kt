@@ -86,6 +86,7 @@ class MainActivity : ComponentActivity() {
         model.reloadClips()
         model.refreshCaptures()
         model.refreshStatus()
+        model.refreshWeather()
         model.refreshHomeRole()
         model.checkUpdate()
     }

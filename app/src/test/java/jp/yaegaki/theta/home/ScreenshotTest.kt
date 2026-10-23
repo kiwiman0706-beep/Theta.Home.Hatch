@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.foundation.background
 import androidx.compose.ui.test.performScrollTo
 import androidx.activity.compose.setContent
 import androidx.test.core.app.ActivityScenario
@@ -144,6 +145,64 @@ class ScreenshotTest {
         launch("light") { photos(it, "list:2") }
         compose.mainClock.advanceTimeBy(1000)
         shot("filer-list-thumbs")
+    }
+
+    /** 狭い画面のダッシュボード：今日の予定・天気（見本の予報）・状態・ファイル・端末。 */
+    @Test
+    @Config(qualifiers = "w360dp-h1400dp-xxhdpi")
+    fun dashboard() {
+        launch { app ->
+            app.store.weatherPlace = jp.yaegaki.theta.home.data.WeatherPlace("東京都 / 東京", 35.68, 139.76)
+            app.store.weatherCache = weatherSample(System.currentTimeMillis())
+        }
+        shot("dashboard-narrow")
+    }
+
+    private fun sampleEvents(): List<jp.yaegaki.theta.home.data.Event> {
+        val today = jp.yaegaki.theta.home.data.Calendar.startOfDay()
+        fun at(day: Int, h: Int, m: Int = 0) = jp.yaegaki.theta.home.data.Calendar.addDays(today, day) + (h * 60 + m) * 60_000L
+        val utc = java.util.TimeZone.getDefault().getOffset(today)
+        var id = 1L
+        fun ev(title: String, day: Int, h: Int, len: Int, color: Long) = jp.yaegaki.theta.home.data.Event(id++, title, at(day, h), at(day, h) + len * 60_000L, false, null, color.toInt())
+        fun all(title: String, day: Int, days: Int, color: Long) = jp.yaegaki.theta.home.data.Event(id++, title, at(day, 0) + utc, at(day + days, 0) + utc, true, null, color.toInt())
+        return listOf(
+            all("出張（大阪）", 1, 2, 0xFF3F7FBF), ev("朝会", 0, 9, 30, 0xFFE0662B), ev("設計レビュー", 0, 10, 90, 0xFF4CAF50),
+            ev("昼食 with 田中", 0, 12, 60, 0xFF9C27B0), ev("歯医者", 0, 16, 45, 0xFFE0662B), ev("1on1", 0, 10, 30, 0xFF3F7FBF),
+            ev("定例", 2, 14, 60, 0xFF4CAF50), ev("ジム", 3, 19, 60, 0xFF9C27B0), ev("請求書の締め", 5, 10, 30, 0xFFE0662B),
+            ev("家族で夕食", 6, 18, 120, 0xFF3F7FBF), ev("勉強会", -2, 15, 90, 0xFF4CAF50), ev("美容院", -5, 11, 60, 0xFF9C27B0),
+            ev("打ち合わせ A", 8, 9, 60, 0xFFE0662B), ev("打ち合わせ B", 8, 11, 60, 0xFF3F7FBF), ev("打ち合わせ C", 8, 13, 60, 0xFF4CAF50),
+            ev("打ち合わせ D", 8, 15, 60, 0xFF9C27B0), ev("飲み会", 8, 19, 120, 0xFFE0662B), all("連休", 12, 3, 0xFF4CAF50),
+        )
+    }
+
+    private fun calendarShot(name: String, content: @androidx.compose.runtime.Composable (List<jp.yaegaki.theta.home.data.Event>, Long) -> Unit) {
+        launch()
+        val events = sampleEvents()
+        val today = jp.yaegaki.theta.home.data.Calendar.startOfDay()
+        scenario!!.onActivity { a ->
+            a.setContent {
+                jp.yaegaki.theta.home.ui.HomeTheme(dark = true) {
+                    androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.background(jp.yaegaki.theta.home.ui.LocalPalette.current.panel)) { content(events, today) }
+                }
+            }
+        }
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("build/screenshots/$name.png")
+    }
+
+    @Test
+    @Config(qualifiers = "w340dp-h900dp-xxhdpi")
+    fun calendarMonth() = calendarShot("calendar-month") { ev, today ->
+        val first = java.util.Calendar.getInstance().apply { timeInMillis = today; set(java.util.Calendar.DAY_OF_MONTH, 1) }.timeInMillis
+        val dow = java.util.Calendar.getInstance().apply { timeInMillis = first }.get(java.util.Calendar.DAY_OF_WEEK) - 1
+        val from = jp.yaegaki.theta.home.data.Calendar.addDays(first, -dow)
+        jp.yaegaki.theta.home.ui.MonthView(ev, from, jp.yaegaki.theta.home.data.Calendar.addDays(from, 42), today, today) {}
+    }
+
+    @Test
+    @Config(qualifiers = "w340dp-h900dp-xxhdpi")
+    fun calendarDay() = calendarShot("calendar-day") { ev, today ->
+        jp.yaegaki.theta.home.ui.DayView(ev, today, today) {}
     }
 
     /** 端のタブの「＋」でウィジェットの追加の画面が出る。 */

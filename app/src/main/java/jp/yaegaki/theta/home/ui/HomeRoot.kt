@@ -119,14 +119,17 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity) {
     val canGoUp = model.location == "nas" && model.nasState.path.isNotEmpty() ||
         model.location == "drive" && model.driveState.stack.size > 1 ||
         here != null && (model.folders[here.id]?.stack?.size ?: 0) > 1
-    BackHandler(enabled = model.open != null || model.settingsOpen || model.query.isNotEmpty() || canGoUp) {
+    // 狭い画面では、いちばん上のフォルダで戻るとファイラーを閉じてダッシュボードへ
+    val closeFiler = model.filerOpen && model.profile == "narrow"
+    BackHandler(enabled = model.open != null || model.settingsOpen || model.query.isNotEmpty() || canGoUp || closeFiler) {
         when {
             model.settingsOpen -> model.settingsOpen = false
             model.open != null -> model.close()
             model.query.isNotEmpty() -> model.query = ""
-            model.location == "nas" -> model.nasUp()
-            model.location == "drive" -> model.driveUp()
-            here != null -> model.up(here.id)
+            model.location == "nas" && model.nasState.path.isNotEmpty() -> model.nasUp()
+            model.location == "drive" && model.driveState.stack.size > 1 -> model.driveUp()
+            here != null && (model.folders[here.id]?.stack?.size ?: 0) > 1 -> model.up(here.id)
+            closeFiler -> model.filerOpen = false
         }
     }
 
@@ -294,7 +297,8 @@ private fun Rail(model: HomeModel, width: Dp) {
 }
 
 private fun railActive(model: HomeModel, t: TabSpec) = when (t.kind) {
-    TabKind.FOLDER -> model.location == "tab:${t.id}" || model.location == "nas" && model.nasTab == t.id
+    TabKind.FOLDER -> (model.filerOpen || model.profile == "wide") &&
+        (model.location == "tab:${t.id}" || model.location == "nas" && model.nasTab == t.id || model.location == "drive" && model.driveTab == t.id)
     else -> model.open == t.id || t.id in model.docked
 }
 

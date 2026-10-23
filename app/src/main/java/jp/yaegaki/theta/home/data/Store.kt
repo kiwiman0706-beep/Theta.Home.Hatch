@@ -245,6 +245,26 @@ class Store(context: Context) {
 
     fun saveQueries(list: List<SavedQuery>) = putObjects("queries", list) { it.toJson() }
 
+    var weatherPlace: WeatherPlace?
+        get() = runCatching {
+            val o = JSONObject(prefs.getString("weatherPlace", null) ?: return null)
+            WeatherPlace(o.getString("name"), o.getDouble("lat"), o.getDouble("lon"), o.optBoolean("loc"))
+        }.getOrNull()
+        set(v) = prefs.edit().putString("weatherPlace", v?.let { JSONObject().put("name", it.name).put("lat", it.lat).put("lon", it.lon).put("loc", it.useLocation).toString() }).apply()
+
+    /** 最後に取った予報（JSON のまま）と取った時刻。起動直後でもすぐ出せるように。 */
+    var weatherCache: String?
+        get() = prefs.getString("weatherCache", null)
+        set(v) = prefs.edit().putString("weatherCache", v).putLong("weatherAt", System.currentTimeMillis()).apply()
+
+    val weatherAt: Long
+        get() = prefs.getLong("weatherAt", 0)
+
+    /** カレンダーのドロワーの表示："month"・"week"・"day"。 */
+    var calendarMode: String
+        get() = prefs.getString("calMode", "month") ?: "month"
+        set(v) = prefs.edit().putString("calMode", v).apply()
+
     fun recents(): List<RecentFile> = objects("recents") {
         RecentFile(it.getString("uri"), it.getString("name"), it.optString("mime").ifEmpty { null }, it.getString("where"), it.getLong("time"))
     }

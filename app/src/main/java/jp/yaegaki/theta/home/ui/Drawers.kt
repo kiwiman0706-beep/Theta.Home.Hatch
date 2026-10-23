@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import jp.yaegaki.theta.home.data.ViewSpec
@@ -152,69 +153,6 @@ fun shortTime(t: Long): String {
     return if (dayFmt.format(d) == dayFmt.format(Date(now))) timeFmt.format(d) else dayFmt.format(d)
 }
 
-// ---- 予定 ----
-
-@Composable
-private fun CalendarDrawer(model: HomeModel) {
-    val p = LocalPalette.current
-    val actions = LocalActions.current
-    if (!model.has(Manifest.permission.READ_CALENDAR)) {
-        NeedPermission("端末のカレンダー（Google カレンダーと同期しているもの）から予定を表示します。", "予定の読み取りを許可") {
-            actions.requestPermissions(arrayOf(Manifest.permission.READ_CALENDAR)) { model.refreshEvents() }
-        }
-        return
-    }
-    var day by remember { mutableIntStateOf(0) }
-    val start = remember {
-        java.util.Calendar.getInstance().apply {
-            set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
-            set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
-        }.timeInMillis
-    }
-    val oneDay = 24L * 3600_000
-    val dayEvents = model.events.filter { e ->
-        val b = e.localBegin
-        val from = start + day * oneDay
-        if (e.allDay) b < from + oneDay && b + (e.end - e.begin) > from else b in from until from + oneDay || (b < from && e.end > from)
-    }
-    DrawerList {
-        item {
-            Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                for (i in 0 until 7) {
-                    val c = java.util.Calendar.getInstance().apply { timeInMillis = start + i * oneDay }
-                    val on = i == day
-                    Column(
-                        Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(0.dp))
-                            .background(if (on) p.accent else p.raised)
-                            .clickable(onClickLabel = "この日の予定") { day = i }
-                            .padding(vertical = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text("日月火水木金土"[c.get(java.util.Calendar.DAY_OF_WEEK) - 1].toString(), color = if (on) p.onAccent else p.muted, fontSize = 11.sp)
-                        Text(c.get(java.util.Calendar.DAY_OF_MONTH).toString(), color = if (on) p.onAccent else p.fg, fontSize = 17.sp)
-                    }
-                }
-            }
-        }
-        if (dayEvents.isEmpty()) item { Note("予定はありません") }
-        itemsIndexed(dayEvents, key = { _, it -> "${it.eventId}-${it.begin}" }) { zi, e ->
-            RowButton(zebra = zi, onClick = { actions.start(Calendar.openIntent(e)) }) {
-                Text(if (e.allDay) "終日" else timeFmt.format(Date(e.begin)), color = p.fg, fontSize = 15.sp, modifier = Modifier.width(48.dp))
-                Box(Modifier.width(3.dp).height(32.dp).background(if (e.color != 0) Color(e.color) else p.widget))
-                TwoLines(e.title, e.location, Modifier.weight(1f))
-            }
-        }
-        item {
-            FlowRow2 {
-                PillButton("＋ 予定を追加", { actions.start(Calendar.newEventIntent()) })
-                PillButton("カレンダーを開く", { actions.start(Calendar.openAppIntent()) })
-            }
-        }
-    }
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FlowRow2(content: @Composable () -> Unit) {
@@ -226,6 +164,37 @@ fun FlowRow2(content: @Composable () -> Unit) {
 }
 
 // ---- メール・LINE（届いた通知から） ----
+
+/** 通知 1 件。押すと通知を押したのと同じ画面（開けなければそのアプリ）。app を渡すと頭にアプリのアイコン。 */
+@Composable
+private fun NoticeRow(n: Notice, zebra: Int, app: jp.yaegaki.theta.home.data.AppEntry? = null) {
+    val p = LocalPalette.current
+    val actions = LocalActions.current
+    val ctx = actions.activity
+    RowButton(zebra = zebra, onClick = {
+        if (!HatchNotificationListener.open(ctx, n)) {
+            ctx.packageManager.getLaunchIntentForPackage(n.packageName)?.let(actions.start)
+        }
+    }) {
+        if (app != null) AppIcon(app, 32.dp) else Initial(n.initial)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row {
+                Text(n.title, color = p.fg, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(shortTime(n.time), color = p.muted, fontSize = 11.sp)
+            }
+            Text(n.text, color = p.muted, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+/** アイコンの右上に付ける通知の件数。 */
+@Composable
+private fun CountBadge(n: Int, modifier: Modifier) {
+    if (n <= 0) return
+    val p = LocalPalette.current
+    Text(if (n > 99) "99+" else n.toString(), color = p.onAccent, fontSize = 10.sp, fontFamily = Hud.mono,
+        modifier = modifier.background(p.accent).padding(horizontal = 4.dp))
+}
 
 @Composable
 private fun NoticeDrawer(mail: Boolean) {
@@ -249,22 +218,7 @@ private fun NoticeDrawer(mail: Boolean) {
         } else if (list.isEmpty()) {
             item { Note(if (mail) "新しいメールの通知はありません" else "新しいトークの通知はありません") }
         }
-        itemsIndexed(list, key = { _, it -> it.key }) { zi, n ->
-            RowButton(zebra = zi, onClick = {
-                if (!HatchNotificationListener.open(ctx, n)) {
-                    ctx.packageManager.getLaunchIntentForPackage(n.packageName)?.let(actions.start)
-                }
-            }) {
-                Initial(n.initial)
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Row {
-                        Text(n.title, color = p.fg, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        Text(shortTime(n.time), color = p.muted, fontSize = 11.sp)
-                    }
-                    Text(n.text, color = p.muted, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
-            }
-        }
+        itemsIndexed(list, key = { _, it -> it.key }) { zi, n -> NoticeRow(n, zi) }
         item {
             FlowRow2 {
                 if (mail) {
@@ -359,6 +313,8 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
     var moving by remember { mutableStateOf<jp.yaegaki.theta.home.data.AppEntry?>(null) }
     var sorting by remember { mutableStateOf(false) }
     val unsorted = model.apps.count { model.categoryOf(it) == null }
+    val notices by HatchNotificationListener.notices.collectAsState()
+    val counts = notices.groupingBy { it.packageName }.eachCount()
     // 見せ方（一覧・グリッド・大きさ）は、全体とカテゴリーのタブごとに覚える。カテゴリーのタブは初めからグリッド
     val viewKey = if (only != null) "apps:$only" else "apps"
     val spec = model.viewFor(listOf(viewKey), mostlyMedia = only != null)
@@ -423,7 +379,10 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(4.dp),
                             ) {
-                                AppIcon(app, appIcon[spec.size])
+                                Box {
+                                    AppIcon(app, appIcon[spec.size])
+                                    CountBadge(counts[app.packageName] ?: 0, Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-4).dp))
+                                }
                                 Text(app.label, color = p.fg, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(horizontal = 2.dp))
                             }
@@ -442,11 +401,31 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
                         ) {
                             AppIcon(app, listIcon[spec.size])
                             Text(app.label, color = p.fg, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            CountBadge(counts[app.packageName] ?: 0, Modifier)
                         }
                         AppMenu(model, app, menuFor == app.key, { menuFor = null }) { moving = app }
                     }
                 }
             }
+        }
+        // カテゴリーのタブ：そのカテゴリーのアプリに届いている通知を、アプリの下に並べる
+        if (only != null) {
+            val pkgs = groups.flatMap { it.third }.associateBy { it.packageName }
+            val mine = notices.filter { it.packageName in pkgs }
+            item(key = "n:head") {
+                Row(Modifier.padding(top = 14.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SectionTitle("NOTICE / 通知")
+                    Text("%02d".format(mine.size), color = if (mine.isEmpty()) p.faint else p.accent, fontSize = 11.sp)
+                    Ticks(Modifier.weight(1f).height(5.dp))
+                }
+            }
+            if (!HatchNotificationListener.isEnabled(actions.activity)) item(key = "n:perm") {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Note("通知へのアクセスを許可すると、このカテゴリーのアプリの通知がここに並びます（端末の中だけで使い、保存も送信もしません）。")
+                    PillButton("通知へのアクセスを許可", { actions.start(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) })
+                }
+            } else if (mine.isEmpty()) item(key = "n:none") { Note("新しい通知はありません") }
+            itemsIndexed(mine, key = { _, it -> "n:" + it.key }) { zi, n -> NoticeRow(n, zi, pkgs[n.packageName]) }
         }
         item { Note("長押しで「カテゴリーを変える」「アンインストール」など。") }
     }

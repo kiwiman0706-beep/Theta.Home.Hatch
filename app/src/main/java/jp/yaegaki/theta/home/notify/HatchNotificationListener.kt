@@ -37,7 +37,8 @@ data class Notice(
 
 /**
  * LINE には公開 API がないため、届いた通知の内容をドロワーに出す。メールも同じ仕組みで「届いたもの」を表示する。
- * 通知は端末内のメモリだけに持ち、保存も送信もしない。
+ * カテゴリーのタブでは、そのカテゴリーのアプリの通知をアプリの下に並べ、アイコンに件数を付ける。
+ * 再生中・通話中などの「消せない通知」は除く。通知は端末内のメモリだけに持ち、保存も送信もしない。
  */
 class HatchNotificationListener : NotificationListenerService() {
     override fun onListenerConnected() {
@@ -56,12 +57,16 @@ class HatchNotificationListener : NotificationListenerService() {
         if (watched(sbn.packageName)) refresh()
     }
 
-    private fun watched(pkg: String) = pkg == Notice.LINE || pkg in Notice.MAIL
+    private fun watched(pkg: String) = pkg != packageName
 
     private fun refresh() {
         val list = runCatching { activeNotifications }.getOrNull() ?: emptyArray()
         state.value = list
-            .filter { watched(it.packageName) && it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0 }
+            .filter {
+                val f = it.notification.flags
+                watched(it.packageName) && f and Notification.FLAG_GROUP_SUMMARY == 0 &&
+                    f and (Notification.FLAG_ONGOING_EVENT or Notification.FLAG_FOREGROUND_SERVICE) == 0
+            }
             .mapNotNull { sbn ->
                 val ex = sbn.notification.extras
                 val title = ex.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)

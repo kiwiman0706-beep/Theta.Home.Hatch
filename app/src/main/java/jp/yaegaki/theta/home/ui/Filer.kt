@@ -117,7 +117,7 @@ private fun GDrive.Item.row() = Row("drive:$id", name, isDir, size, modified, mi
 
 /**
  * 背景（デスクトップ）のファイラー。スマホでもファイルの置き場をホームにする。
- * 上：時計・次の予定・検索、ネットワーク・Tailscale・NAS の状態。下：場所（フォルダのタブ・NAS・最近）とファイルの一覧。
+ * 上：時計・今日の予定・検索、ネットワーク・Tailscale・NAS の状態。下：場所（フォルダのタブ・NAS・最近）とファイルの一覧。
  * 広い画面では選んだファイルの中身を右に出す。
  */
 @Composable
@@ -125,6 +125,12 @@ fun Filer(model: HomeModel) {
     val layout = LocalLayout.current
     var nasDialog by remember { mutableStateOf(false) }
     var driveDialog by remember { mutableStateOf(false) }
+    // 狭い画面の背景はダッシュボード。ファイラーはフォルダのタブ・場所を押したときだけ
+    if (layout.compact && !model.filerOpen) {
+        Dashboard(model, openNasSettings = { nasDialog = true })
+        if (nasDialog) NasDialog(model) { nasDialog = false }
+        return
+    }
     Column(Modifier.fillMaxSize().padding(horizontal = if (layout.compact) 14.dp else 28.dp, vertical = 12.dp)) {
         FilerHeader(model)
         Gap(8.dp)
@@ -182,65 +188,125 @@ private fun FilerFooter(model: HomeModel) {
     }
 }
 
+/** 時計と日付。10 秒ごとに描き直す。 */
 @Composable
-private fun FilerHeader(model: HomeModel) {
+internal fun ClockBlock(big: Boolean) {
     val p = LocalPalette.current
-    val layout = LocalLayout.current
     val now by produceState(System.currentTimeMillis()) {
         while (true) {
             value = System.currentTimeMillis(); delay(10_000)
         }
     }
+    val d = Date(now)
+    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.size(6.dp).background(p.accent))
+                Text("SYS.TIME", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, letterSpacing = 2.sp)
+            }
+            Text(
+                SimpleDateFormat("HH:mm", Locale.US).format(d), color = p.fg, fontFamily = Hud.display, fontWeight = FontWeight.Light,
+                fontSize = if (big) 72.sp else 52.sp, lineHeight = if (big) 76.sp else 56.sp, letterSpacing = 1.sp,
+            )
+        }
+        Column(Modifier.padding(bottom = 8.dp)) {
+            Text(SimpleDateFormat("yyyy.MM.dd", Locale.US).format(d), color = p.fg, fontSize = 14.sp, fontFamily = Hud.mono)
+            Text(SimpleDateFormat("EEE", Locale.US).format(d).uppercase(Locale.US) + " / " + SimpleDateFormat("E曜日", Locale.JAPAN).format(d), color = p.accent, fontSize = 12.sp, fontFamily = Hud.mono)
+        }
+    }
+}
+
+/** 検索・アプリ・設定の並び。 */
+@Composable
+internal fun SearchRow(model: HomeModel, leading: (@Composable () -> Unit)? = null) {
+    val p = LocalPalette.current
     val focus = remember { FocusRequester() }
     LaunchedEffect(model.focusSearch) { if (model.focusSearch > 0) runCatching { focus.requestFocus() } }
-    val next = if (model.has(Manifest.permission.READ_CALENDAR)) model.events.firstOrNull() else null
-    val calTab = model.tabs.firstOrNull { it.kind == TabKind.CALENDAR }
-    val d = Date(now)
-    val nextText = next?.let { (if (it.allDay) "ALL DAY" else SimpleDateFormat("HH:mm", Locale.US).format(Date(it.begin))) + "  " + it.title }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        leading?.invoke()
+        Field(model.query, { model.query = it }, "SEARCH  検索", Modifier.weight(1f).focusRequester(focus), leading = { GlyphIcon(Glyph.SEARCH, p.accent) })
+        GlyphButton(Glyph.GRID, "APPS（Alt+A）", { model.toggle(model.appsId()) }, tint = if (model.open == model.appsId()) p.accent else null)
+        GlyphButton(Glyph.GEAR, "設定", { model.settingsOpen = true })
+    }
+}
 
+/** 予定を 1 行で：時刻（終日は ALL DAY）・色の帯・題名。終わった予定は薄く。 */
+@Composable
+internal fun EventLine(e: jp.yaegaki.theta.home.data.Event, onClick: () -> Unit) {
+    val p = LocalPalette.current
+    val done = !e.allDay && e.end < System.currentTimeMillis()
+    Row(
+        Modifier.fillMaxWidth().clickable(onClickLabel = "予定を開く", onClick = onClick).padding(vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            if (e.allDay) "ALL DAY" else SimpleDateFormat("HH:mm", Locale.US).format(Date(e.begin)),
+            color = if (done) p.faint else p.accent, fontSize = 12.sp, fontFamily = Hud.mono, modifier = Modifier.width(58.dp),
+        )
+        Box(Modifier.width(3.dp).height(16.dp).background(if (e.color != 0) Color(e.color) else p.widget))
+        Text(e.title, color = if (done) p.faint else p.fg, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+    }
+}
+
+/** 今日の予定。max を超えた分は「+N 件」（押すとカレンダー）。 */
+@Composable
+internal fun TodayEvents(model: HomeModel, max: Int, modifier: Modifier = Modifier) {
+    val p = LocalPalette.current
+    val actions = LocalActions.current
+    val calTab = model.tabs.firstOrNull { it.kind == TabKind.CALENDAR }
+    val list = model.todayEvents
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("TODAY'S_EVENTS", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, letterSpacing = 1.5.sp)
+            Text("%02d".format(list.size), color = p.accent, fontSize = 10.sp, fontFamily = Hud.mono)
+        }
+        when {
+            !model.has(Manifest.permission.READ_CALENDAR) -> Text("予定の読み取りを許可すると、今日の予定が出ます", color = p.muted, fontSize = 13.sp,
+                modifier = Modifier.clickable { actions.requestPermissions(arrayOf(Manifest.permission.READ_CALENDAR)) { model.refreshEvents() } })
+            list.isEmpty() -> Text("今日の予定はありません", color = p.muted, fontSize = 13.sp)
+            else -> {
+                list.take(max).forEach { e -> EventLine(e) { actions.start(jp.yaegaki.theta.home.data.Calendar.openIntent(e)) } }
+                if (list.size > max) Text("+${list.size - max} 件 ›", color = p.accent, fontSize = 12.sp, fontFamily = Hud.mono,
+                    modifier = Modifier.clickable { calTab?.let { model.toggle(it.id) } }.padding(vertical = 4.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilerHeader(model: HomeModel) {
+    val p = LocalPalette.current
+    val layout = LocalLayout.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Box(Modifier.size(6.dp).background(p.accent))
-                    Text("SYS.TIME", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, letterSpacing = 2.sp)
-                }
-                Text(
-                    SimpleDateFormat("HH:mm", Locale.US).format(d), color = p.fg, fontFamily = Hud.display, fontWeight = FontWeight.Light,
-                    fontSize = if (layout.compact) 52.sp else 72.sp, lineHeight = if (layout.compact) 56.sp else 76.sp, letterSpacing = 1.sp,
-                )
-            }
-            Column(Modifier.padding(bottom = 8.dp)) {
-                Text(SimpleDateFormat("yyyy.MM.dd", Locale.US).format(d), color = p.fg, fontSize = 14.sp, fontFamily = Hud.mono)
-                Text(SimpleDateFormat("EEE", Locale.US).format(d).uppercase(Locale.US) + " / " + SimpleDateFormat("E曜日", Locale.JAPAN).format(d), color = p.accent, fontSize = 12.sp, fontFamily = Hud.mono)
-            }
-            if (!layout.compact && nextText != null) {
-                Readout("NEXT_EVENT", nextText, Modifier.weight(1f).padding(bottom = 8.dp).clickable(onClickLabel = "予定を開く") { calTab?.let { model.toggle(it.id) } }, accent = true)
-            } else {
+        if (layout.compact) {
+            // 狭い画面のファイラーは、ダッシュボードの上に開くもの。戻るでダッシュボードへ
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                GlyphButton(Glyph.CLOSE, "ファイラーを閉じる", { model.filerOpen = false })
+                Text("FILER", color = p.fg, fontSize = 26.sp, fontFamily = Hud.display)
+                Text("// FILES", color = p.faint, fontSize = 11.sp, fontFamily = Hud.mono, letterSpacing = 2.sp)
                 Spacer(Modifier.weight(1f))
+                Stripes(Modifier.width(60.dp).height(8.dp))
             }
-            if (!layout.compact) {
-                Column(Modifier.padding(bottom = 8.dp), horizontalAlignment = Alignment.End) {
-                    Text("THETA // HOME.HATCH", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, letterSpacing = 1.sp)
-                    Stripes(Modifier.width(96.dp).height(8.dp))
-                }
+            SearchRow(model)
+            return@Column
+        }
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            ClockBlock(big = true)
+            TodayEvents(model, max = 3, modifier = Modifier.weight(1f).padding(bottom = 6.dp))
+            Column(Modifier.padding(bottom = 8.dp), horizontalAlignment = Alignment.End) {
+                Text("THETA // HOME.HATCH", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, letterSpacing = 1.sp)
+                Stripes(Modifier.width(96.dp).height(8.dp))
             }
         }
         Ticks(Modifier.fillMaxWidth().height(6.dp))
-        if (layout.compact && nextText != null) {
-            Readout("NEXT_EVENT", nextText, Modifier.clickable(onClickLabel = "予定を開く") { calTab?.let { model.toggle(it.id) } }, accent = true)
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Field(model.query, { model.query = it }, "SEARCH  検索", Modifier.weight(1f).focusRequester(focus), leading = { GlyphIcon(Glyph.SEARCH, p.accent) })
-            GlyphButton(Glyph.GRID, "APPS（Alt+A）", { model.toggle(model.appsId()) }, tint = if (model.open == model.appsId()) p.accent else null)
-            GlyphButton(Glyph.GEAR, "設定", { model.settingsOpen = true })
-        }
+        SearchRow(model)
     }
 }
 
 /** ネットワーク・Tailscale・NAS の状態。つながっていなければ、Tailscale を開く・再接続の手助けを出す。 */
 @Composable
-private fun StatusStrip(model: HomeModel, openNasSettings: () -> Unit) {
+internal fun StatusStrip(model: HomeModel, openNasSettings: () -> Unit) {
     val p = LocalPalette.current
     val actions = LocalActions.current
     val s = model.status
@@ -355,7 +421,7 @@ private fun PlaceButton(index: Int, title: String, sub: String, active: Boolean,
 }
 
 @Composable
-private fun PlaceChips(model: HomeModel) {
+internal fun PlaceChips(model: HomeModel) {
     val p = LocalPalette.current
     Row(Modifier.horizontalScroll(rememberScrollState()).padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         @Composable
@@ -809,7 +875,7 @@ fun NasDialog(model: HomeModel, onDismiss: () -> Unit) {
 private data class Hit(val kind: String, val name: String, val where: String, val go: () -> Unit)
 
 @Composable
-private fun SearchResults(model: HomeModel) {
+internal fun SearchResults(model: HomeModel) {
     val p = LocalPalette.current
     val actions = LocalActions.current
     val q = model.query.trim()
