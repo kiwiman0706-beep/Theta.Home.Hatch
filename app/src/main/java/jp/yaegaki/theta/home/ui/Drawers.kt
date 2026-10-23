@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import jp.yaegaki.theta.home.data.ViewSpec
@@ -314,6 +315,7 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
     var sorting by remember { mutableStateOf(false) }
     val unsorted = model.apps.count { model.categoryOf(it) == null }
     val notices by HatchNotificationListener.notices.collectAsState()
+    val reorder = rememberReorderState()
     val counts = notices.groupingBy { it.packageName }.eachCount()
     // 見せ方（一覧・グリッド・大きさ）は、全体とカテゴリーのタブごとに覚える。カテゴリーのタブは初めからグリッド
     val viewKey = if (only != null) "apps:$only" else "apps"
@@ -322,7 +324,7 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
     // カテゴリーの並び順で見出しを付ける。未分類は最後
     val groups = (model.categories.map { c -> c.id to c.name } + ("" to "未分類"))
         .filter { (id, _) -> filter == null || filter == id }
-        .map { (id, name) -> Triple(id, name, visible.filter { (model.appCategories[it.key] ?: "") == id || id == "" && model.categoryOf(it) == null }.distinct()) }
+        .map { (id, name) -> Triple(id, name, model.ordered(id, visible.filter { (model.appCategories[it.key] ?: "") == id || id == "" && model.categoryOf(it) == null }.distinct())) }
         .filter { it.third.isNotEmpty() }
 
     DrawerList {
@@ -369,12 +371,14 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
                 }
             }
             if (spec.grid) item(key = "g:$id") {
-                FlowRow(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                FlowRow(Modifier.zIndex(if (list.any { it.key == reorder.dragging }) 10f else 0f).fillMaxWidth().padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     list.forEach { app ->
-                        Box {
+                        Box(Modifier.zIndex(if (reorder.dragging == app.key) 10f else 0f)) {
                             Column(
                                 Modifier.width(appCell[spec.size])
-                                    .combinedClickable(onClick = { actions.start(Apps.launchIntent(app)) }, onLongClick = { menuFor = app.key }, onClickLabel = "開く")
+                                    // 長押し→ドラッグで同じカテゴリーの中を並べ替え。動かさずに離すとメニュー
+                                    .reorderable(reorder, app.key, "app:$id", p.accent, onMenu = { menuFor = app.key }) { from, to -> model.moveAppTo(id, list, from, to) }
+                                    .combinedClickable(onClick = { actions.start(Apps.launchIntent(app)) }, onLongClick = {}, onClickLabel = "開く")
                                     .padding(vertical = 6.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -392,12 +396,13 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
                 }
             } else list.forEachIndexed { zi, app ->
                 item(key = "$id:${app.key}") {
-                    Box {
+                    Box(Modifier.zIndex(if (reorder.dragging == app.key) 10f else 0f)) {
                         RowButton(
                             zebra = zi,
                             onClick = { actions.start(Apps.launchIntent(app)) },
-                            onLongClick = { menuFor = app.key },
+                            onLongClick = {},
                             label = "開く",
+                            modifier = Modifier.reorderable(reorder, app.key, "app:$id", p.accent, onMenu = { menuFor = app.key }) { from, to -> model.moveAppTo(id, list, from, to) },
                         ) {
                             AppIcon(app, listIcon[spec.size])
                             Text(app.label, color = p.fg, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
@@ -427,7 +432,7 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
             } else if (mine.isEmpty()) item(key = "n:none") { Note("新しい通知はありません") }
             itemsIndexed(mine, key = { _, it -> "n:" + it.key }) { zi, n -> NoticeRow(n, zi, pkgs[n.packageName]) }
         }
-        item { Note("長押しで「カテゴリーを変える」「アンインストール」など。") }
+        item { Note("長押しして動かすと並べ替え、動かさずに離すと「カテゴリーを変える」「アンインストール」など。") }
     }
 
     moving?.let { app ->

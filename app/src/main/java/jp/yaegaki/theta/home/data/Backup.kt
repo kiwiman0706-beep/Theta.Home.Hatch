@@ -52,6 +52,7 @@ object Backup {
             .put("bookmarks", JSONArray(store.bookmarks().map { JSONObject().put("id", it.id).put("name", it.name).put("url", it.url) }))
             .put("folderViews", JSONObject(store.folderViews()))
             .put("queries", JSONArray(store.queries().map { it.toJson() }))
+            .put("appOrder", JSONObject(store.appOrder().mapValues { JSONArray(it.value) }))
             .put("nas", JSONObject().put("url", store.prefs.getString("nasUrl", "")).put("account", store.prefs.getString("nasAccount", "")))
             .put("apps", JSONArray(apps.map { JSONObject().put("package", it.packageName).put("component", it.key).put("label", it.label) }))
         val widgets = JSONObject()
@@ -84,6 +85,7 @@ object Backup {
         o.optJSONObject("categoryAliases")?.let { e.putString("catAlias", it.toString()) }
         o.optJSONArray("bookmarks")?.let { e.putString("bookmarks", it.toString()) }
         o.optJSONObject("folderViews")?.let { e.putString("views", it.toString()) }
+        o.optJSONObject("appOrder")?.let { e.putString("appOrder", it.toString()) }
         o.optJSONArray("queries")?.let { e.putString("queries", it.toString()).putBoolean("queriesSeeded", true) }
         e.putString("location", o.optString("location", ""))
         val nas = o.optJSONObject("nas")

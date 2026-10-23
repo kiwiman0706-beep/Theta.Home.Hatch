@@ -7,9 +7,11 @@ import android.content.pm.ResolveInfo
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.foundation.background
 import androidx.compose.ui.test.performScrollTo
 import androidx.activity.compose.setContent
@@ -147,6 +149,69 @@ class ScreenshotTest {
         shot("filer-list-thumbs")
     }
 
+    /** 長押し→ドラッグで並べ替え：アプリ（カテゴリーのタブ）と端のタブ。動かさずに離すとメニュー。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun dragToReorder() {
+        launch()
+        compose.waitForIdle()
+        var model: HomeModel? = null
+        scenario!!.onActivity { a ->
+            val m = androidx.lifecycle.ViewModelProvider(a)[HomeModel::class.java]
+            val c = m.addCategory("DRAG")
+            m.apps.forEach { m.assign(it, c) }
+            m.addCategoryTab(c)
+            model = m
+        }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("DRAG").performScrollTo().performClick()
+        compose.mainClock.advanceTimeBy(600)
+        fun drag(from: String, to: String) {
+            val a = compose.onNodeWithText(from).fetchSemanticsNode().boundsInRoot
+            val b = compose.onNodeWithText(to).fetchSemanticsNode().boundsInRoot
+            val node = compose.onNodeWithText(from)
+            node.performTouchInput { down(center) }
+            compose.mainClock.advanceTimeBy(1000)
+            val step = (b.center - a.center) / 10f
+            repeat(10) { node.performTouchInput { moveBy(step) }; compose.mainClock.advanceTimeBy(16) }
+            node.performTouchInput { up() }
+            compose.waitForIdle()
+        }
+        val m = model!!
+        val cat = m.categories.first { it.name == "DRAG" }.id
+        val before = m.ordered(cat, m.apps.filter { m.appCategories[it.key] == cat }).map { it.label }
+        drag(before[0], before[2])
+        val expected = before.toMutableList().also { it.add(2, it.removeAt(0)) }
+        org.junit.Assert.assertEquals(expected, m.ordered(cat, m.apps.filter { m.appCategories[it.key] == cat }).map { it.label })
+        shot("drag-reorder-apps")
+
+        // 動かさずに離すとメニュー
+        compose.onNodeWithText(expected[0]).performTouchInput { down(center) }
+        compose.mainClock.advanceTimeBy(1000)
+        compose.onNodeWithText(expected[0]).performTouchInput { up() }
+        compose.waitForIdle()
+        compose.onNodeWithText("カテゴリーを変える").assertExists()
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun dragTabs() {
+        launch()
+        compose.waitForIdle()
+        var model: HomeModel? = null
+        scenario!!.onActivity { a -> model = androidx.lifecycle.ViewModelProvider(a)[HomeModel::class.java] }
+        val from = compose.onNodeWithContentDescription("WORK（Alt+1）")
+        val a = from.fetchSemanticsNode().boundsInRoot
+        val b = compose.onNodeWithContentDescription("PHOTO（Alt+3）").fetchSemanticsNode().boundsInRoot
+        from.performTouchInput { down(center) }
+        compose.mainClock.advanceTimeBy(1000)
+        val step = (b.center - a.center) / 10f
+        repeat(10) { from.performTouchInput { moveBy(step) }; compose.mainClock.advanceTimeBy(16) }
+        from.performTouchInput { up() }
+        compose.waitForIdle()
+        org.junit.Assert.assertEquals(listOf("PRIVATE", "PHOTO", "WORK"), model!!.tabs.take(3).map { it.label })
+    }
+
     /** 狭い画面のダッシュボード：今日の予定・天気（見本の予報）・状態・ファイル・端末。 */
     @Test
     @Config(qualifiers = "w360dp-h1400dp-xxhdpi")
@@ -261,7 +326,7 @@ class ScreenshotTest {
         compose.onNodeWithContentDescription("APPS（Alt+A）").performClick()
         compose.mainClock.advanceTimeBy(600)
         shot("sort-apps-drawer")
-        compose.onNodeWithText("仕分け 5").performClick()
+        compose.onAllNodesWithText("仕分け", substring = true).onFirst().performClick()
         shot("sort-step1-categories")
         startSorting()
         shot("sort-step2-assign")
@@ -273,7 +338,7 @@ class ScreenshotTest {
         launch("light")
         compose.onNodeWithContentDescription("APPS（Alt+A）").performClick()
         compose.mainClock.advanceTimeBy(600)
-        compose.onNodeWithText("仕分け 5").performClick()
+        compose.onAllNodesWithText("仕分け", substring = true).onFirst().performClick()
         startSorting()
         shot("sort-step2-assign-light")
     }

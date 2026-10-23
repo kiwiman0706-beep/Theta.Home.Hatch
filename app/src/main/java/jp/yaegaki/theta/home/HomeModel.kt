@@ -993,6 +993,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         bookmarks = store.bookmarks()
         folderViews = store.folderViews()
         queries = store.queries()
+        appOrder = store.appOrder()
         widgetTabs = store.widgetTabs(profile)
         folders.clear()
         open = null
@@ -1074,6 +1075,44 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     fun updateWidgetTab(t: WidgetTab) {
         liveWidth.remove(t.id)
         saveWidgetTabs(widgetTabs.map { if (it.id == t.id) t else it })
+    }
+
+    /** ドラッグで並べ替え：from を to の場所へ。 */
+    fun moveTabTo(from: String, to: String) {
+        val i = tabs.indexOfFirst { it.id == from }
+        val j = tabs.indexOfFirst { it.id == to }
+        if (i < 0 || j < 0 || i == j) return
+        updateTabs(tabs.toMutableList().also { it.add(j, it.removeAt(i)) })
+    }
+
+    fun moveWidgetTabTo(from: Int, to: Int) {
+        val i = widgetTabs.indexOfFirst { it.id == from }
+        val j = widgetTabs.indexOfFirst { it.id == to }
+        if (i < 0 || j < 0 || i == j) return
+        saveWidgetTabs(widgetTabs.toMutableList().also { it.add(j, it.removeAt(i)) })
+    }
+
+    /** カテゴリーごとのアプリの並び（ドラッグで決めたもの）。キーはカテゴリーの id（未分類は ""）。 */
+    var appOrder by mutableStateOf(store.appOrder()); private set
+
+    /** 並びを決めていないアプリは、決めたものの後ろに名前順。 */
+    fun ordered(catId: String, list: List<AppEntry>): List<AppEntry> {
+        val order = appOrder[catId] ?: return list
+        val pos = order.withIndex().associate { it.value to it.index }
+        return list.sortedWith(compareBy({ pos[it.key] ?: Int.MAX_VALUE }, { it.label.lowercase() }))
+    }
+
+    /** shown は今見えている並び。from を to の場所へ動かして、そのカテゴリーの並びとして覚える。 */
+    fun moveAppTo(catId: String, shown: List<AppEntry>, from: String, to: String) {
+        val keys = ordered(catId, shown).map { it.key }.toMutableList()
+        val i = keys.indexOf(from)
+        val j = keys.indexOf(to)
+        if (i < 0 || j < 0 || i == j) return
+        keys.add(j, keys.removeAt(i))
+        // 絞り込みで隠れているものの位置は前のまま残す
+        val rest = appOrder[catId].orEmpty().filter { it !in keys }
+        appOrder = appOrder + (catId to keys + rest)
+        store.saveAppOrder(appOrder)
     }
 
     fun moveWidgetTab(id: Int, delta: Int) {

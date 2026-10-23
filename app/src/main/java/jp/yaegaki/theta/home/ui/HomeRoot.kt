@@ -268,16 +268,17 @@ private fun Rail(model: HomeModel, width: Dp) {
         verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         var lastGroup = -1
+        val reorder = rememberReorderState()
         model.tabs.forEach { t ->
             if (lastGroup != -1 && t.kind.group != lastGroup) Spacer(Modifier.height(12.dp))
             lastGroup = t.kind.group
-            RailTab(model, t.id, t.label, t.kind.group, active = railActive(model, t), shortcut = shortcut(model, t), left = left)
+            RailTab(model, reorder, t.id, t.label, t.kind.group, active = railActive(model, t), shortcut = shortcut(model, t), left = left)
         }
         // ウィジェットは 1 タブに 1 つ。並びと大きさは画面（閉じた／開いた）ごと
         Spacer(Modifier.height(12.dp))
         model.widgetTabs.forEach { w ->
             val id = "w:${w.id}"
-            RailTab(model, id, w.label.take(10), 1, active = model.open == id || id in model.docked, shortcut = null, left = left)
+            RailTab(model, reorder, id, w.label.take(10), 1, active = model.open == id || id in model.docked, shortcut = null, left = left)
         }
         var adding by remember { mutableStateOf(false) }
         var addingWidget by remember { mutableStateOf(false) }
@@ -307,7 +308,7 @@ private fun shortcut(model: HomeModel, t: TabSpec) = t.kind.key?.let { "Alt+$it"
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun RailTab(model: HomeModel, id: String, label: String, group: Int, active: Boolean, shortcut: String?, left: Boolean) {
+private fun RailTab(model: HomeModel, reorder: ReorderState, id: String, label: String, group: Int, active: Boolean, shortcut: String?, left: Boolean) {
     val p = LocalPalette.current
     val groupColor = p.group(group)
     val code = model.tabs.indexOfFirst { it.id == id }.let { if (it >= 0) "%02d".format(it + 1) else "W" + (model.widgetTabs.indexOfFirst { w -> "w:${w.id}" == id } + 1) }
@@ -316,9 +317,14 @@ private fun RailTab(model: HomeModel, id: String, label: String, group: Int, act
     Box(
         Modifier
             .width(40.dp)
+            // 長押し→ドラッグで並べ替え（タブはタブの間、ウィジェットのタブはウィジェットの間）。動かさずに離すとメニュー
+            .reorderable(reorder, id, if (id.startsWith("w:")) "widget" else "tab", p.accent, onMenu = { menu = true }) { from, to ->
+                if (from.startsWith("w:")) model.moveWidgetTabTo(from.removePrefix("w:").toInt(), to.removePrefix("w:").toInt())
+                else model.moveTabTo(from, to)
+            }
             .background(if (active) p.accent else p.bg)
             .border(1.dp, if (active) p.accent else p.line)
-            .combinedClickable(role = Role.Tab, onClick = { model.toggle(id) }, onLongClick = { menu = true }, onLongClickLabel = "並べ替え・名前・外す")
+            .combinedClickable(role = Role.Tab, onClick = { model.toggle(id) }, onLongClick = {}, onLongClickLabel = "ドラッグで並べ替え・離すとメニュー")
             .semantics {
                 contentDescription = label + (shortcut?.let { "（$it）" } ?: "")
                 selected = active

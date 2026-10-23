@@ -265,6 +265,14 @@ class Store(context: Context) {
         get() = prefs.getString("calMode", "month") ?: "month"
         set(v) = prefs.edit().putString("calMode", v).apply()
 
+    fun appOrder(): Map<String, List<String>> = runCatching {
+        val o = JSONObject(prefs.getString("appOrder", "{}") ?: "{}")
+        o.keys().asSequence().associateWith { k -> o.getJSONArray(k).let { a -> (0 until a.length()).map { a.getString(it) } } }
+    }.getOrDefault(emptyMap())
+
+    fun saveAppOrder(map: Map<String, List<String>>) =
+        prefs.edit().putString("appOrder", JSONObject(map.mapValues { JSONArray(it.value) }).toString()).apply()
+
     fun recents(): List<RecentFile> = objects("recents") {
         RecentFile(it.getString("uri"), it.getString("name"), it.optString("mime").ifEmpty { null }, it.getString("where"), it.getLong("time"))
     }
