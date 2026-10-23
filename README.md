@@ -72,7 +72,7 @@ DSBooks と同じく、Synology の DSM File Station API でつなぐ（設定 �
 
 1. 手元で `./gradlew :app:assembleRelease`（鍵は `keystore.properties`）し、APK を `releases/ThetaHomeHatch-<版>.apk` として置く
 2. `releases/SHA256SUMS-<x.y.z>.txt`（`sha256sum` の出力）と `docs/release-notes/v<版>.md` を置いてコミット
-3. `v<版>` のタグを付けてプッシュすると、Actions（`release-apk`）がハッシュ・署名の証明書・版を確かめて Release を作る。`-` 付きの版はプレリリース
+3. Actions の `release-apk` を「Run workflow」で版（例 `v0.5.0-alpha`）を指定して実行するか、`v<版>` のタグをプッシュする。ハッシュ・署名の証明書・版を確かめてから Release を作り、タグも付ける。`-` 付きの版はプレリリース
 
 ## ビルド
 

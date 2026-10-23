@@ -1,10 +1,16 @@
 name: release-apk
 
-# v0.5.0-alpha のようなタグを付けると、releases/ に置いた署名済み APK を GitHub Release として公開する。
+# releases/ に置いた署名済み APK を GitHub Release として公開する。
+# v0.5.0-alpha のようなタグをプッシュするか、Actions の画面から版を指定して手動で実行する（タグはそのとき付く）。
 # APK はここではビルドしない（署名鍵をリポジトリにも Actions にも置かないため）。
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版（例：v0.5.0-alpha）'
+        required: true
 
 permissions:
   contents: write
@@ -19,12 +25,14 @@ jobs:
       - name: 版と添付ファイルを決める
         id: v
         run: |
-          tag="${GITHUB_REF_NAME}"
+          tag="${{ github.event.inputs.version || github.ref_name }}"
+          case "$tag" in v*) ;; *) tag="v$tag";; esac
           ver="${tag#v}"
           apk="releases/ThetaHomeHatch-${ver}.apk"
           sums="releases/SHA256SUMS-${ver%%-*}.txt"
           notes="docs/release-notes/${tag}.md"
           for f in "$apk" "$sums" "$notes"; do test -f "$f" || { echo "::error::$f がありません"; exit 1; }; done
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "ver=$ver" >> "$GITHUB_OUTPUT"
           echo "apk=$apk" >> "$GITHUB_OUTPUT"
           echo "sums=$sums" >> "$GITHUB_OUTPUT"
@@ -42,6 +50,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           pre=""
-          case "$GITHUB_REF_NAME" in *-*) pre="--prerelease";; esac
-          gh release create "$GITHUB_REF_NAME" "${{ steps.v.outputs.apk }}" "${{ steps.v.outputs.sums }}" \
+          tag="${{ steps.v.outputs.tag }}"
+          case "$tag" in *-*) pre="--prerelease";; esac
+          gh release create "$tag" "${{ steps.v.outputs.apk }}" "${{ steps.v.outputs.sums }}" --target "$GITHUB_SHA" \
             --title "Theta Home Hatch ${{ steps.v.outputs.ver }}" --notes-file "${{ steps.v.outputs.notes }}" $pre
