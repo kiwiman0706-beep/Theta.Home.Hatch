@@ -1,0 +1,15 @@
+.gradle/
+build/
+app/build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+.kotlin/
+
+# 署名鍵と鍵情報はリポジトリに入れない
+*.jks
+*.keystore
+keystore.properties
+signing.properties

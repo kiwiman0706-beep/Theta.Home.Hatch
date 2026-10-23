@@ -1,0 +1,3016 @@
+<!doctype html>
+<html lang="en" data-visualize-standalone>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Home Hatch V5</title>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
+
+</head>
+<body>
+<iframe id="codex-visualization" sandbox="allow-scripts" referrerpolicy="no-referrer" title="Home Hatch V5" data-srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot; data-visualize-standalone&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
+&lt;title&gt;Home Hatch V5&lt;/title&gt;
+&lt;style&gt;:root {
+  color-scheme: light dark;
+  background-color: var(
+    --background,
+    var(--color-background-primary, light-dark(rgb(255 255 255), rgb(24 24 24)))
+  ) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: var(
+    --color-background-primary,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --card: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  --card-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --popover: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255), rgb(45 45 45))
+  );
+  --popover-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --primary: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --primary-foreground: var(
+    --color-text-inverse,
+    light-dark(rgb(255 255 255), rgb(13 13 13))
+  );
+  --secondary: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%))
+  );
+  --secondary-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: var(
+    --color-text-secondary,
+    light-dark(rgb(26 28 31 / 49.4%), rgb(255 255 255 / 49.8%))
+  );
+  --accent: var(
+    --color-background-info,
+    light-dark(rgb(229 242 255), rgb(13 39 63))
+  );
+  --accent-foreground: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --destructive: var(
+    --color-text-warning,
+    light-dark(rgb(226 85 7), rgb(255 133 73))
+  );
+  --border: var(
+    --color-border-secondary,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+  --input: var(
+    --color-border-primary,
+    light-dark(
+      rgb(26 28 31 / 11.8%),
+      color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+    )
+  );
+  --ring: var(
+    --color-ring-primary,
+    light-dark(rgb(51 156 255), rgb(131 195 255 / 76%))
+  );
+  --font-size-base: var(--font-text-md-size, 16px);
+  --blue: light-dark(rgb(51 156 255), rgb(51 156 255));
+  --orange: light-dark(rgb(226 85 7), rgb(251 106 34));
+  --green: light-dark(rgb(0 162 64), rgb(64 201 119));
+  --red: light-dark(rgb(224 46 42), rgb(255 103 100));
+  --purple: light-dark(rgb(146 79 247), rgb(173 123 249));
+  --yellow: light-dark(rgb(255 195 0), rgb(255 210 64));
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans:
+    -apple-system-body, ui-sans-serif, -apple-system, system-ui, &quot;Segoe UI&quot;,
+    Helvetica, &quot;Apple Color Emoji&quot;, Arial, sans-serif, &quot;Segoe UI Emoji&quot;,
+    &quot;Segoe UI Symbol&quot;;
+  --font-mono:
+    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --icon-size: 16px;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --corner-shape: round;
+  --radius: var(--border-radius-lg, 8px);
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 2);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 17 17&#x27;%3E%3Cpath d=&#x27;M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z&#x27;/%3E%3C/svg%3E&quot;);
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+}
+
+:root[data-theme=&quot;light&quot;] {
+  color-scheme: light;
+}
+
+:root[data-theme=&quot;dark&quot;] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html &gt; body {
+  /* Preserve MCP aliases for older inline renderers without creating :root cycles. */
+  --color-background-primary: var(
+    --background,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --color-text-primary: var(
+    --foreground,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --color-border-secondary: var(
+    --border,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+
+  margin: 0;
+  padding: var(--visualize-paint-gutter, 0px);
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans) !important;
+  -webkit-font-smoothing: antialiased;
+  font-size: var(--font-size-base);
+  line-height: calc(var(--font-size-base) * 1.625);
+  font-weight: var(--font-weight-normal);
+}
+
+.cursor-interaction {
+  cursor: var(--cursor-interaction, pointer);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: var(--cursor-interaction, pointer);
+  text-decoration: none;
+  text-underline-offset: 2px;
+  font-weight: inherit;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+li,
+.table {
+  font-family: var(--font-sans);
+}
+
+h1 {
+  font-size: calc(var(--font-size-base) * 1.5);
+  line-height: 1.3333333333;
+}
+
+h2 {
+  font-size: calc(var(--font-size-base) * 1.25);
+  line-height: 1.4;
+}
+h3 {
+  font-size: calc(var(--font-size-base) * 1.125);
+  line-height: 1.5555555556;
+}
+h4 {
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+}
+h5,
+h6 {
+  font-size: var(--font-size-base);
+  line-height: calc(var(--font-size-base) * 1.625);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+b,
+strong,
+th {
+  font-weight: 600;
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+pre,
+pre code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: calc(var(--font-size-base) * 0.875);
+  line-height: calc(var(--font-size-base) * 1.625);
+  font-family: var(--font-sans);
+}
+
+.table :is(th, td) {
+  padding-block: 10px;
+  padding-inline: 0 24px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+  border-bottom-color: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+.table :is(th, td):not(:last-child) {
+  padding-inline-end: calc(var(--font-size-base) * 1.5);
+}
+
+.table-responsive &gt; .table :is(th, td) {
+  overflow-wrap: break-word;
+}
+
+.table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.table :is(caption, thead th) {
+  font-weight: 600;
+}
+
+.table thead :is(th, td) {
+  border-bottom-color: var(--border-strong, var(--input));
+  padding-block: calc(var(--font-size-base) / 2);
+  line-height: var(--font-size-base);
+}
+
+.table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+.table tbody :is(th, td) {
+  padding-block: calc(var(--font-size-base) * 0.625);
+}
+
+.table.table-sm :is(th, td) {
+  padding-block: 8px;
+}
+
+.table.table-sm :is(th, td):not(:last-child) {
+  padding-inline-end: 16px;
+}
+
+.table :is(.text-end, [align=&quot;right&quot;]) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table :is(.text-center, [align=&quot;center&quot;]) {
+  text-align: center;
+}
+
+.table .text-nowrap {
+  white-space: nowrap;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: var(--corner-shape);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+.widget {
+  min-width: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  box-shadow: 0 0 0 0.5px var(--border-strong, var(--border));
+  color: var(--foreground);
+  background: var(--background);
+}
+
+#widget &gt; :not(.card, .widget, .progress) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  border: 1px solid var(--border);
+  corner-shape: var(--corner-shape);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+  font-family: var(--font-sans);
+  padding: 5px 12px;
+  border-color: color-mix(
+    in oklab,
+    light-dark(var(--primary-foreground), var(--foreground)) 5%,
+    transparent
+  );
+  border-radius: var(--radius-2xl);
+  color: light-dark(var(--primary-foreground), var(--foreground));
+  background: light-dark(var(--foreground), var(--popover));
+  box-shadow: 0 8px 18px rgb(15 23 42 / 20%);
+  letter-spacing: -0.15px;
+  font-size: calc(var(--font-size-base) * 14 / 16);
+  font-size: round(nearest, calc(var(--font-size-base) * 14 / 16), 1px);
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+hr {
+  width: 100%;
+  height: 1px;
+  margin-block: 6px;
+  border: 0;
+  background: var(--border);
+}
+
+.nav {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress {
+  display: flex;
+  height: 8px;
+  margin-block: calc((var(--line-height-normal, 1.5em) - 8px) / 2);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+}
+
+.progress-bar:only-child {
+  border-radius: var(--radius-full);
+}
+
+.progress-bar {
+  height: 100%;
+  flex-shrink: 0;
+  border: 0;
+  background: var(--viz-series-1);
+}
+
+.viz-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  color: color-mix(in srgb, var(--foreground) 40%, var(--muted-foreground));
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  font-family: var(--font-sans);
+  font-size: calc(var(--font-size-base) * 14 / 16);
+  font-size: round(nearest, calc(var(--font-size-base) * 14 / 16), 1px);
+  font-weight: var(--font-weight-normal);
+  line-height: 1;
+}
+
+small,
+.text-small {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls &gt; .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.nav-link,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+/* Match inline alignment without overriding a containing flex or grid layout. */
+.btn,
+.nav-link,
+.form-control,
+.form-select,
+.form-range,
+.form-check {
+  vertical-align: middle;
+}
+
+.btn,
+.nav-link {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  corner-shape: var(--corner-shape);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: inherit;
+  font-family: var(--font-sans);
+  height: fit-content;
+  min-height: calc(12px + 2 * var(--control-spacing, 12px));
+  padding-inline: var(--control-spacing, 12px);
+  border-color: transparent;
+  border-radius: var(--radius-full);
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  font-size: calc(var(--font-size-base) * 14 / 16);
+  font-size: round(nearest, calc(var(--font-size-base) * 14 / 16), 1px);
+  font-weight: var(--font-weight-normal);
+  line-height: 18px;
+}
+
+.btn {
+  border-color: var(--border);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: var(--cursor-interaction, pointer);
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover {
+  background: light-dark(
+    color-mix(in srgb, var(--foreground) 5.5%, transparent),
+    color-mix(in srgb, var(--foreground) 8%, transparent)
+  );
+}
+
+.nav-link:not(:disabled):not([aria-disabled=&quot;true&quot;]):hover {
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+.btn-primary {
+  border-color: var(--border);
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: border-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: border-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--muted-foreground);
+  background: light-dark(
+    color-mix(in srgb, var(--foreground) 5.5%, transparent),
+    color-mix(in srgb, var(--foreground) 8%, transparent)
+  );
+}
+
+.nav-pills .nav-link {
+  min-width: 0;
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.nav-justified .nav-link {
+  flex: 1 1 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.nav-pills .nav-link.active {
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+/* Shared preview chrome; product styles stay inside each variant. */
+.viz-dotted-background {
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--foreground) 14%, transparent) 0.8px,
+    transparent 0.8px
+  );
+  background-position: center;
+  background-size: 16px 16px;
+}
+
+.viz-carousel {
+  position: relative;
+  min-width: 0;
+}
+
+.viz-carousel:has(&gt; .viz-carousel-controls) {
+  min-height: calc(60px + var(--viz-carousel-picker-height, 0px));
+  padding-bottom: 60px;
+}
+
+.viz-carousel &gt; [data-variant][hidden] {
+  display: none !important;
+}
+
+.viz-carousel &gt; [data-variant] {
+  isolation: isolate;
+}
+
+.viz-carousel-controls {
+  --viz-carousel-hover: light-dark(
+    color-mix(in srgb, var(--foreground) 5.4%, transparent),
+    color-mix(in srgb, var(--foreground) 7.8%, transparent)
+  );
+  position: absolute;
+  z-index: 2;
+  bottom: 8px;
+  left: 50%;
+  display: flex;
+  width: max-content;
+  /* Leave room for the host&#x27;s design-controls launcher at the trailing edge. */
+  max-width: calc(100% - 96px);
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-sans);
+  /* Match the settings dropdown chrome independently of the content font size. */
+  font-size: 13px;
+  font-weight: var(--font-weight-normal);
+  line-height: 18px;
+  transform: translateX(-50%);
+  user-select: none;
+}
+
+/* Keep authored mockup button styles out of the shared carousel chrome. */
+.viz-carousel-controls button,
+.viz-carousel-picker &gt; summary {
+  display: flex !important;
+  height: auto !important;
+  min-height: 30px;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px;
+  padding: 0 6px !important;
+  -webkit-app-region: no-drag;
+  border: 0 !important;
+  border-radius: 14px !important;
+  color: inherit !important;
+  background: transparent !important;
+  font: inherit !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.viz-carousel-controls &gt; button,
+.viz-carousel-picker &gt; summary {
+  position: relative;
+  isolation: isolate;
+}
+
+.viz-carousel-controls &gt; button {
+  --icon-size: 16px;
+  width: 30px !important;
+  padding: 0 !important;
+}
+
+.viz-carousel-picker &gt; summary {
+  padding-inline: 12px !important;
+}
+
+.viz-carousel-controls .viz-carousel-caret {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  margin: 0;
+  color: inherit;
+  transform: rotate(180deg);
+}
+
+.viz-carousel-controls &gt; button &gt; svg,
+.viz-carousel-controls .viz-carousel-caret,
+.viz-carousel-count {
+  opacity: 0.5;
+}
+
+.viz-carousel-controls &gt; button::before,
+.viz-carousel-picker &gt; summary::before {
+  position: absolute;
+  z-index: -1;
+  inset: 3px;
+  border-radius: 12px;
+  content: &quot;&quot;;
+  pointer-events: none;
+}
+
+.viz-carousel-controls &gt; button:hover::before,
+.viz-carousel-picker &gt; summary:hover::before {
+  background: var(--viz-carousel-hover);
+}
+
+.viz-carousel-controls &gt; button,
+.viz-carousel-controls [data-lucide],
+.viz-carousel-controls .lucide {
+  flex-shrink: 0;
+}
+
+.viz-carousel-picker {
+  min-width: 0;
+}
+
+.viz-carousel-picker &gt; summary {
+  min-width: 0;
+  list-style: none;
+}
+
+.viz-carousel-picker &gt; summary::-webkit-details-marker {
+  display: none;
+}
+
+.viz-carousel-count {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.viz-carousel-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viz-carousel-options {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 4px);
+  left: 0;
+  display: flex;
+  max-height: 240px;
+  flex-direction: column;
+  gap: 2px;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--background);
+  box-shadow: 0 4px 12px light-dark(rgb(0 0 0 / 6%), rgb(0 0 0 / 25%));
+}
+
+.viz-carousel-options &gt; button {
+  border-radius: max(0px, calc(var(--radius-lg) - 5px)) !important;
+  width: 100% !important;
+  min-height: 28px;
+  justify-content: flex-start !important;
+  padding: 4px 8px !important;
+  font-size: var(--font-size-small) !important;
+  text-align: start;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.viz-carousel-options &gt; [aria-current=&quot;true&quot;],
+.viz-carousel-options &gt; button:hover {
+  background: var(--viz-carousel-hover) !important;
+}
+
+.btn:disabled,
+.nav-link:disabled,
+.nav-link[aria-disabled=&quot;true&quot;] {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  height: calc(12px + 2 * var(--control-spacing, 12px));
+  min-height: calc(12px + 2 * var(--control-spacing, 12px));
+  padding-inline: calc(4px + var(--control-spacing, 12px) / 2);
+  border-color: var(--input);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--popover) 96%, transparent);
+  font-size: calc(var(--font-size-base) * 14 / 16);
+  font-size: round(nearest, calc(var(--font-size-base) * 14 / 16), 1px);
+  font-weight: var(--font-weight-normal);
+  line-height: 1.4285714286;
+}
+.form-control:is(
+  [type=&quot;file&quot;],
+  [type=&quot;date&quot;],
+  [type=&quot;datetime-local&quot;],
+  [type=&quot;month&quot;],
+  [type=&quot;week&quot;],
+  [type=&quot;color&quot;]
+) {
+  height: calc(12px + 2 * var(--control-spacing, 12px));
+  min-height: calc(12px + 2 * var(--control-spacing, 12px));
+  line-height: 18px;
+}
+.form-control:is(
+  [type=&quot;date&quot;],
+  [type=&quot;datetime-local&quot;],
+  [type=&quot;month&quot;],
+  [type=&quot;week&quot;]
+) {
+  padding-inline: var(--control-spacing, 12px);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type=&quot;file&quot;] {
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+  padding: 0;
+}
+
+.form-control[type=&quot;file&quot;]::file-selector-button {
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+  min-height: calc(10px + 2 * var(--control-spacing, 12px));
+  padding-inline: var(--control-spacing, 12px);
+  margin-inline-end: var(--control-spacing, 12px);
+}
+
+.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type=&quot;color&quot;] {
+  width: 40px;
+  height: calc(12px + 2 * var(--control-spacing, 12px));
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: var(--corner-shape);
+}
+
+textarea.form-control {
+  height: auto;
+  resize: vertical;
+  min-height: 96px;
+  padding: 8px 10px;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: none;
+}
+.form-control:disabled {
+  color: var(--muted-foreground);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  opacity: 1;
+}
+.form-control[aria-invalid=&quot;true&quot;] {
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--red) 20%, transparent);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: fit-content;
+  min-height: calc(12px + 2 * var(--control-spacing, 12px));
+  margin: 0;
+  /* The secondary icon role is 14px at compact density and 16px at web density. */
+  --icon-size: calc(10px + var(--control-spacing, 12px) / 2);
+  /* Settings dropdowns retain a 12px inset and a 4px text-to-chevron gap. */
+  padding: 0 calc(16px + var(--icon-size)) 0 12px;
+  outline: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(
+      45deg,
+      transparent calc(50% - 0.6px),
+      var(--muted-foreground) calc(50% - 0.6px) calc(50% + 0.6px),
+      transparent calc(50% + 0.6px)
+    ),
+    linear-gradient(
+      135deg,
+      transparent calc(50% - 0.6px),
+      var(--muted-foreground) calc(50% - 0.6px) calc(50% + 0.6px),
+      transparent calc(50% + 0.6px)
+    );
+  background-position:
+    calc(100% - 12px - var(--icon-size) / 2) 50%,
+    calc(100% - 12px - var(--icon-size) * 0.18) 50%;
+  background-repeat: no-repeat;
+  background-size: calc(var(--icon-size) * 0.32) calc(var(--icon-size) * 0.32);
+  cursor: var(--cursor-interaction, default);
+  font-size: calc(var(--font-size-base) * 14 / 16);
+  font-size: round(nearest, calc(var(--font-size-base) * 14 / 16), 1px);
+  font-weight: var(--font-weight-normal);
+  line-height: 18px;
+}
+
+.form-select option {
+  color: var(--popover-foreground);
+  background-color: var(--popover);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: light-dark(
+    color-mix(in srgb, var(--foreground) 5.5%, transparent),
+    color-mix(in srgb, var(--foreground) 8%, transparent)
+  );
+}
+
+.form-select:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+.form-select:disabled {
+  opacity: 0.4;
+}
+
+.form-check {
+  display: flex;
+  min-height: calc(12px + 2 * var(--control-spacing, 12px));
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+  corner-shape: round;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  width: calc(10px + var(--control-spacing, 12px) / 2);
+  height: calc(10px + var(--control-spacing, 12px) / 2);
+  border-color: var(--border-strong, var(--input));
+  border-radius: calc(var(--radius-sm) / 2);
+  background-color: transparent;
+  color: var(--foreground);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:is(:checked, :indeterminate) {
+  border-color: var(--border-strong, var(--input));
+  background-color: color-mix(in srgb, var(--popover) 96%, transparent);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: &quot;&quot;;
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+  background-color: var(--foreground);
+}
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:indeterminate::before {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 65%;
+  height: 6.65%;
+  margin: auto;
+  border-radius: var(--radius-full);
+  background: var(--foreground);
+  mask: none;
+  content: &quot;&quot;;
+}
+
+.form-check-input[type=&quot;radio&quot;] {
+  border-radius: var(--radius-full);
+  width: 16px;
+  height: 16px;
+  border: 0;
+  box-shadow: inset 0 0 0 1px var(--input);
+}
+
+.form-check-input[type=&quot;radio&quot;]:checked {
+  border: 0;
+  background: radial-gradient(
+    circle,
+    var(--primary-foreground) 0 3px,
+    var(--foreground) 3px
+  );
+  box-shadow: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:focus-visible {
+  border-color: var(--ring);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+.form-check:not(.form-switch) .form-check-input[type=&quot;radio&quot;]:disabled,
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;radio&quot;]:disabled
+  + .form-check-label {
+  opacity: 0.5;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm);
+  content: &quot;&quot;;
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+  border-color: #fff;
+  background: #fff;
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--blue);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+  outline: none;
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  accent-color: var(--primary);
+  height: calc(12px + 2 * var(--control-spacing, 12px));
+  min-height: calc(12px + 2 * var(--control-spacing, 12px));
+  outline: none;
+  border-radius: var(--radius-full);
+  color: var(--foreground);
+  background: transparent;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  background: var(--form-range-track, var(--border));
+  height: 2px;
+  border-radius: var(--radius-full);
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  margin-top: -9px;
+  border-color: transparent;
+  background: currentColor;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Outline the native track and thumb, preserving the larger input hit area. */
+.form-range:focus-visible::-webkit-slider-runnable-track {
+  outline: 2px auto Highlight;
+  outline-color: -webkit-focus-ring-color;
+}
+
+.form-range::-moz-range-track {
+  background: var(--form-range-track, var(--border));
+  height: 2px;
+  border-radius: var(--radius-full);
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  border-color: transparent;
+  background: currentColor;
+  box-shadow: var(--shadow-sm);
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  outline: 2px solid Highlight;
+  outline-offset: 2px;
+}
+
+.form-range:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+  [aria-pressed=&quot;true&quot;],
+  [aria-selected=&quot;true&quot;],
+  .is-selected
+) {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--blue);
+}
+
+.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible,
+.nav-link:focus-visible {
+  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.viz-carousel-controls :is(button, summary):focus-visible {
+  outline: 2px solid var(--ring) !important;
+  outline-offset: 2px !important;
+}
+
+/* Web recipes are the default, including on renderers without inline style queries. */
+@supports (border-radius: if(style(--corner-shape: round): 1px; else: 2px)) {
+  /* Match the host&#x27;s proportional text-sm scale at every text preference. */
+  .tooltip,
+  .viz-badge,
+  .btn,
+  .nav-link,
+  .form-control,
+  .form-select {
+    font-size: if(
+      style(--corner-shape: round): round(
+          nearest,
+          calc(var(--font-size-base) * 14 / 16),
+          1px
+        );
+        else: round(nearest, calc(var(--font-size-base) * 13 / 14), 1px)
+    );
+  }
+
+  .btn,
+  .nav-link,
+  .form-select {
+    border-radius: if(
+      style(--corner-shape: round): var(--radius-full); else: var(--radius-lg)
+    );
+  }
+
+  .form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+    border-radius: if(
+      style(--corner-shape: round): calc(var(--radius-sm) / 2);
+        else: calc(var(--radius-lg) * 0.4)
+    );
+  }
+
+  .tooltip {
+    font-weight: if(
+      style(--corner-shape: round): 600; else: var(--font-weight-normal)
+    );
+  }
+}
+
+@media (pointer: coarse) {
+  .viz-carousel:has(&gt; .viz-carousel-controls) {
+    min-height: calc(76px + var(--viz-carousel-picker-height, 0px));
+    padding-bottom: 76px;
+  }
+
+  .btn,
+  .nav-link,
+  .viz-carousel-controls button,
+  .viz-carousel-picker &gt; summary,
+  .form-control,
+  .form-select {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Keep small-screen WebKit from zooming when a text field receives focus. */
+  .form-control,
+  .form-select {
+    font-size: max(16px, calc(var(--font-size-base) * 14 / 16));
+    font-size: max(
+      16px,
+      round(nearest, calc(var(--font-size-base) * 14 / 16), 1px)
+    );
+  }
+  .form-control:is(
+    [type=&quot;file&quot;],
+    [type=&quot;date&quot;],
+    [type=&quot;datetime-local&quot;],
+    [type=&quot;month&quot;],
+    [type=&quot;week&quot;],
+    [type=&quot;time&quot;],
+    [type=&quot;color&quot;]
+  ) {
+    height: 44px;
+    min-height: 44px;
+    font-size: max(16px, calc(var(--font-size-base) * 14 / 16));
+    font-size: max(
+      16px,
+      round(nearest, calc(var(--font-size-base) * 14 / 16), 1px)
+    );
+  }
+
+  .form-control[type=&quot;file&quot;]::file-selector-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .form-control-color[type=&quot;color&quot;] {
+    width: 44px;
+    height: 44px;
+  }
+
+  .form-control:is(
+    [type=&quot;date&quot;],
+    [type=&quot;datetime-local&quot;],
+    [type=&quot;month&quot;],
+    [type=&quot;time&quot;],
+    [type=&quot;week&quot;]
+  ) {
+    min-width: 0;
+    max-width: 100%;
+    padding-block: 8px;
+  }
+
+  .form-check {
+    min-height: 44px;
+    padding-inline: 15px;
+  }
+
+  .form-check-input {
+    position: relative;
+  }
+
+  .form-check-input::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    content: &quot;&quot;;
+    transform: translate(-50%, -50%);
+  }
+
+  .form-check-label {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .form-range {
+    height: 44px;
+    touch-action: pan-y;
+  }
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget &gt; svg {
+  width: 100%;
+}
+
+/* Model-authored chart rules can otherwise stretch icons after these styles load. */
+svg.lucide {
+  display: block;
+  width: var(--icon-size) !important;
+  height: var(--icon-size) !important;
+  flex: none;
+  margin: 0 !important;
+  stroke-width: 1.6;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html&gt;body{padding:0}&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;script type=&quot;application/json&quot; id=&quot;codex-visualization-widget-state&quot;&gt;__CODEX_VISUALIZATION_WIDGET_STATE__&lt;/script&gt;
+&lt;script&gt;(() =&gt; {
+  const root = document.documentElement;
+  const mediaQuery = globalThis.matchMedia(&quot;(prefers-color-scheme: dark)&quot;);
+  const apply = Reflect.apply;
+  const isArray = Array.isArray;
+  const hasOwn = Object.hasOwn;
+  const parentWindow = globalThis.parent;
+  const stringify = JSON.stringify;
+  const parse = JSON.parse;
+  const encode = TextEncoder.prototype.encode.bind(new TextEncoder());
+  const initialStateElement = document.getElementById(
+    &quot;codex-visualization-widget-state&quot;,
+  );
+  const initialGlobals = parse(initialStateElement?.textContent ?? &quot;{}&quot;);
+  initialStateElement?.remove();
+  /** @type {Record&lt;string, unknown&gt; | null} */
+  let state = initialGlobals.widgetState ?? null;
+  const statePersistence = initialGlobals.statePersistence ?? &quot;none&quot;;
+  let nextStateRequestId = 0;
+  /** @type {Map&lt;number, { resolve: () =&gt; void; reject: (error: Error) =&gt; void; timeout: ReturnType&lt;typeof globalThis.setTimeout&gt;; serializedState: string }&gt;} */
+  const pendingStateWrites = new Map();
+  const persistenceError = () =&gt;
+    Object.assign(
+      new Error(&quot;The host could not persist the widget state update&quot;),
+      {
+        code: -32000,
+        data: { code: &quot;widget_state_persistence_failed&quot;, retryable: false },
+      },
+    );
+  /**
+   * @param {object} prototype
+   * @param {string} property
+   */
+  const getPrototypeGetter = (prototype, property) =&gt; {
+    // oxlint-disable-next-line typescript/unbound-method -- invoked through captured Reflect.apply
+    const getter = Object.getOwnPropertyDescriptor(prototype, property)?.get;
+    if (getter == null) {
+      throw new Error(`Missing ${property} getter`);
+    }
+    return getter;
+  };
+  const getMessageData = getPrototypeGetter(MessageEvent.prototype, &quot;data&quot;);
+  const getMessagePorts = getPrototypeGetter(MessageEvent.prototype, &quot;ports&quot;);
+  const getMessageSource = getPrototypeGetter(MessageEvent.prototype, &quot;source&quot;);
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const addHostMessageListener = MessagePort.prototype.addEventListener;
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const postHostMessage = MessagePort.prototype.postMessage;
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const startHostPort = MessagePort.prototype.start;
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const stopMessagePropagation = Event.prototype.stopImmediatePropagation;
+  /** @type {MessagePort | null} */
+  let hostPort = null;
+  const postToHost = (type, payload) =&gt; {
+    if (hostPort != null) {
+      apply(postHostMessage, hostPort, [{ type, ...payload }]);
+    }
+  };
+  const openExternal = ({ href }) =&gt; {
+    if (globalThis.navigator.userActivation?.isActive === true) {
+      postToHost(&quot;open-external&quot;, { href });
+    }
+  };
+  const sendFollowUpMessage = ({ context, prompt, title }) =&gt; {
+    if (globalThis.navigator.userActivation?.isActive === true) {
+      postToHost(&quot;follow-up&quot;, { context, prompt, title });
+    }
+    return Promise.resolve();
+  };
+  /**
+   * @param {Record&lt;string, unknown&gt; | ((previous: Record&lt;string, unknown&gt; | null) =&gt; Record&lt;string, unknown&gt;)} next
+   * @returns {Promise&lt;void&gt;}
+   */
+  const setWidgetState = async (next) =&gt; {
+    const nextState = typeof next === &quot;function&quot; ? next(state) : next;
+    if (
+      nextState == null ||
+      typeof nextState !== &quot;object&quot; ||
+      isArray(nextState)
+    ) {
+      throw new TypeError(&quot;Widget state must be a JSON object&quot;);
+    }
+    const inputState = stringify(
+      nextState,
+      (_key, /** @type {unknown} */ value) =&gt; {
+        if (
+          typeof value === &quot;undefined&quot; ||
+          typeof value === &quot;function&quot; ||
+          typeof value === &quot;symbol&quot; ||
+          (typeof value === &quot;number&quot; &amp;&amp; !Number.isFinite(value))
+        ) {
+          throw new TypeError(&quot;Widget state must be a JSON object&quot;);
+        }
+        return value;
+      },
+    );
+    const parsedState = parse(inputState);
+    if (
+      parsedState == null ||
+      typeof parsedState !== &quot;object&quot; ||
+      isArray(parsedState)
+    ) {
+      throw new TypeError(&quot;Widget state must be a JSON object&quot;);
+    }
+    const storedState = {
+      modelContent: null,
+      privateContent: null,
+      ...parsedState,
+    };
+    const serializedState = stringify(storedState);
+    if (encode(serializedState).length &gt; 16 * 1024) {
+      throw new TypeError(
+        &quot;Widget state must be a JSON object of at most 16 KiB&quot;,
+      );
+    }
+    if (
+      hasOwn(storedState, &quot;imageIds&quot;) &amp;&amp;
+      (!isArray(storedState.imageIds) ||
+        storedState.imageIds.some(
+          (/** @type {unknown} */ id) =&gt; typeof id !== &quot;string&quot;,
+        ))
+    ) {
+      throw new TypeError(&quot;Widget state imageIds must be an array of strings&quot;);
+    }
+    if (storedState.imageIds?.length &gt; 0) {
+      throw Object.assign(
+        new TypeError(&quot;Visualization state does not support image attachments&quot;),
+        { code: -32602, data: { code: &quot;images_unsupported&quot; } },
+      );
+    }
+    state = storedState;
+    globalThis.openai.widgetState = state;
+    globalThis.dispatchEvent(
+      new CustomEvent(&quot;openai:set_globals&quot;, {
+        detail: { globals: { widgetState: state } },
+      }),
+    );
+    if (statePersistence === &quot;none&quot;) {
+      throw persistenceError();
+    }
+    const id = ++nextStateRequestId;
+    return new Promise((resolve, reject) =&gt; {
+      const timeout = globalThis.setTimeout(() =&gt; {
+        pendingStateWrites.delete(id);
+        reject(persistenceError());
+      }, 30_000);
+      pendingStateWrites.set(id, { resolve, reject, timeout, serializedState });
+      postToHost(&quot;widget-state-write&quot;, { id, state: serializedState });
+    });
+  };
+  const syncTheme = () =&gt; {
+    const theme = mediaQuery.matches ? &quot;dark&quot; : &quot;light&quot;;
+    root.dataset.theme = theme;
+    globalThis.openai = {
+      ...globalThis.openai,
+      openExternal,
+      sendFollowUpMessage,
+      setWidgetState,
+      theme,
+      visualizationStyleVariables: {},
+      visualizationTheme: theme,
+      widgetState: state,
+      statePersistence,
+      stateModelContext: &quot;none&quot;,
+    };
+    globalThis.dispatchEvent(
+      new CustomEvent(&quot;openai:set_globals&quot;, {
+        detail: { globals: globalThis.openai },
+      }),
+    );
+  };
+  const sendHeight = () =&gt; {
+    postToHost(&quot;height&quot;, {
+      height: Math.ceil(
+        Math.max(
+          document.body.scrollHeight,
+          document.body.getBoundingClientRect().height,
+        ),
+      ),
+    });
+  };
+
+  globalThis.addEventListener(
+    &quot;message&quot;,
+    (event) =&gt; {
+      const data = apply(getMessageData, event, []);
+      const ports = apply(getMessagePorts, event, []);
+      const source = apply(getMessageSource, event, []);
+      if (
+        hostPort != null ||
+        source !== parentWindow ||
+        typeof data !== &quot;object&quot; ||
+        data?.type !== &quot;codex-visualization-initialize&quot; ||
+        !isArray(ports) ||
+        ports.length !== 1
+      ) {
+        return;
+      }
+      apply(stopMessagePropagation, event, []);
+      const nextHostPort = ports[0];
+      try {
+        apply(addHostMessageListener, nextHostPort, [
+          &quot;message&quot;,
+          (event) =&gt; {
+            const data = apply(getMessageData, event, []);
+            if (typeof data === &quot;object&quot; &amp;&amp; data?.type === &quot;measure&quot;) {
+              sendHeight();
+            } else if (
+              typeof data === &quot;object&quot; &amp;&amp;
+              data?.type === &quot;widget-state-result&quot;
+            ) {
+              /** @type {unknown} */
+              const id = data.id;
+              if (typeof id !== &quot;number&quot;) {
+                return;
+              }
+              const pending = pendingStateWrites.get(id);
+              if (pending != null) {
+                pendingStateWrites.delete(id);
+                globalThis.clearTimeout(pending.timeout);
+                if (data.ok === true) {
+                  pending.resolve();
+                } else {
+                  pending.reject(persistenceError());
+                }
+              }
+            }
+          },
+        ]);
+        apply(startHostPort, nextHostPort, []);
+      } catch {
+        return;
+      }
+      hostPort = nextHostPort;
+      for (const [id, { serializedState }] of pendingStateWrites) {
+        postToHost(&quot;widget-state-write&quot;, { id, state: serializedState });
+      }
+      sendHeight();
+    },
+    { capture: true },
+  );
+  document.currentScript?.remove();
+  mediaQuery.addEventListener(&quot;change&quot;, syncTheme);
+  globalThis.addEventListener(&quot;click&quot;, (event) =&gt; {
+    if (event.defaultPrevented) {
+      return;
+    }
+    let element = null;
+    if (event.target instanceof globalThis.Element) {
+      element = event.target;
+    } else if (event.target instanceof globalThis.Node) {
+      element = event.target.parentElement;
+    }
+    const link = element?.closest(&quot;a[href]&quot;);
+    const href = link?.getAttribute(&quot;href&quot;);
+    if (href == null) {
+      return;
+    }
+    if (href.startsWith(&quot;#&quot;)) {
+      let id;
+      try {
+        id = decodeURIComponent(href.slice(1));
+      } catch {
+        return;
+      }
+      const target = id.length === 0 ? root : document.getElementById(id);
+      if (
+        target == null ||
+        globalThis.navigator.userActivation?.isActive !== true
+      ) {
+        return;
+      }
+      event.preventDefault();
+      postToHost(&quot;scroll-to&quot;, {
+        top: target.getBoundingClientRect().top + globalThis.scrollY,
+      });
+      return;
+    }
+    event.preventDefault();
+    openExternal({ href });
+  });
+  new ResizeObserver(sendHeight).observe(document.body);
+  syncTheme();
+})();
+&lt;/script&gt;
+&lt;div id=&quot;theta-fold-lab&quot; class=&quot;viz-dotted-background&quot;&gt;
+  &lt;div class=&quot;tf-labbar&quot;&gt;&lt;span class=&quot;tf-small&quot;&gt;デモ&lt;/span&gt;&lt;label&gt;画面&lt;select id=&quot;tf-device&quot;&gt;&lt;option value=&quot;open&quot;&gt;Z Fold5 · 開く / ファイラー&lt;/option&gt;&lt;option value=&quot;closed&quot;&gt;Z Fold5 · 閉じる / ホーム&lt;/option&gt;&lt;option value=&quot;tablet&quot;&gt;iPlay · タブレット想定&lt;/option&gt;&lt;option value=&quot;titan&quot;&gt;Titan · コンパクト想定&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&lt;/div&gt;
+  &lt;div class=&quot;viz-carousel&quot; aria-label=&quot;Hatch のデザイン&quot; data-previous-label=&quot;前のデザイン&quot; data-next-label=&quot;次のデザイン&quot;&gt;
+    &lt;section data-variant=&quot;Black / Orange&quot;&gt;&lt;div class=&quot;tf-device&quot; data-skin=&quot;terminal&quot; aria-label=&quot;黒とオレンジのデザイン&quot;&gt;&lt;/div&gt;&lt;/section&gt;
+    &lt;section data-variant=&quot;Industrial / Mono&quot; hidden&gt;&lt;div class=&quot;tf-device&quot; data-skin=&quot;instrument&quot; aria-label=&quot;グレーの工業ラベル風デザイン&quot;&gt;&lt;/div&gt;&lt;/section&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;style&gt;
+#theta-fold-lab{font-family:&quot;Segoe UI&quot;,&quot;Yu Gothic UI&quot;,sans-serif;color:light-dark(#233f46,#dde9e7);padding:6px 0}#theta-fold-lab *{box-sizing:border-box}#theta-fold-lab [hidden]{display:none!important}
+#theta-fold-lab .tf-labbar{display:flex;gap:14px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:18px;font-size:13px;padding:6px 0;min-height:54px}#theta-fold-lab .tf-labbar small{display:block;font-size:10px;letter-spacing:1.5px;opacity:.65;margin-top:5px}#theta-fold-lab label{font-size:11px}#theta-fold-lab select{display:block;margin-top:6px;border:1px solid light-dark(#b6c9c5,#4b6464);background:light-dark(#f4f8f3,#192a2b);color:inherit;font:inherit;padding:9px 10px;border-radius:7px;max-width:100%}
+#theta-fold-lab .tf-device{--tf-bg:#0d1a20;--tf-panel:#12232b;--tf-raised:#192e36;--tf-ink:#dfefee;--tf-soft:#91aeb3;--tf-line:#29444c;--tf-accent:#91ddd9;--tf-inverse:#102c31;--tf-focus:#233f47;--tf-round:13px;color:var(--tf-ink);background:var(--tf-bg);position:relative;container-type:inline-size;max-width:736px;width:100%;min-height:730px;margin:0 auto;border:6px solid #33464a;border-radius:25px;overflow:hidden;box-shadow:0 14px 40px #0000001a;font-size:12px;transition:max-width .32s ease}
+#theta-fold-lab .tf-device[data-skin=instrument]{--tf-bg:#efeee4;--tf-panel:#f8f7ef;--tf-raised:#e5e3d6;--tf-ink:#292d29;--tf-soft:#676c61;--tf-line:#d1d2c3;--tf-accent:#b64d28;--tf-inverse:#fffaf0;--tf-focus:#e3e2d5;--tf-round:9px;border-color:#484e43}
+#theta-fold-lab .tf-device[data-screen=closed],#theta-fold-lab .tf-device[data-screen=titan]{max-width:366px}
+#theta-fold-lab .tf-device button,#theta-fold-lab .tf-device input,#theta-fold-lab .tf-device select{font:inherit;color:inherit}#theta-fold-lab .tf-device button{cursor:var(--cursor-interaction,pointer)}#theta-fold-lab .tf-device button:focus-visible{outline:2px solid var(--tf-accent);outline-offset:2px}
+#theta-fold-lab .tf-status{padding:14px 20px 0;display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:10px;letter-spacing:1px;color:var(--tf-soft)}#theta-fold-lab .tf-status span:last-child{display:flex;align-items:center;gap:7px}
+#theta-fold-lab .tf-header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:23px 20px 17px;border-bottom:1px solid var(--tf-line);margin-right:59px}#theta-fold-lab .tf-brand{font-size:11px;letter-spacing:2.5px;margin:0 0 5px;font-weight:500}#theta-fold-lab .tf-caption{font-size:10px;color:var(--tf-soft);letter-spacing:.8px}#theta-fold-lab .tf-head-actions{display:flex;gap:5px;align-items:center}
+#theta-fold-lab .tf-iconbtn{background:transparent;border:1px solid var(--tf-line);border-radius:7px;min-width:33px;min-height:33px;padding:7px;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:11px!important}
+#theta-fold-lab .tf-screenbutton{background:var(--tf-raised);padding:8px 10px;min-height:34px;border:0;border-radius:6px;font-size:10px!important;white-space:nowrap}
+#theta-fold-lab .tf-rail{position:absolute;right:0;top:119px;width:52px;z-index:7;display:flex;flex-direction:column;align-items:stretch;gap:5px}#theta-fold-lab .tf-tabscroll{max-height:383px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--tf-line) transparent;overscroll-behavior:contain;display:flex;flex-direction:column;gap:5px;padding-right:0}
+#theta-fold-lab .tf-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;flex-shrink:0;min-height:56px;background:var(--tf-panel);border:1px solid var(--tf-line);border-right:0;border-radius:8px 0 0 8px;padding:9px 2px;font-size:10px!important}
+#theta-fold-lab .tf-tab[aria-expanded=true]{color:var(--tf-inverse);background:var(--tf-accent);border-color:var(--tf-accent)}#theta-fold-lab .tf-railstep{background:transparent;border:0;color:var(--tf-soft)!important;min-height:28px;display:flex;justify-content:center;align-items:center}#theta-fold-lab .tf-tabcount{text-align:center;color:var(--tf-soft);font:10px/1.5 monospace;letter-spacing:1px;margin:3px 0}
+#theta-fold-lab .tf-workspace{margin-right:61px;padding:20px 16px 24px;min-height:570px}#theta-fold-lab .tf-worktop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:19px}#theta-fold-lab .tf-worktop h2{font-size:23px;font-weight:400;letter-spacing:-.7px;margin:0 0 4px}#theta-fold-lab .tf-small{font-size:10px;color:var(--tf-soft);line-height:1.7}#theta-fold-lab .tf-toolrow{display:flex;gap:6px;flex-wrap:wrap}
+#theta-fold-lab .tf-desk{display:grid;grid-template-columns:126px minmax(0,1fr) minmax(0,1fr);min-height:410px;border-top:1px solid var(--tf-line)}#theta-fold-lab .tf-desk.tree-hidden{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+#theta-fold-lab .tf-tree{padding:17px 10px 12px 0;border-right:1px solid var(--tf-line);min-width:0}#theta-fold-lab .tf-eyebrow{font:10px/1.6 &quot;Segoe UI&quot;,sans-serif;letter-spacing:1.7px;color:var(--tf-soft);display:block;margin-bottom:12px}
+#theta-fold-lab .tf-treegroup{margin-bottom:5px}#theta-fold-lab .tf-treeline{display:flex;align-items:center;gap:2px;min-height:35px}#theta-fold-lab .tf-treefold{border:0;background:transparent;display:flex;align-items:center;justify-content:center;padding:4px 0;min-width:23px;min-height:33px}#theta-fold-lab .tf-treelink{border:0;background:transparent;display:flex;align-items:center;gap:6px;min-height:34px;text-align:left;padding:5px 2px;font-size:11px!important;flex:1;min-width:0;overflow-wrap:anywhere}#theta-fold-lab .tf-treelink[aria-current=page]{color:var(--tf-accent);font-weight:500}#theta-fold-lab .tf-treechildren{margin-left:12px;border-left:1px solid var(--tf-line);padding-left:6px}#theta-fold-lab .tf-treefooter{margin-top:22px;color:var(--tf-soft);font-size:10px;line-height:1.8;padding-right:5px}
+#theta-fold-lab .tf-filelist{padding:18px 12px;min-width:0}#theta-fold-lab .tf-path{font-size:10px;color:var(--tf-soft);margin-bottom:13px;min-height:33px;line-height:1.7;overflow-wrap:anywhere}#theta-fold-lab .tf-file{display:flex;align-items:flex-start;gap:9px;width:100%;min-height:66px;padding:12px 6px;background:transparent;border:0;border-bottom:1px solid var(--tf-line);text-align:left;border-radius:5px;color:var(--tf-ink)}#theta-fold-lab .tf-file[aria-pressed=true]{background:var(--tf-focus)}#theta-fold-lab .tf-file&gt;span{min-width:0;flex:1;overflow-wrap:anywhere}#theta-fold-lab .tf-file small{display:block;font-size:10px;color:var(--tf-soft);margin-top:6px}#theta-fold-lab .tf-file svg{flex-shrink:0;margin-top:2px}
+#theta-fold-lab .tf-preview{padding:18px 0 16px 13px;border-left:1px solid var(--tf-line);min-width:0}#theta-fold-lab .tf-document{padding:21px 17px;background:var(--tf-panel);border:1px solid var(--tf-line);border-radius:var(--tf-round);min-height:239px}#theta-fold-lab .tf-document h3{font-size:20px;font-weight:400;line-height:1.45;margin:12px 0 20px;letter-spacing:-.3px}#theta-fold-lab .tf-document p{font-size:11px;line-height:1.9;color:var(--tf-soft);margin:0 0 14px;overflow-wrap:anywhere}#theta-fold-lab .tf-document hr{border:0;border-top:1px solid var(--tf-line);margin:20px 0}#theta-fold-lab .tf-docname{overflow-wrap:anywhere;font-size:11px;margin-bottom:10px;color:var(--tf-soft)}#theta-fold-lab .tf-paperline{height:3px;background:var(--tf-line);margin:9px 0;width:85%;opacity:.7}
+#theta-fold-lab .tf-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;border:1px solid var(--tf-line);background:var(--tf-panel);border-radius:7px;padding:9px 12px;font-size:11px!important}#theta-fold-lab .tf-button.primary{background:var(--tf-accent);color:var(--tf-inverse);border-color:var(--tf-accent)}#theta-fold-lab .tf-buttons{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
+#theta-fold-lab .tf-workfoot{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:space-between;border-top:1px solid var(--tf-line);padding-top:15px;margin-top:17px;color:var(--tf-soft);font-size:10px}
+#theta-fold-lab .tf-cover{padding:24px 70px 26px 20px;min-height:590px}#theta-fold-lab .tf-clockarea{position:relative;display:flex;justify-content:space-between;align-items:center;gap:8px;margin:2px 0 16px}#theta-fold-lab .tf-clock{font:300 56px/1.08 &quot;Segoe UI&quot;,sans-serif;letter-spacing:-3px;font-variant-numeric:tabular-nums}#theta-fold-lab .tf-clocklabel{font-size:10px;letter-spacing:1.6px;color:var(--tf-soft);margin-top:9px}#theta-fold-lab .tf-orbit{width:57px;height:57px;flex-shrink:0;border:1px solid var(--tf-line);border-top:2px solid var(--tf-accent);border-right:2px solid var(--tf-accent);border-radius:50%;display:grid;place-items:center;transform:rotate(-25deg)}#theta-fold-lab .tf-orbit span{font:10px monospace;transform:rotate(25deg);letter-spacing:1px;color:var(--tf-accent)}
+#theta-fold-lab .tf-indicators{display:flex;gap:10px;align-items:center;justify-content:space-between;border-top:1px solid var(--tf-line);border-bottom:1px solid var(--tf-line);padding:11px 0;margin:17px 0;font-size:10px;color:var(--tf-soft)}#theta-fold-lab .tf-indicators span{display:flex;gap:5px;align-items:center}#theta-fold-lab .tf-photoframe{position:relative;height:112px;border-radius:var(--tf-round);overflow:hidden;border:1px solid var(--tf-line);padding:12px;margin-bottom:15px;text-align:left;width:100%;background:linear-gradient(165deg,#29505a,#1b303f 60%,#141f2a);color:#e5f1ed!important;isolation:isolate}#theta-fold-lab .tf-photoframe::before{content:&quot;&quot;;position:absolute;inset:23px -20px -30px;background:#476b6b;clip-path:polygon(0 90%,35% 20%,50% 42%,70% 8%,100% 80%);opacity:.7;z-index:-1}#theta-fold-lab .tf-photoframe::after{content:&quot;&quot;;position:absolute;inset:40px -20px -30px;background:#223c42;clip-path:polygon(0 80%,20% 65%,40% 85%,73% 15%,100% 85%);z-index:-1}#theta-fold-lab .tf-photolabel{display:block;font:9px monospace;letter-spacing:2px;margin-bottom:35px;opacity:.8}#theta-fold-lab .tf-phototitle{font-size:12px;letter-spacing:1px}#theta-fold-lab .tf-photoframe[data-photo=1]{background:linear-gradient(165deg,#806554,#43595d 70%,#334049)}#theta-fold-lab .tf-photoframe[data-photo=1]::before{background:#bb9c79}
+#theta-fold-lab .tf-player{border:1px solid var(--tf-line);border-radius:var(--tf-round);padding:13px;margin-bottom:18px;background:var(--tf-panel)}#theta-fold-lab .tf-playerhead{display:flex;align-items:center;gap:10px;margin-bottom:11px}#theta-fold-lab .tf-artwork{width:34px;height:34px;flex-shrink:0;display:grid;place-items:center;background:var(--tf-raised);border:1px solid var(--tf-line);border-radius:6px;color:var(--tf-accent)}#theta-fold-lab .tf-song{flex:1;min-width:0;font-size:12px}#theta-fold-lab .tf-song small{display:block;font-size:10px;color:var(--tf-soft);margin-top:4px}#theta-fold-lab .tf-transport{display:flex;align-items:center;justify-content:space-between;gap:8px}#theta-fold-lab .tf-transport button{background:transparent;border:0;padding:6px;display:flex;min-height:33px;align-items:center;justify-content:center}#theta-fold-lab .tf-track{height:3px;background:var(--tf-line);flex:1;position:relative}#theta-fold-lab .tf-track::after{content:&quot;&quot;;position:absolute;left:0;top:0;width:38%;height:100%;background:var(--tf-accent)}
+#theta-fold-lab .tf-quickhead{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:10px}#theta-fold-lab .tf-quickhead .tf-eyebrow{margin:0}#theta-fold-lab .tf-editlink{background:transparent;border:0;color:var(--tf-soft)!important;padding:4px;font-size:10px!important;min-height:28px;display:flex;align-items:center;gap:4px}#theta-fold-lab .tf-quickgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}#theta-fold-lab .tf-app{background:transparent;border:0;display:flex;align-items:center;flex-direction:column;gap:8px;padding:6px 0;min-height:61px;font-size:10px!important}#theta-fold-lab .tf-appsymbol{width:35px;height:35px;display:grid;place-items:center;border:1px solid var(--tf-line);border-radius:9px;background:var(--tf-panel);color:var(--tf-ink);flex-shrink:0}#theta-fold-lab [data-iconmode=invert] .tf-appsymbol{background:var(--tf-ink);color:var(--tf-bg);border-color:var(--tf-ink)}#theta-fold-lab [data-iconmode=color] .tf-appsymbol[data-app=chrome]{background:#346dc4;color:#fff;border-color:#346dc4}#theta-fold-lab [data-iconmode=color] .tf-appsymbol[data-app=line]{background:#138446;color:#fff;border-color:#138446}#theta-fold-lab [data-iconmode=color] .tf-appsymbol[data-app=mail]{background:#b34d46;color:#fff;border-color:#b34d46}#theta-fold-lab [data-iconmode=color] .tf-appsymbol[data-app=files]{background:#a27127;color:#fff;border-color:#a27127}#theta-fold-lab .tf-stackbadge{position:relative}#theta-fold-lab .tf-stackbadge::after{content:&quot;3&quot;;position:absolute;right:-5px;bottom:-4px;font:8px monospace;padding:2px 4px;background:var(--tf-raised);border:1px solid var(--tf-line);border-radius:4px;color:var(--tf-ink)}
+#theta-fold-lab .tf-coverfoot{margin-top:18px;display:flex;justify-content:space-between;align-items:center;gap:5px;font-size:9px;color:var(--tf-soft);letter-spacing:1px}#theta-fold-lab .tf-homebar{height:3px;width:90px;background:var(--tf-soft);opacity:.5;border-radius:4px;margin:0 auto 10px}
+#theta-fold-lab .tf-dotcal{display:grid;grid-template-columns:repeat(7,5px);gap:6px;justify-content:end;flex-shrink:0}#theta-fold-lab .tf-dotcal span{width:5px;height:5px;border-radius:50%;background:var(--tf-line)}#theta-fold-lab .tf-dotcal span:nth-child(23){background:var(--tf-accent)}#theta-fold-lab .tf-dotcal span:nth-child(-n+3){opacity:0}
+#theta-fold-lab [data-skin=instrument] .tf-clock{font-size:48px;font-weight:400}#theta-fold-lab [data-skin=instrument] .tf-clockarea{margin:8px 0 22px}#theta-fold-lab [data-skin=instrument] .tf-player{border-radius:4px;border:0;background:var(--tf-raised)}#theta-fold-lab [data-skin=instrument] .tf-playerhead{margin-bottom:13px}#theta-fold-lab [data-skin=instrument] .tf-appsymbol{background:#2b2f29;border-color:#2b2f29;color:#faf8ef;border-radius:5px}#theta-fold-lab [data-skin=instrument][data-iconmode=invert] .tf-appsymbol{background:#f7f6ed;border-color:#6a7063;color:#2b2f29}#theta-fold-lab [data-skin=instrument] .tf-coverfoot{font-family:monospace}#theta-fold-lab [data-skin=instrument] .tf-worktop{align-items:flex-start;flex-direction:column;gap:13px}#theta-fold-lab [data-skin=instrument] .tf-workspace{padding-top:16px}#theta-fold-lab [data-skin=instrument] .tf-document{border-radius:4px}
+#theta-fold-lab .tf-scrim{position:absolute;inset:103px 0 17px;background:#00000055;border:0;z-index:5}#theta-fold-lab .tf-drawer{position:absolute;z-index:6;right:61px;top:118px;bottom:47px;width:min(440px,calc(100% - 78px));background:var(--tf-panel);border:1px solid var(--tf-line);border-radius:var(--tf-round);padding:21px;overflow:auto;box-shadow:0 15px 45px #00000030;animation:tf-in .25s ease-out}#theta-fold-lab .tf-panelhead{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-bottom:20px}#theta-fold-lab .tf-panelhead h2{font-size:21px;font-weight:400;margin:0 0 4px}#theta-fold-lab .tf-listrow{display:flex;align-items:center;gap:11px;padding:12px 0;border:0;border-bottom:1px solid var(--tf-line);width:100%;min-height:58px;background:transparent;text-align:left}#theta-fold-lab .tf-listrow&gt;span{flex:1;min-width:0;overflow-wrap:anywhere}#theta-fold-lab .tf-listrow small{display:block;font-size:10px;color:var(--tf-soft);margin-top:5px}#theta-fold-lab .tf-listrow .tf-appsymbol{flex:0 0 35px}#theta-fold-lab .tf-paneltext{color:var(--tf-soft);font-size:11px;line-height:1.9;margin:15px 0}#theta-fold-lab .tf-modalback{position:absolute;inset:0;background:#00000066;z-index:10;border:0}#theta-fold-lab .tf-modal{position:absolute;left:20px;right:20px;top:75px;z-index:11;background:var(--tf-panel);border:1px solid var(--tf-line);border-radius:15px;padding:23px;max-height:610px;overflow:auto;box-shadow:0 15px 60px #00000044}#theta-fold-lab .tf-modal h2{font-size:21px;font-weight:400;margin:0}#theta-fold-lab .tf-modal p{font-size:11px;color:var(--tf-soft);line-height:1.85}#theta-fold-lab .tf-formgrid{display:grid;grid-template-columns:1fr 1fr;gap:15px}#theta-fold-lab .tf-modal label{display:block;font-size:11px;margin:12px 0}#theta-fold-lab .tf-modal select,#theta-fold-lab .tf-modal input{border:1px solid var(--tf-line);background:var(--tf-bg);color:var(--tf-ink);padding:10px;border-radius:6px;width:100%;display:block;margin-top:7px}#theta-fold-lab .tf-symbolchoices{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}#theta-fold-lab .tf-symbolchoices button{background:var(--tf-bg);border:1px solid var(--tf-line);min-height:38px;padding:8px 10px;border-radius:6px;display:flex;gap:6px;align-items:center;font-size:10px}#theta-fold-lab .tf-symbolchoices button[aria-pressed=true]{background:var(--tf-focus);border-color:var(--tf-accent);color:var(--tf-accent)}#theta-fold-lab .tf-settingsection{padding-top:13px;margin-top:16px;border-top:1px solid var(--tf-line)}#theta-fold-lab .tf-settingsection h3{font-size:13px;font-weight:500;margin:0 0 9px}#theta-fold-lab .tf-toast{position:absolute;bottom:29px;left:17px;right:66px;z-index:15;background:var(--tf-accent);color:var(--tf-inverse);padding:12px 14px;border-radius:8px;font-size:11px;line-height:1.7;box-shadow:0 8px 25px #0000002a}#theta-fold-lab .tf-today{padding:16px;border:1px solid var(--tf-line);border-radius:9px;background:var(--tf-bg);margin-bottom:14px}#theta-fold-lab .tf-today h3{font-size:18px;font-weight:400;margin:10px 0}#theta-fold-lab .tf-assignment{font-size:11px;color:var(--tf-soft);line-height:1.9;margin-top:18px;padding-top:15px;border-top:1px solid var(--tf-line)}
+#theta-fold-lab .tf-dotcal span:nth-child(23){background:var(--tf-line)}#theta-fold-lab .tf-dotcal span:nth-child(26){background:var(--tf-accent)}
+@keyframes tf-in{from{transform:translateX(35px);opacity:.3}to{transform:translateX(0);opacity:1}}
+@container(max-width:560px){#theta-fold-lab .tf-desk{grid-template-columns:105px minmax(0,1fr)}#theta-fold-lab .tf-preview{grid-column:1/-1;border-left:0;border-top:1px solid var(--tf-line);padding-left:0;padding-top:18px}#theta-fold-lab .tf-desk.tree-hidden{grid-template-columns:minmax(0,1fr)}#theta-fold-lab .tf-worktop{align-items:flex-start;flex-direction:column}#theta-fold-lab .tf-document{min-height:160px}#theta-fold-lab .tf-formgrid{grid-template-columns:1fr}}
+@container(max-width:330px){#theta-fold-lab .tf-header{padding-left:14px;padding-right:8px;margin-right:56px}#theta-fold-lab .tf-brand{letter-spacing:1.7px;font-size:10px}#theta-fold-lab .tf-caption{font-size:9px}#theta-fold-lab .tf-head-actions{gap:3px}#theta-fold-lab .tf-screenbutton{padding:7px;font-size:9px!important}#theta-fold-lab .tf-cover{padding-left:15px;padding-right:64px}#theta-fold-lab .tf-clock{font-size:46px}#theta-fold-lab .tf-orbit{width:44px;height:44px}#theta-fold-lab .tf-clocklabel{font-size:9px;letter-spacing:.7px}#theta-fold-lab .tf-indicators{font-size:9px;gap:4px}#theta-fold-lab .tf-quickgrid{gap:3px}#theta-fold-lab .tf-modal{left:12px;right:12px;padding:17px}#theta-fold-lab .tf-drawer{right:57px;padding:15px;width:calc(100% - 68px)}}
+@media(max-width:430px){#theta-fold-lab .tf-labbar{padding-right:80px}#theta-fold-lab .tf-device[data-screen=open] .tf-workspace,#theta-fold-lab .tf-device[data-screen=tablet] .tf-workspace{padding-left:10px;padding-right:8px}#theta-fold-lab .tf-desk{grid-template-columns:85px minmax(0,1fr)}#theta-fold-lab .tf-filelist{padding-left:7px;padding-right:0}}
+@media(prefers-reduced-motion:reduce){#theta-fold-lab .tf-device{transition:none}#theta-fold-lab .tf-drawer{animation:none}}
+@media(pointer:coarse){#theta-fold-lab .tf-iconbtn,#theta-fold-lab .tf-button,#theta-fold-lab .tf-symbolchoices button,#theta-fold-lab .tf-treefold,#theta-fold-lab .tf-treelink,#theta-fold-lab .tf-transport button{min-height:44px}#theta-fold-lab select,#theta-fold-lab input{font-size:16px!important}}
+/* Capture: the same three entrances on the cover and the workspace. */
+#theta-fold-lab .tf-device{min-height:790px}
+#theta-fold-lab .tf-workspace{min-height:490px}
+#theta-fold-lab .tf-cover{min-height:0}
+#theta-fold-lab .tf-recordstrip{margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;background:var(--tf-raised);border-radius:6px;font-size:10px}
+#theta-fold-lab .tf-recorddot{width:6px;height:6px;border-radius:50%;background:#d96c5b;flex-shrink:0}
+#theta-fold-lab .tf-elapsed{font:13px/1.4 monospace;font-variant-numeric:tabular-nums;color:var(--tf-accent);letter-spacing:1px}
+#theta-fold-lab .tf-recordstrip button{margin-left:auto}
+#theta-fold-lab .tf-capmodal .tf-modal{max-height:640px}
+#theta-fold-lab .tf-capnote{font-size:10px!important;color:var(--tf-soft);line-height:1.9!important}
+#theta-fold-lab .tf-capheading{display:flex;justify-content:space-between;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:15px}
+#theta-fold-lab .tf-caphistory{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+#theta-fold-lab .tf-capthumb{padding:0 0 9px;text-align:left;border:1px solid var(--tf-line);border-radius:8px;background:var(--tf-bg);overflow:hidden;min-width:0}
+#theta-fold-lab .tf-capthumb&gt;span{display:block;font-size:10px;padding:9px 8px 0;overflow-wrap:anywhere;line-height:1.65}
+#theta-fold-lab .tf-capthumb small{display:block;color:var(--tf-soft);font-size:9px;margin-top:3px}
+#theta-fold-lab .tf-capscene{aspect-ratio:4/3;background:linear-gradient(158deg,#3f656a,#213c49);position:relative;overflow:hidden;isolation:isolate;min-height:55px;display:grid;place-items:center;color:#e8f5ef}
+#theta-fold-lab .tf-capscene::before{content:&quot;&quot;;position:absolute;inset:20% -15% -10%;background:#74918b;clip-path:polygon(0 90%,25% 30%,45% 65%,68% 5%,100% 90%);z-index:-1;opacity:.7}
+#theta-fold-lab .tf-capscene[data-scene=&quot;1&quot;]{background:linear-gradient(160deg,#a08364,#455964)}
+#theta-fold-lab .tf-capscene[data-scene=&quot;2&quot;]{background:linear-gradient(160deg,#535b70,#222e46)}
+#theta-fold-lab .tf-capscene img{width:100%;height:100%;object-fit:contain;background:var(--tf-panel);position:absolute;inset:0}
+#theta-fold-lab .tf-capduration{position:absolute;right:6px;bottom:6px;padding:3px 4px;background:#102027cc;color:#f7faf5;border-radius:3px;font:9px monospace}
+#theta-fold-lab .tf-viewfinder{position:relative;min-height:202px;aspect-ratio:4/3;background:linear-gradient(160deg,#48676d,#162e3c);border-radius:10px;overflow:hidden;isolation:isolate;color:#f0f9f5}
+#theta-fold-lab .tf-viewfinder::before{content:&quot;&quot;;position:absolute;inset:15% -10% -20%;background:#81968b;clip-path:polygon(0 80%,30% 25%,45% 45%,70% 5%,100% 75%);opacity:.6;z-index:-1}
+#theta-fold-lab .tf-viewgrid{position:absolute;inset:0;background:linear-gradient(90deg,transparent 33%,#ffffff33 33%,#ffffff33 33.3%,transparent 33.3%,transparent 66%,#ffffff33 66%,#ffffff33 66.3%,transparent 66.3%),linear-gradient(transparent 33%,#ffffff33 33%,#ffffff33 33.3%,transparent 33.3%,transparent 66%,#ffffff33 66%,#ffffff33 66.3%,transparent 66.3%);pointer-events:none}
+#theta-fold-lab .tf-lenslabel{position:absolute;top:13px;left:14px;right:14px;display:flex;justify-content:space-between;gap:8px;font:10px/1.7 monospace;letter-spacing:1px}
+#theta-fold-lab .tf-lenscross{position:absolute;left:calc(50% - 15px);top:calc(50% - 15px);width:30px;height:30px;border:1px solid #e1f3dfaa;border-radius:6px}
+#theta-fold-lab .tf-cameramodes{display:flex;justify-content:center;gap:9px;margin:16px 0}
+#theta-fold-lab .tf-cameramodes button[aria-pressed=true]{background:var(--tf-accent);color:var(--tf-inverse);border-color:var(--tf-accent)}
+#theta-fold-lab .tf-shutterrow{display:flex;align-items:center;justify-content:center;gap:20px;margin:14px 0}
+#theta-fold-lab .tf-shutter{min-width:70px;min-height:70px;border-radius:50%;border:1px solid var(--tf-accent);background:var(--tf-accent);color:var(--tf-inverse)!important;display:grid;place-items:center;padding:10px;font-size:11px!important}
+#theta-fold-lab .tf-captureresult{min-height:25px;text-align:center;font-size:10px;color:var(--tf-soft);line-height:1.8}
+#theta-fold-lab .tf-inktools{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+#theta-fold-lab .tf-inktools label{display:flex;align-items:center;gap:6px;font-size:10px;margin:0}
+#theta-fold-lab .tf-inktools input[type=checkbox]{width:auto;margin:0;display:inline}
+#theta-fold-lab .tf-inkframe{position:relative;border:1px solid var(--tf-line);border-radius:9px;overflow:hidden;background:var(--tf-bg)}
+#theta-fold-lab .tf-inkcanvas{display:block;width:100%;height:240px;touch-action:none;cursor:crosshair;background:var(--tf-bg)}
+#theta-fold-lab .tf-inkhint{position:absolute;left:20px;top:20px;color:var(--tf-soft);font-size:12px;pointer-events:none;line-height:1.8}
+#theta-fold-lab .tf-inkimage{display:block;max-width:100%;width:100%;max-height:260px;object-fit:contain;border:1px solid var(--tf-line);border-radius:7px;background:var(--tf-bg)}
+#theta-fold-lab .tf-inkfallback{margin-top:11px;display:block;font-size:10px;color:var(--tf-soft)}
+#theta-fold-lab .tf-capempty{padding:22px 0;color:var(--tf-soft);font-size:12px}
+/* Compact file workspace. Capture occupies one row at the foot of the tree. */
+#theta-fold-lab .tf-device{min-height:650px}
+#theta-fold-lab .tf-header{padding:12px 17px;margin-right:61px;min-height:53px}
+#theta-fold-lab .tf-brand{margin:0;font-size:11px;letter-spacing:1.7px}
+#theta-fold-lab .tf-workspace{padding:10px 12px 16px;min-height:0}
+#theta-fold-lab .tf-filetoolbar{display:flex;align-items:center;gap:6px;min-height:40px;margin-bottom:9px}
+#theta-fold-lab .tf-currentpath{min-width:0;flex:1;font-size:11px;color:var(--tf-soft);overflow-wrap:anywhere;line-height:1.6;padding-left:4px}
+#theta-fold-lab .tf-desk{grid-template-columns:136px minmax(0,1fr) minmax(0,1fr);min-height:493px}
+#theta-fold-lab .tf-desk.tree-hidden{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+#theta-fold-lab .tf-tree{display:flex;flex-direction:column;padding-top:9px;padding-right:10px;padding-bottom:0;min-width:0}
+#theta-fold-lab .tf-treeitems{flex:1;min-width:0}
+#theta-fold-lab .tf-treefooter{margin-top:auto;padding:10px 0 0;border-top:1px solid var(--tf-line)}
+#theta-fold-lab .tf-capturedock{display:flex;justify-content:space-between;align-items:center;gap:2px;min-height:35px;width:100%}
+#theta-fold-lab .tf-capturedock button{display:grid;place-items:center;min-width:28px;min-height:33px;padding:5px;background:transparent;border:0;border-radius:5px;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;color:var(--tf-soft)}
+#theta-fold-lab .tf-capturedock button:hover{background:var(--tf-focus);color:var(--tf-ink)}
+#theta-fold-lab .tf-capturedock button[aria-pressed=true]{color:var(--tf-accent);background:var(--tf-focus)}
+#theta-fold-lab .tf-filelist{padding:9px 9px 0}
+#theta-fold-lab .tf-file{min-height:48px;padding:10px 5px;gap:8px}
+#theta-fold-lab .tf-file small{margin-top:4px}
+#theta-fold-lab .tf-filecount{margin-top:12px}
+#theta-fold-lab .tf-filelist .tf-caphistory{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+#theta-fold-lab .tf-filelist .tf-capthumb[aria-pressed=true]{border-color:var(--tf-accent);background:var(--tf-focus)}
+#theta-fold-lab .tf-preview{padding-top:10px}
+#theta-fold-lab .tf-document{padding:16px 13px;min-height:200px}
+#theta-fold-lab .tf-document h3{font-size:16px;margin:11px 0 16px}
+#theta-fold-lab .tf-recordstrip{margin:4px 73px 0 18px;padding:5px 9px;min-height:26px}
+#theta-fold-lab .tf-recordstrip .tf-historylink{background:transparent;border:0;font-size:10px;padding:0 3px;color:var(--tf-ink)}
+#theta-fold-lab .tf-covercapture{margin-top:14px;padding-top:8px;border-top:1px solid var(--tf-line)}
+#theta-fold-lab .tf-covercapture .tf-capturedock button{min-width:40px;min-height:40px}
+#theta-fold-lab .tf-texteditor{display:block;width:100%;padding:12px;border:1px solid var(--tf-line);border-radius:7px;background:var(--tf-bg);color:var(--tf-ink);font:13px/1.8 &quot;Segoe UI&quot;,&quot;Yu Gothic UI&quot;,sans-serif;resize:vertical;margin-top:7px;min-height:180px}
+#theta-fold-lab .tf-textpreview{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.9 &quot;Segoe UI&quot;,&quot;Yu Gothic UI&quot;,sans-serif;padding:14px;border:1px solid var(--tf-line);border-radius:7px;background:var(--tf-panel);min-height:200px;color:var(--tf-ink)}
+#theta-fold-lab [data-skin=instrument] .tf-workspace{padding-top:10px}
+@container(max-width:560px){#theta-fold-lab .tf-desk{grid-template-columns:126px minmax(0,1fr)}#theta-fold-lab .tf-desk.tree-hidden{grid-template-columns:minmax(0,1fr)}#theta-fold-lab .tf-preview{grid-column:1/-1}#theta-fold-lab .tf-document{min-height:150px}#theta-fold-lab .tf-caphistory{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(pointer:coarse){#theta-fold-lab .tf-texteditor{font-size:16px}#theta-fold-lab .tf-capturedock button{min-height:44px}}
+/* The device is a screen: content and the tab rail share its full height. */
+#theta-fold-lab{padding-top:0}
+#theta-fold-lab .tf-labbar{min-height:0;justify-content:flex-start;gap:12px;margin:0 0 8px;padding:0 90px 0 0;align-items:center}
+#theta-fold-lab .tf-labbar label{display:flex;align-items:center;gap:8px}
+#theta-fold-lab .tf-labbar select{display:inline-block;margin:0;padding:6px 8px;font-size:11px}
+#theta-fold-lab .tf-device{display:flex;flex-direction:column;height:680px;min-height:0;border-width:2px;border-radius:13px}
+#theta-fold-lab .tf-status{min-height:22px;flex:0 0 22px;padding:4px 64px 4px 9px;font-size:9px}
+#theta-fold-lab .tf-viewtools{position:absolute;right:61px;top:27px;z-index:3;display:flex;align-items:center}
+#theta-fold-lab .tf-viewtools .tf-screenbutton{min-height:30px;padding:6px 8px}
+#theta-fold-lab .tf-viewtools .tf-iconbtn{min-height:30px;min-width:30px;padding:6px}
+#theta-fold-lab .tf-workspace{display:flex;flex:1;min-height:0;flex-direction:column;margin-right:54px;padding:0 6px 5px;overflow:hidden}
+#theta-fold-lab [data-skin=instrument] .tf-workspace{padding-top:0}
+#theta-fold-lab .tf-filetoolbar{flex:0 0 auto;min-height:38px;margin:0;padding:3px 79px 3px 0;border-bottom:1px solid var(--tf-line);gap:3px}
+#theta-fold-lab .tf-currentpath{font-size:10px;padding-left:2px}
+#theta-fold-lab .tf-filetoolbar .tf-iconbtn{min-height:30px;min-width:30px;padding:5px}
+#theta-fold-lab .tf-desk{flex:1;min-height:0;border-top:0;overflow:hidden}
+#theta-fold-lab .tf-tree{min-height:0;overflow:hidden;padding-top:4px}
+#theta-fold-lab .tf-treeitems{overflow-y:auto;min-height:0;scrollbar-width:thin}
+#theta-fold-lab .tf-treefooter{flex:0 0 auto;padding-top:5px}
+#theta-fold-lab .tf-filelist,#theta-fold-lab .tf-preview{min-height:0;overflow-y:auto;scrollbar-width:thin;padding-top:5px}
+#theta-fold-lab .tf-cover{flex:1;min-height:0;overflow-y:auto;padding:25px 64px 9px 12px;scrollbar-width:thin}
+#theta-fold-lab .tf-rail{top:0;bottom:0;right:0;width:52px;gap:0;padding:0;min-height:0;border-left:1px solid var(--tf-line);background:var(--tf-bg)}
+#theta-fold-lab .tf-tabscroll{flex:1;min-height:0;max-height:none;gap:3px;padding:0;scrollbar-width:thin}
+#theta-fold-lab .tf-tab{flex:1 0 52px;min-height:52px;padding:6px 2px;border-radius:6px 0 0 6px}
+#theta-fold-lab .tf-railstep{flex:0 0 23px;min-height:23px;padding:0}
+#theta-fold-lab .tf-scrim{inset:0 54px 0 0}
+#theta-fold-lab .tf-drawer{top:0;bottom:0;left:0;right:54px;width:auto;max-width:none;padding:7px 9px;border-radius:0;border:0;box-shadow:none}
+#theta-fold-lab .tf-drawer .tf-listrow{min-height:47px;padding:9px 1px}
+#theta-fold-lab .tf-drawer .tf-today{padding:11px;margin-bottom:9px}
+#theta-fold-lab .tf-drawer .tf-buttons{margin-top:10px}
+#theta-fold-lab .tf-modal{top:0;bottom:0;left:0;right:54px;max-height:none;padding:9px;border:0;border-radius:0;box-shadow:none}
+#theta-fold-lab .tf-dialogclose{float:right;margin:0 0 5px 8px}
+#theta-fold-lab .tf-recordstrip{margin:0 58px 0 6px;padding:3px 6px;flex:0 0 auto;min-height:24px}
+#theta-fold-lab .tf-toast{left:6px;right:59px;bottom:7px;padding:9px 11px}
+@container(max-width:560px){#theta-fold-lab .tf-desk{grid-template-rows:minmax(210px,1fr) minmax(170px,1fr)}#theta-fold-lab .tf-desk.tree-hidden{grid-template-rows:minmax(180px,1fr) minmax(170px,1fr)}#theta-fold-lab .tf-tree{grid-row:1/-1}#theta-fold-lab .tf-preview{grid-column:2;border-top:1px solid var(--tf-line);border-left:1px solid var(--tf-line);padding:7px}#theta-fold-lab .tf-desk.tree-hidden .tf-preview{grid-column:1}}
+@container(max-width:330px){#theta-fold-lab .tf-drawer{left:0;right:54px;width:auto;padding:6px}#theta-fold-lab .tf-modal{left:0;right:54px;padding:7px}#theta-fold-lab .tf-cover{padding-left:9px;padding-right:61px}}
+@media(max-width:430px){#theta-fold-lab .tf-device[data-screen=open] .tf-workspace,#theta-fold-lab .tf-device[data-screen=tablet] .tf-workspace{padding:0 5px 5px}}
+/* Reference direction: industrial labels, squared controls, restrained accents. */
+#theta-fold-lab .tf-device{--tf-bg:#0d0e0e;--tf-panel:#151616;--tf-raised:#242524;--tf-ink:#ecece7;--tf-soft:#adafa6;--tf-line:#444641;--tf-accent:#ff852b;--tf-inverse:#0e100e;--tf-focus:#33251b;--tf-round:1px;border-color:#55584f;border-radius:3px;font-family:Bahnschrift,&quot;Arial Narrow&quot;,&quot;Yu Gothic UI&quot;,sans-serif;font-size:12px;box-shadow:none}
+#theta-fold-lab .tf-device[data-skin=instrument]{--tf-bg:#d3d3ca;--tf-panel:#deded6;--tf-raised:#c3c4ba;--tf-ink:#20221e;--tf-soft:#50554c;--tf-line:#858b7e;--tf-accent:#22261f;--tf-inverse:#f2f2e9;--tf-focus:#b8bdb0;--tf-round:1px;border-color:#40463b}
+#theta-fold-lab .tf-device button,#theta-fold-lab .tf-device select,#theta-fold-lab .tf-device input,#theta-fold-lab .tf-device textarea{border-radius:1px}
+#theta-fold-lab .tf-filetoolbar{border-bottom:2px solid var(--tf-line)}
+#theta-fold-lab .tf-currentpath{font:11px/1.6 Consolas,&quot;Yu Gothic UI&quot;,monospace;letter-spacing:-.2px}
+#theta-fold-lab .tf-status,#theta-fold-lab .tf-file small,#theta-fold-lab .tf-filecount,#theta-fold-lab .tf-docname{font-family:Consolas,&quot;Yu Gothic UI&quot;,monospace}
+#theta-fold-lab .tf-file{border-radius:0;border-bottom-color:var(--tf-line)}
+#theta-fold-lab .tf-file[aria-pressed=true]{background:var(--tf-focus);box-shadow:inset 2px 0 var(--tf-accent)}
+#theta-fold-lab .tf-file[aria-pressed=true]&gt;span{color:var(--tf-accent)}
+#theta-fold-lab .tf-treelink[aria-current=page]{background:var(--tf-focus);color:var(--tf-accent)}
+#theta-fold-lab .tf-tab{border-radius:0;border-top:1px solid var(--tf-line);border-bottom:1px solid var(--tf-line);background:var(--tf-bg);letter-spacing:.3px}
+#theta-fold-lab .tf-tab[aria-expanded=true]{background:var(--tf-accent);color:var(--tf-inverse)}
+#theta-fold-lab .tf-tabscroll{gap:2px}
+#theta-fold-lab .tf-document,#theta-fold-lab .tf-player,#theta-fold-lab .tf-today,#theta-fold-lab .tf-capthumb,#theta-fold-lab .tf-textpreview,#theta-fold-lab .tf-inkframe,#theta-fold-lab .tf-viewfinder,#theta-fold-lab .tf-recordstrip,#theta-fold-lab .tf-photoframe{border-radius:1px}
+#theta-fold-lab .tf-document h3{font-family:Bahnschrift,&quot;Arial Narrow&quot;,&quot;Yu Gothic UI&quot;,sans-serif;font-weight:500}
+#theta-fold-lab .tf-clock,#theta-fold-lab [data-skin=instrument] .tf-clock{font-family:Bahnschrift,&quot;Arial Narrow&quot;,sans-serif;font-size:59px;letter-spacing:-2px}
+#theta-fold-lab .tf-clocklabel{font-family:Consolas,monospace;letter-spacing:1px}
+#theta-fold-lab .tf-indicators{border-top-width:2px;border-bottom-width:1px;padding:9px 0}
+#theta-fold-lab .tf-appsymbol,#theta-fold-lab [data-skin=instrument] .tf-appsymbol{border-radius:1px}
+#theta-fold-lab [data-skin=instrument] .tf-appsymbol{background:var(--tf-bg);border:2px solid var(--tf-ink);color:var(--tf-ink)}
+#theta-fold-lab [data-skin=instrument][data-iconmode=invert] .tf-appsymbol{background:var(--tf-ink);border-color:var(--tf-ink);color:var(--tf-bg)}
+#theta-fold-lab [data-skin=instrument] .tf-file{border-bottom:1px solid var(--tf-line)}
+#theta-fold-lab [data-skin=instrument] .tf-iconbtn{border-color:var(--tf-ink)}
+#theta-fold-lab [data-skin=instrument] .tf-player{border:1px solid var(--tf-ink);background:var(--tf-panel)}
+#theta-fold-lab .tf-dotcal{grid-template-columns:repeat(7,4px);gap:5px}
+#theta-fold-lab .tf-dotcal span{width:4px;height:4px;border-radius:0;background:var(--tf-line)}
+#theta-fold-lab .tf-capturedock{border-top:2px solid var(--tf-line);padding-top:3px}
+#theta-fold-lab .tf-treefooter{border-top:0;padding-top:3px}
+#theta-fold-lab .tf-button.primary{font-weight:500;border-color:var(--tf-accent)}
+#theta-fold-lab .tf-viewfinder .tf-shutter,#theta-fold-lab .tf-shutter{border-radius:50%}
+#theta-fold-lab .tf-device[data-screen=closed] .tf-viewtools,#theta-fold-lab .tf-device[data-screen=titan] .tf-viewtools{top:24px}
+#theta-fold-lab .tf-device[data-screen=closed] .tf-cover,#theta-fold-lab .tf-device[data-screen=titan] .tf-cover{padding-top:35px}
+&lt;/style&gt;
+&lt;script&gt;
+(()=&gt;{
+const root=document.getElementById(&#x27;theta-fold-lab&#x27;);
+const I=n=&gt;`&lt;i data-lucide=&quot;${n}&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;`;
+const apps={chrome:{name:&#x27;Chrome&#x27;,icon:&#x27;globe&#x27;},mail:{name:&#x27;メール&#x27;,icon:&#x27;mail&#x27;},line:{name:&#x27;LINE&#x27;,icon:&#x27;message-circle&#x27;},files:{name:&#x27;Files&#x27;,icon:&#x27;folder-open&#x27;},calendar:{name:&#x27;カレンダー&#x27;,icon:&#x27;calendar-days&#x27;}};
+const folders={work:{name:&#x27;仕事&#x27;,parent:null,items:[{id:&#x27;projects&#x27;,name:&#x27;Projects&#x27;,folder:true},{id:&#x27;meeting&#x27;,name:&#x27;会議メモ.md&#x27;,type:&#x27;MD&#x27;,size:&#x27;8 KB&#x27;}]},projects:{name:&#x27;Projects&#x27;,parent:&#x27;work&#x27;,items:[{id:&#x27;hatch&#x27;,name:&#x27;Home Hatch&#x27;,folder:true},{id:&#x27;brief&#x27;,name:&#x27;Design brief.md&#x27;,type:&#x27;MD&#x27;,size:&#x27;12 KB&#x27;},{id:&#x27;reference&#x27;,name:&#x27;Reference.pdf&#x27;,type:&#x27;PDF&#x27;,size:&#x27;2.4 MB&#x27;}]},hatch:{name:&#x27;Home Hatch&#x27;,parent:&#x27;projects&#x27;,items:[{id:&#x27;spec&#x27;,name:&#x27;Home concept.md&#x27;,type:&#x27;MD&#x27;,size:&#x27;16 KB&#x27;},{id:&#x27;wire&#x27;,name:&#x27;Wireframe.pdf&#x27;,type:&#x27;PDF&#x27;,size:&#x27;1.8 MB&#x27;}]},personal:{name:&#x27;個人&#x27;,parent:null,items:[{id:&#x27;travel&#x27;,name:&#x27;旅のメモ.md&#x27;,type:&#x27;MD&#x27;,size:&#x27;4 KB&#x27;},{id:&#x27;reading&#x27;,name:&#x27;読書リスト.pdf&#x27;,type:&#x27;PDF&#x27;,size:&#x27;640 KB&#x27;}]},photos:{name:&#x27;写真&#x27;,parent:null,items:[{id:&#x27;lake&#x27;,name:&#x27;湖の風景.png&#x27;,type:&#x27;PNG&#x27;,size:&#x27;3.1 MB&#x27;},{id:&#x27;coast&#x27;,name:&#x27;海辺.png&#x27;,type:&#x27;PNG&#x27;,size:&#x27;2.8 MB&#x27;}]},archive:{name:&#x27;Archive&#x27;,parent:null,items:[{id:&#x27;archive-note&#x27;,name:&#x27;2026 notes.md&#x27;,type:&#x27;MD&#x27;,size:&#x27;22 KB&#x27;}]}};
+const tabs=[[&#x27;work&#x27;,&#x27;folder-open&#x27;,&#x27;仕事&#x27;],[&#x27;personal&#x27;,&#x27;folder-heart&#x27;,&#x27;個人&#x27;],[&#x27;photos&#x27;,&#x27;images&#x27;,&#x27;写真&#x27;],[&#x27;calendar&#x27;,&#x27;calendar-days&#x27;,&#x27;予定&#x27;],[&#x27;mail&#x27;,&#x27;mail&#x27;,&#x27;メール&#x27;],[&#x27;widgets&#x27;,&#x27;panels-top-left&#x27;,&#x27;Widget&#x27;],[&#x27;stack&#x27;,&#x27;layers&#x27;,&#x27;連絡&#x27;],[&#x27;bookmarks&#x27;,&#x27;bookmark&#x27;,&#x27;リンク&#x27;],[&#x27;apps&#x27;,&#x27;app-window&#x27;,&#x27;アプリ&#x27;],[&#x27;hatch&#x27;,&#x27;panel-left-open&#x27;,&#x27;Hatch&#x27;]];
+const state={screen:&#x27;open&#x27;,iconmode:&#x27;mono&#x27;,icons:Object.fromEntries(Object.entries(apps).map(([k,v])=&gt;[k,v.icon])),stackicon:&#x27;layers&#x27;,modules:{clock:true,indicators:true,photo:true,music:true}};
+const views=[];
+const captureStore={
+ recordings:[{id:&#x27;rec-sample-1&#x27;,name:&#x27;打ち合わせ.m4a&#x27;,type:&#x27;M4A&#x27;,size:&#x27;01:42 / 見本&#x27;,seconds:102,capture:&#x27;audio&#x27;},{id:&#x27;rec-sample-2&#x27;,name:&#x27;アイデア.m4a&#x27;,type:&#x27;M4A&#x27;,size:&#x27;00:28 / 見本&#x27;,seconds:28,capture:&#x27;audio&#x27;}],
+ media:[{id:&#x27;photo-sample-1&#x27;,name:&#x27;静かな湖畔.png&#x27;,type:&#x27;PNG&#x27;,size:&#x27;写真 / 見本&#x27;,capture:&#x27;photo&#x27;,scene:0},{id:&#x27;video-sample-1&#x27;,name:&#x27;夕暮れ.mp4&#x27;,type:&#x27;MP4&#x27;,size:&#x27;00:12 / 見本&#x27;,seconds:12,capture:&#x27;video&#x27;,scene:1},{id:&#x27;photo-sample-2&#x27;,name:&#x27;稜線.png&#x27;,type:&#x27;PNG&#x27;,size:&#x27;写真 / 見本&#x27;,capture:&#x27;photo&#x27;,scene:2}],
+ notes:[],
+ texts:[]
+};
+folders.recordings={name:&#x27;Recordings&#x27;,parent:null,items:captureStore.recordings};
+folders.captures={name:&#x27;Camera&#x27;,parent:null,items:captureStore.media};
+folders.notes={name:&#x27;Handwriting&#x27;,parent:null,items:captureStore.notes};
+folders.textnotes={name:&#x27;Text notes&#x27;,parent:null,items:captureStore.texts};
+function captureGesture(kind,dx,dy,elapsed){
+ if(Math.hypot(dx,dy)&gt;12)return &#x27;cancel&#x27;;
+ return elapsed&gt;=560?&#x27;create&#x27;:&#x27;browse&#x27;;
+}
+const capTime=s=&gt;`${String(Math.floor(s/60)).padStart(2,&#x27;0&#x27;)}:${String(s%60).padStart(2,&#x27;0&#x27;)}`;
+function applySaved(s){if(!s||s.version!==2)return;if([&#x27;open&#x27;,&#x27;closed&#x27;,&#x27;tablet&#x27;,&#x27;titan&#x27;].includes(s.screen))state.screen=s.screen;if([&#x27;mono&#x27;,&#x27;invert&#x27;,&#x27;color&#x27;].includes(s.iconmode))state.iconmode=s.iconmode;const allowed=[&#x27;globe&#x27;,&#x27;mail&#x27;,&#x27;message-circle&#x27;,&#x27;folder-open&#x27;,&#x27;calendar-days&#x27;,&#x27;circle&#x27;,&#x27;square&#x27;,&#x27;command&#x27;,&#x27;layers&#x27;,&#x27;briefcase-business&#x27;,&#x27;contact-round&#x27;,&#x27;radio&#x27;,&#x27;grid-2x2&#x27;,&#x27;archive&#x27;,&#x27;star&#x27;];if(s.icons)for(const k in apps)if(allowed.includes(s.icons[k]))state.icons[k]=s.icons[k];if(allowed.includes(s.stackicon))state.stackicon=s.stackicon;}
+applySaved(window.openai?.widgetState?.modelContent);
+const savedModules=window.openai?.widgetState?.modelContent?.modules;
+if(savedModules)for(const k in state.modules)if(typeof savedModules[k]===&#x27;boolean&#x27;)state.modules[k]=savedModules[k];
+function remember(){window.openai?.setWidgetState?.({modelContent:{version:2,concept:&#x27;THETA.Home.Hatch&#x27;,screen:state.screen,iconmode:state.iconmode,icons:state.icons,stackicon:state.stackicon,modules:state.modules},privateContent:{}}).catch(()=&gt;{})}
+function icons(){if(globalThis.lucide)lucide.createIcons({attrs:{width:16,height:16}})}
+function sync(){root.querySelector(&#x27;#tf-device&#x27;).value=state.screen;views.forEach(v=&gt;{v.el.dataset.screen=state.screen;v.el.dataset.iconmode=state.iconmode;v.render()})}
+root.querySelector(&#x27;#tf-device&#x27;).onchange=e=&gt;{state.screen=e.target.value;sync();remember()};
+window.addEventListener(&#x27;openai:set_globals&#x27;,e=&gt;{const s=e.detail?.globals?.widgetState?.modelContent;if(s){applySaved(s);if(s.modules)for(const k in state.modules)if(typeof s.modules[k]===&#x27;boolean&#x27;)state.modules[k]=s.modules[k];sync()}});
+root.querySelectorAll(&#x27;.tf-device&#x27;).forEach((el,n)=&gt;{
+const v={el,folder:&#x27;projects&#x27;,selected:&#x27;brief&#x27;,expanded:new Set([&#x27;work&#x27;,&#x27;projects&#x27;]),tree:true,drawer:null,photo:0,playing:false,song:0,assigned:&#x27;work&#x27;,lastFocus:null};views.push(v);
+const instrument=el.dataset.skin===&#x27;instrument&#x27;;
+const symbol=k=&gt;`&lt;span class=&quot;tf-appsymbol&quot; data-app=&quot;${k}&quot;&gt;${I(state.icons[k])}&lt;/span&gt;`;
+const stackSymbol=()=&gt;`&lt;span class=&quot;tf-appsymbol tf-stackbadge&quot;&gt;${I(state.stackicon)}&lt;/span&gt;`;
+const launch=k=&gt;`&lt;button class=&quot;tf-app cursor-interaction&quot; data-do=&quot;app:${k}&quot;&gt;${symbol(k)}&lt;span&gt;${apps[k].name}&lt;/span&gt;&lt;/button&gt;`;
+el.innerHTML=`&lt;div class=&quot;tf-status&quot;&gt;&lt;span&gt;09:41&lt;/span&gt;&lt;span&gt;${I(&#x27;wifi&#x27;)} 85% ${I(&#x27;battery-full&#x27;)}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;tf-viewtools&quot;&gt;&lt;div class=&quot;tf-head-actions&quot;&gt;&lt;button class=&quot;tf-screenbutton cursor-interaction&quot; data-do=&quot;fold&quot;&gt;&lt;/button&gt;&lt;button class=&quot;tf-iconbtn cursor-interaction&quot; aria-label=&quot;アイコンとホームの設定&quot; data-do=&quot;settings&quot;&gt;${I(&#x27;sliders-horizontal&#x27;)}&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&lt;main class=&quot;tf-workspace&quot;&gt;&lt;/main&gt;&lt;main class=&quot;tf-cover&quot; hidden&gt;&lt;/main&gt;&lt;nav class=&quot;tf-rail&quot; aria-label=&quot;Hatch タブ&quot;&gt;&lt;button class=&quot;tf-railstep cursor-interaction&quot; data-do=&quot;tabsup&quot; aria-label=&quot;タブを上にスクロール&quot;&gt;${I(&#x27;chevron-up&#x27;)}&lt;/button&gt;&lt;div class=&quot;tf-tabscroll&quot;&gt;${tabs.map(([id,ic,t])=&gt;`&lt;button class=&quot;tf-tab cursor-interaction&quot; data-do=&quot;tab:${id}&quot; aria-controls=&quot;tf-drawer-${n}&quot; aria-expanded=&quot;false&quot;&gt;${I(ic)}${t}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;button class=&quot;tf-railstep cursor-interaction&quot; data-do=&quot;tabsdown&quot; aria-label=&quot;タブを下にスクロール&quot;&gt;${I(&#x27;chevron-down&#x27;)}&lt;/button&gt;&lt;/nav&gt;&lt;button class=&quot;tf-scrim cursor-interaction&quot; data-do=&quot;close&quot; aria-label=&quot;Hatchを閉じる&quot; hidden&gt;&lt;/button&gt;&lt;section class=&quot;tf-drawer&quot; id=&quot;tf-drawer-${n}&quot; aria-label=&quot;Hatch ドロワー&quot; hidden&gt;&lt;/section&gt;&lt;button class=&quot;tf-modalback cursor-interaction&quot; data-do=&quot;dismiss&quot; aria-label=&quot;設定を閉じる&quot; hidden&gt;&lt;/button&gt;&lt;section class=&quot;tf-modal&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-label=&quot;Hatchの設定&quot; hidden&gt;&lt;/section&gt;&lt;div class=&quot;tf-toast&quot; role=&quot;status&quot; hidden&gt;&lt;/div&gt;`;
+const work=el.querySelector(&#x27;.tf-workspace&#x27;),cover=el.querySelector(&#x27;.tf-cover&#x27;),drawer=el.querySelector(&#x27;.tf-drawer&#x27;),modal=el.querySelector(&#x27;.tf-modal&#x27;);
+const cap={recording:false,recStart:0,recInterval:null,video:false,videoStart:0,videoInterval:null,cameraMode:&#x27;photo&#x27;,scene:0,strokes:[],penOnly:false,observer:null,previewInterval:null};
+el.querySelector(&#x27;.tf-viewtools&#x27;).insertAdjacentHTML(&#x27;afterend&#x27;,`&lt;div class=&quot;tf-recordstrip&quot; hidden&gt;&lt;span class=&quot;tf-recorddot&quot;&gt;&lt;/span&gt;&lt;span&gt;REC / デモ&lt;/span&gt;&lt;span class=&quot;tf-elapsed&quot; aria-label=&quot;録音デモの経過時間&quot;&gt;00:00&lt;/span&gt;&lt;button class=&quot;tf-historylink cursor-interaction&quot; data-capdo=&quot;stoprecord&quot;&gt;停止&lt;/button&gt;&lt;/div&gt;`);
+function toast(text){const node=el.querySelector(&#x27;.tf-toast&#x27;);node.textContent=text;node.hidden=false;clearTimeout(v.timer);v.timer=setTimeout(()=&gt;node.hidden=true,4200)}
+function file(){return folders[v.folder].items.find(f=&gt;f.id===v.selected&amp;&amp;!f.folder)}
+function path(id){const f=folders[id];return (f.parent?path(f.parent)+&#x27; / &#x27;:&#x27;Documents / &#x27;)+f.name}
+function fileIcon(f){return f.folder?&#x27;folder&#x27;:f.capture===&#x27;audio&#x27;?&#x27;audio-lines&#x27;:f.capture===&#x27;video&#x27;?&#x27;video&#x27;:f.capture===&#x27;ink&#x27;?&#x27;pen-line&#x27;:f.type===&#x27;PNG&#x27;?&#x27;image&#x27;:f.type===&#x27;PDF&#x27;?&#x27;file-text&#x27;:&#x27;notebook-pen&#x27;}
+function preview(f){if(!f)return `&lt;span class=&quot;tf-eyebrow&quot;&gt;プレビュー&lt;/span&gt;&lt;div class=&quot;tf-small&quot;&gt;ファイル未選択&lt;/div&gt;`;return `&lt;div class=&quot;tf-docname&quot;&gt;${f.name}&lt;/div&gt;&lt;div class=&quot;tf-document&quot;&gt;${f.type===&#x27;PNG&#x27;?`&lt;button class=&quot;tf-photoframe cursor-interaction&quot; data-photo=&quot;${v.photo}&quot; data-do=&quot;photo&quot; aria-label=&quot;風景の見本を切り替える&quot;&gt;&lt;span class=&quot;tf-photolabel&quot;&gt;PNG / SAMPLE&lt;/span&gt;&lt;/button&gt;`:`&lt;h3&gt;レイアウト仕様&lt;/h3&gt;&lt;p&gt;カバー画面：時計、写真、音楽、アプリ。&lt;br&gt;展開画面：ツリー、一覧、プレビュー。&lt;/p&gt;&lt;p&gt;Capture：録音、撮影、手書き、テキスト。&lt;br&gt;タップで一覧、長押しで新規作成。&lt;/p&gt;`}&lt;/div&gt;&lt;div class=&quot;tf-buttons&quot;&gt;&lt;button class=&quot;tf-button primary cursor-interaction&quot; data-do=&quot;openfile&quot;&gt;開く ${I(&#x27;arrow-up-right&#x27;)}&lt;/button&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-do=&quot;share&quot;&gt;${I(&#x27;share-2&#x27;)}共有&lt;/button&gt;&lt;/div&gt;`}
+function treeNode(id){const f=folders[id],children=f.items.filter(i=&gt;i.folder),expanded=v.expanded.has(id);return `&lt;div class=&quot;tf-treegroup&quot;&gt;&lt;div class=&quot;tf-treeline&quot;&gt;${children.length?`&lt;button class=&quot;tf-treefold cursor-interaction&quot; data-do=&quot;expand:${id}&quot; aria-expanded=&quot;${expanded}&quot; aria-label=&quot;${f.name}を${expanded?&#x27;折りたたむ&#x27;:&#x27;展開する&#x27;}&quot;&gt;${I(expanded?&#x27;chevron-down&#x27;:&#x27;chevron-right&#x27;)}&lt;/button&gt;`:&#x27;&lt;span style=&quot;width:23px;flex-shrink:0&quot;&gt;&lt;/span&gt;&#x27;}&lt;button class=&quot;tf-treelink cursor-interaction&quot; data-do=&quot;folder:${id}&quot; ${v.folder===id?&#x27;aria-current=&quot;page&quot;&#x27;:&#x27;&#x27;}&gt;${I(v.folder===id?&#x27;folder-open&#x27;:&#x27;folder&#x27;)}${f.name}&lt;/button&gt;&lt;/div&gt;${children.length&amp;&amp;expanded?`&lt;div class=&quot;tf-treechildren&quot;&gt;${children.map(c=&gt;treeNode(c.id)).join(&#x27;&#x27;)}&lt;/div&gt;`:&#x27;&#x27;}&lt;/div&gt;`}
+function captureDock(){return `&lt;nav class=&quot;tf-capturedock&quot; aria-label=&quot;Capture。タップで一覧、長押しで新規作成&quot;&gt;${[[&#x27;record&#x27;,&#x27;mic&#x27;,&#x27;録音&#x27;],[&#x27;camera&#x27;,&#x27;camera&#x27;,&#x27;撮影&#x27;],[&#x27;ink&#x27;,&#x27;pen-line&#x27;,&#x27;手書き&#x27;],[&#x27;text&#x27;,&#x27;file-pen-line&#x27;,&#x27;テキストメモ&#x27;]].map(([kind,ic,label])=&gt;`&lt;button class=&quot;cursor-interaction&quot; data-capture=&quot;${kind}&quot; aria-label=&quot;${label}一覧。長押しで新規作成&quot; data-tooltip=&quot;${label}：タップで一覧／長押しで新規&quot;&gt;${I(ic)}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/nav&gt;`}
+function filer(){
+ const f=folders[v.folder];
+ const kind={recordings:&#x27;record&#x27;,captures:&#x27;camera&#x27;,notes:&#x27;ink&#x27;,textnotes:&#x27;text&#x27;}[v.folder];
+ const items=v.folder===&#x27;captures&#x27;?`&lt;div class=&quot;tf-caphistory&quot;&gt;${f.items.map(i=&gt;`&lt;button class=&quot;tf-capthumb cursor-interaction&quot; data-do=&quot;select:${i.id}&quot; aria-pressed=&quot;${v.selected===i.id}&quot;&gt;&lt;div class=&quot;tf-capscene&quot; data-scene=&quot;${i.scene||0}&quot;&gt;${I(i.capture===&#x27;video&#x27;?&#x27;play&#x27;:&#x27;image&#x27;)}${i.capture===&#x27;video&#x27;?`&lt;span class=&quot;tf-capduration&quot;&gt;${capTime(i.seconds)}&lt;/span&gt;`:&#x27;&#x27;}&lt;/div&gt;&lt;span&gt;${i.name}&lt;/span&gt;&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;`:f.items.map(i=&gt;`&lt;button class=&quot;tf-file cursor-interaction&quot; data-do=&quot;${i.folder?&#x27;folder:&#x27;+i.id:&#x27;select:&#x27;+i.id}&quot; ${i.folder?&#x27;&#x27;:&#x27;aria-pressed=&quot;&#x27;+(i.id===v.selected)+&#x27;&quot;&#x27;}&gt;${I(fileIcon(i))}&lt;span&gt;${i.name}&lt;small&gt;${i.folder?&#x27;フォルダ&#x27;:i.type+&#x27; · &#x27;+i.size}&lt;/small&gt;&lt;/span&gt;${i.folder?I(&#x27;chevron-right&#x27;):&#x27;&#x27;}&lt;/button&gt;`).join(&#x27;&#x27;);
+ work.innerHTML=`&lt;header class=&quot;tf-filetoolbar&quot;&gt;&lt;button class=&quot;tf-iconbtn cursor-interaction&quot; data-do=&quot;tree&quot; aria-pressed=&quot;${v.tree}&quot; aria-label=&quot;ツリーの表示切り替え&quot;&gt;${I(&#x27;panel-left&#x27;)}&lt;/button&gt;&lt;button class=&quot;tf-iconbtn cursor-interaction&quot; data-do=&quot;up&quot; ${f.parent?&#x27;&#x27;:&#x27;disabled&#x27;} aria-label=&quot;親フォルダへ&quot;&gt;${I(&#x27;arrow-up&#x27;)}&lt;/button&gt;&lt;div class=&quot;tf-currentpath&quot;&gt;${path(v.folder)}&lt;/div&gt;${kind?`&lt;button class=&quot;tf-iconbtn cursor-interaction&quot; data-capdo=&quot;new:${kind}&quot; aria-label=&quot;新規作成&quot;&gt;${I(&#x27;plus&#x27;)}&lt;/button&gt;`:&#x27;&#x27;}&lt;/header&gt;&lt;div class=&quot;tf-desk ${v.tree?&#x27;&#x27;:&#x27;tree-hidden&#x27;}&quot;&gt;&lt;aside class=&quot;tf-tree&quot; aria-label=&quot;フォルダツリー&quot; ${v.tree?&#x27;&#x27;:&#x27;hidden&#x27;}&gt;&lt;div class=&quot;tf-treeitems&quot;&gt;${[&#x27;work&#x27;,&#x27;personal&#x27;,&#x27;photos&#x27;,&#x27;archive&#x27;].map(treeNode).join(&#x27;&#x27;)}&lt;/div&gt;&lt;div class=&quot;tf-treefooter&quot;&gt;${captureDock()}&lt;/div&gt;&lt;/aside&gt;&lt;section class=&quot;tf-filelist&quot; aria-label=&quot;ファイル一覧&quot;&gt;${items||&#x27;&lt;div class=&quot;tf-small&quot;&gt;0 items&lt;/div&gt;&#x27;}&lt;div class=&quot;tf-small tf-filecount&quot;&gt;${f.items.length} items&lt;/div&gt;&lt;/section&gt;&lt;section class=&quot;tf-preview&quot; aria-label=&quot;ファイルプレビュー&quot;&gt;${preview(file())}&lt;/section&gt;&lt;/div&gt;`;
+}
+const songs=[[&#x27;Quiet Orbit&#x27;,&#x27;THETA Sessions / デモ&#x27;],[&#x27;Slow Current&#x27;,&#x27;THETA Sessions / デモ&#x27;],[&#x27;Afterglow&#x27;,&#x27;THETA Sessions / デモ&#x27;]];
+function home(){const song=songs[v.song];cover.innerHTML=`&lt;section class=&quot;tf-clockarea&quot; aria-label=&quot;時計&quot;&gt;&lt;div&gt;&lt;div class=&quot;tf-clock&quot;&gt;09:41&lt;/div&gt;&lt;div class=&quot;tf-clocklabel&quot;&gt;FRI, OCT 23 / TOKYO&lt;/div&gt;&lt;/div&gt;${instrument?`&lt;div class=&quot;tf-dotcal&quot; aria-label=&quot;10月のカレンダー表示の見本&quot;&gt;${Array.from({length:35},()=&gt;&#x27;&lt;span&gt;&lt;/span&gt;&#x27;).join(&#x27;&#x27;)}&lt;/div&gt;`:``}&lt;/section&gt;&lt;div class=&quot;tf-indicators&quot; aria-label=&quot;インジケーターの見本&quot;&gt;&lt;span&gt;${I(&#x27;battery-medium&#x27;)}85%&lt;/span&gt;&lt;span&gt;${I(&#x27;wifi&#x27;)}ONLINE&lt;/span&gt;&lt;span&gt;${I(&#x27;bell&#x27;)}QUIET&lt;/span&gt;&lt;/div&gt;&lt;button class=&quot;tf-photoframe cursor-interaction&quot; data-photo=&quot;${v.photo}&quot; data-do=&quot;photo&quot; aria-label=&quot;サンプルのフォトフレームを切り替える&quot;&gt;&lt;span class=&quot;tf-photolabel&quot;&gt;PHOTO FRAME / DEMO&lt;/span&gt;&lt;span class=&quot;tf-phototitle&quot;&gt;${v.photo?&#x27;夕暮れの稜線&#x27;:&#x27;静かな湖畔&#x27;} ${I(&#x27;arrow-up-right&#x27;)}&lt;/span&gt;&lt;/button&gt;&lt;section class=&quot;tf-player&quot; aria-label=&quot;音楽プレイヤーのデモ&quot;&gt;&lt;div class=&quot;tf-playerhead&quot;&gt;&lt;div class=&quot;tf-artwork&quot;&gt;${I(instrument?&#x27;disc-3&#x27;:&#x27;audio-lines&#x27;)}&lt;/div&gt;&lt;div class=&quot;tf-song&quot;&gt;${song[0]}&lt;small&gt;${song[1]}&lt;/small&gt;&lt;/div&gt;&lt;button class=&quot;tf-iconbtn cursor-interaction&quot; data-do=&quot;app:chrome&quot; aria-label=&quot;音楽アプリを開く操作の説明&quot;&gt;${I(&#x27;arrow-up-right&#x27;)}&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;tf-transport&quot;&gt;&lt;button class=&quot;cursor-interaction&quot; data-do=&quot;prevsong&quot; aria-label=&quot;前のサンプル曲&quot;&gt;${I(&#x27;skip-back&#x27;)}&lt;/button&gt;&lt;button class=&quot;cursor-interaction&quot; data-do=&quot;play&quot; aria-label=&quot;${v.playing?&#x27;一時停止&#x27;:&#x27;再生&#x27;}（音声なしのデモ）&quot; aria-pressed=&quot;${v.playing}&quot;&gt;${I(v.playing?&#x27;pause&#x27;:&#x27;play&#x27;)}&lt;/button&gt;&lt;button class=&quot;cursor-interaction&quot; data-do=&quot;nextsong&quot; aria-label=&quot;次のサンプル曲&quot;&gt;${I(&#x27;skip-forward&#x27;)}&lt;/button&gt;&lt;div class=&quot;tf-track&quot;&gt;&lt;/div&gt;&lt;span class=&quot;tf-small&quot;&gt;1:12&lt;/span&gt;&lt;/div&gt;&lt;/section&gt;&lt;div class=&quot;tf-quickhead&quot;&gt;&lt;span class=&quot;tf-eyebrow&quot;&gt;QUICK ACCESS&lt;/span&gt;&lt;button class=&quot;tf-editlink cursor-interaction&quot; data-do=&quot;settings&quot;&gt;${I(&#x27;pencil&#x27;)}アイコン編集&lt;/button&gt;&lt;/div&gt;&lt;nav class=&quot;tf-quickgrid&quot; aria-label=&quot;よく使うアプリ&quot;&gt;${launch(&#x27;chrome&#x27;)}${launch(&#x27;files&#x27;)}${launch(&#x27;line&#x27;)}&lt;button class=&quot;tf-app cursor-interaction&quot; data-do=&quot;tab:stack&quot;&gt;${stackSymbol()}&lt;span&gt;連絡&lt;/span&gt;&lt;/button&gt;&lt;/nav&gt;`}
+function row(title,sub,ic,action){return `&lt;button class=&quot;tf-listrow cursor-interaction&quot; data-do=&quot;${action}&quot;&gt;${I(ic)}&lt;span&gt;${title}&lt;small&gt;${sub}&lt;/small&gt;&lt;/span&gt;${I(&#x27;chevron-right&#x27;)}&lt;/button&gt;`}
+function drawerBody(){const key=v.drawer;let title=tabs.find(t=&gt;t[0]===key)?.[2]||&#x27;Hatch&#x27;;let body=&#x27;&#x27;;if([&#x27;work&#x27;,&#x27;personal&#x27;,&#x27;photos&#x27;].includes(key)){const folder=key===&#x27;work&#x27;?v.assigned:key;body=`&lt;span class=&quot;tf-small&quot;&gt;${path(folder)}&lt;/span&gt;${folders[folder].items.map(f=&gt;row(f.name,f.folder?&#x27;フォルダ&#x27;:f.type+&#x27; · &#x27;+f.size,fileIcon(f),&#x27;drawfile:&#x27;+f.id)).join(&#x27;&#x27;)}&lt;div class=&quot;tf-buttons&quot;&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-do=&quot;workspace:${folder}&quot;&gt;作業面で開く ${I(&#x27;arrow-up-right&#x27;)}&lt;/button&gt;${key===&#x27;work&#x27;?&#x27;&lt;button class=&quot;tf-button cursor-interaction&quot; data-do=&quot;assign&quot;&gt;割り当て変更&lt;/button&gt;&#x27;:&#x27;&#x27;}&lt;/div&gt;`}
+else if(key===&#x27;stack&#x27;){title=&#x27;連絡スタック&#x27;;body=`&lt;p class=&quot;tf-paneltext&quot;&gt;スタックの表紙は、アプリとは別に設定できます。&lt;/p&gt;${[&#x27;mail&#x27;,&#x27;line&#x27;,&#x27;calendar&#x27;].map(k=&gt;`&lt;button class=&quot;tf-listrow cursor-interaction&quot; data-do=&quot;app:${k}&quot;&gt;${symbol(k)}&lt;span&gt;${apps[k].name}&lt;small&gt;アプリへの入口 / デモ&lt;/small&gt;&lt;/span&gt;${I(&#x27;arrow-up-right&#x27;)}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;div class=&quot;tf-buttons&quot;&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-do=&quot;stacksettings&quot;&gt;${I(&#x27;pencil&#x27;)}スタックのアイコン&lt;/button&gt;&lt;/div&gt;`}
+else if(key===&#x27;calendar&#x27;){title=&#x27;今日の予定&#x27;;body=`&lt;div class=&quot;tf-today&quot;&gt;&lt;span class=&quot;tf-eyebrow&quot;&gt;OCTOBER 23 / SAMPLE&lt;/span&gt;&lt;h3&gt;11:00 デザインレビュー&lt;/h3&gt;&lt;p class=&quot;tf-small&quot;&gt;11:00—11:45 / サンプル&lt;/p&gt;&lt;/div&gt;${row(&#x27;15:30 · 企画の整理&#x27;,&#x27;15:30—16:00 / サンプル&#x27;,&#x27;calendar-days&#x27;,&#x27;app:calendar&#x27;)}&lt;div class=&quot;tf-buttons&quot;&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-do=&quot;app:calendar&quot;&gt;カレンダーへ&lt;/button&gt;&lt;/div&gt;`}
+else if(key===&#x27;mail&#x27;){title=&#x27;メール&#x27;;body=`${row(&#x27;デザインレビューの資料&#x27;,&#x27;青木さん / 架空のメール&#x27;,&#x27;mail&#x27;,&#x27;app:mail&#x27;)}${row(&#x27;来週の打ち合わせ&#x27;,&#x27;佐藤さん / 架空のメール&#x27;,&#x27;mail&#x27;,&#x27;app:mail&#x27;)}&lt;p class=&quot;tf-paneltext&quot;&gt;実装時はメールアプリへの移動、または提供元のWidgetを使います。&lt;/p&gt;`}
+else if(key===&#x27;widgets&#x27;){title=&#x27;Widget Hatch&#x27;;body=`&lt;div class=&quot;tf-today&quot;&gt;&lt;span class=&quot;tf-eyebrow&quot;&gt;WIDGET PREVIEW&lt;/span&gt;&lt;h3&gt;${v.widget===&#x27;mail&#x27;?&#x27;メールのWidget&#x27;:&#x27;カレンダーのWidget&#x27;}&lt;/h3&gt;&lt;p class=&quot;tf-small&quot;&gt;${v.widget===&#x27;mail&#x27;?&#x27;受信トレイの見本&#x27;:&#x27;11:00 デザインレビュー&#x27;}&lt;/p&gt;&lt;/div&gt;&lt;p class=&quot;tf-paneltext&quot;&gt;提供元のAndroidウィジェットを収納する場所です。&lt;/p&gt;&lt;div class=&quot;tf-buttons&quot;&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-do=&quot;widget:calendar&quot;&gt;カレンダーの見本&lt;/button&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-do=&quot;widget:mail&quot;&gt;メールの見本&lt;/button&gt;&lt;/div&gt;`}
+else if(key===&#x27;bookmarks&#x27;){title=&#x27;ブックマーク&#x27;;body=row(&#x27;Hatch の作業ページ&#x27;,&#x27;リンク未接続 / サンプル&#x27;,&#x27;bookmark&#x27;,&#x27;link&#x27;)+row(&#x27;Android Developers&#x27;,&#x27;リンクを開く操作の見本&#x27;,&#x27;globe&#x27;,&#x27;link&#x27;)}
+else if(key===&#x27;apps&#x27;){title=&#x27;アプリ&#x27;;body=`${Object.keys(apps).map(k=&gt;`&lt;button class=&quot;tf-listrow cursor-interaction&quot; data-do=&quot;app:${k}&quot;&gt;${symbol(k)}&lt;span&gt;${apps[k].name}&lt;/span&gt;${I(&#x27;arrow-up-right&#x27;)}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;div class=&quot;tf-buttons&quot;&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-do=&quot;settings&quot;&gt;アイコン編集&lt;/button&gt;&lt;/div&gt;`}
+else if(key===&#x27;hatch&#x27;){title=&#x27;Hatch Connect&#x27;;body=row(&#x27;THETA.xxx.Hatch&#x27;,&#x27;連携情報未登録 / 仮の名称&#x27;,&#x27;panel-left-open&#x27;,&#x27;hatchinfo&#x27;)+`&lt;div class=&quot;tf-buttons&quot;&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-do=&quot;install&quot;&gt;導入の流れ&lt;/button&gt;&lt;/div&gt;&lt;p class=&quot;tf-paneltext&quot;&gt;既存Hatchの仕様に合わせ、開く・共有する・公式配布先へ進む動線を接続します。&lt;/p&gt;`}
+drawer.setAttribute(&#x27;aria-label&#x27;,title);drawer.innerHTML=body;drawer.querySelectorAll(&#x27;.tf-paneltext,.tf-eyebrow&#x27;).forEach(node=&gt;node.remove())}
+v.render=()=&gt;{const isCover=[&#x27;closed&#x27;,&#x27;titan&#x27;].includes(state.screen);work.hidden=isCover;cover.hidden=!isCover;el.querySelector(&#x27;[data-do=fold]&#x27;).textContent=isCover?&#x27;開く&#x27;:&#x27;閉じる&#x27;;filer();home();drawer.hidden=!v.drawer;el.querySelector(&#x27;.tf-scrim&#x27;).hidden=!v.drawer;el.querySelectorAll(&#x27;.tf-tab&#x27;).forEach(b=&gt;b.setAttribute(&#x27;aria-expanded&#x27;,String(b.dataset.do===&#x27;tab:&#x27;+v.drawer)));if(v.drawer)drawerBody();icons()};
+function showModal(html){v.lastFocus=document.activeElement;modal.setAttribute(&#x27;aria-label&#x27;,html.title);modal.innerHTML=`&lt;button class=&quot;tf-iconbtn tf-dialogclose cursor-interaction&quot; data-do=&quot;dismiss&quot; aria-label=&quot;閉じる&quot;&gt;${I(&#x27;x&#x27;)}&lt;/button&gt;${html.body}`;modal.hidden=false;el.querySelector(&#x27;.tf-modalback&#x27;).hidden=false;icons();modal.querySelector(&#x27;button,select,input&#x27;)?.focus()}
+function captureFile(id){return [...captureStore.recordings,...captureStore.media,...captureStore.notes,...captureStore.texts].find(f=&gt;f.id===id)}
+function capturePreview(f){if(f.capture===&#x27;text&#x27;)return `&lt;span class=&quot;tf-eyebrow&quot;&gt;TXT&lt;/span&gt;&lt;div class=&quot;tf-docname&quot;&gt;${htmlText(f.name)}&lt;/div&gt;&lt;pre class=&quot;tf-textpreview&quot;&gt;${htmlText(f.text)}&lt;/pre&gt;&lt;div class=&quot;tf-buttons&quot;&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-do=&quot;share&quot;&gt;${I(&#x27;share-2&#x27;)}共有&lt;/button&gt;&lt;/div&gt;`;return `&lt;span class=&quot;tf-eyebrow&quot;&gt;CAPTURE / ${f.capture.toUpperCase()}&lt;/span&gt;&lt;div class=&quot;tf-docname&quot;&gt;${f.name}&lt;/div&gt;${f.capture===&#x27;ink&#x27;?`&lt;img class=&quot;tf-inkimage&quot; src=&quot;${f.data}&quot; alt=&quot;保存した手書きメモの見本&quot;&gt;`:`&lt;div class=&quot;tf-document&quot;&gt;${f.capture===&#x27;audio&#x27;?`${I(&#x27;audio-lines&#x27;)}&lt;h3&gt;${capTime(f.seconds)}&lt;/h3&gt;&lt;p&gt;録音データの見本。&lt;br&gt;実際の音声は含まれていません。&lt;/p&gt;`:`&lt;div class=&quot;tf-capscene&quot; data-scene=&quot;${f.scene}&quot;&gt;${f.capture===&#x27;video&#x27;?I(&#x27;play&#x27;):I(&#x27;image&#x27;)}${f.capture===&#x27;video&#x27;?`&lt;span class=&quot;tf-capduration&quot;&gt;${capTime(f.seconds)}&lt;/span&gt;`:&#x27;&#x27;}&lt;/div&gt;&lt;p style=&quot;margin-top:12px&quot;&gt;撮影結果の見本です。&lt;/p&gt;`}&lt;/div&gt;`}&lt;div class=&quot;tf-buttons&quot;&gt;&lt;button class=&quot;tf-button primary cursor-interaction&quot; data-capdo=&quot;view:${f.id}&quot;&gt;${f.capture===&#x27;audio&#x27;?&#x27;録音を確認&#x27;:f.capture===&#x27;video&#x27;?&#x27;動画を確認&#x27;:&#x27;開く&#x27;} ${I(&#x27;arrow-up-right&#x27;)}&lt;/button&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-do=&quot;share&quot;&gt;${I(&#x27;share-2&#x27;)}共有&lt;/button&gt;&lt;/div&gt;`}
+function updateRecording(){
+ const strip=el.querySelector(&#x27;.tf-recordstrip&#x27;);
+ el.querySelectorAll(&#x27;[data-capture=record]&#x27;).forEach(button=&gt;{button.setAttribute(&#x27;aria-pressed&#x27;,String(cap.recording));button.setAttribute(&#x27;aria-label&#x27;,cap.recording?&#x27;録音一覧。長押しで録音デモを停止&#x27;:&#x27;録音一覧。長押しで新規録音&#x27;)});
+ strip.hidden=!cap.recording;
+ if(cap.recording)strip.querySelector(&#x27;.tf-elapsed&#x27;).textContent=capTime(Math.max(0,Math.floor((Date.now()-cap.recStart)/1000)));
+}
+function toggleRecording(){if(cap.recording){const seconds=Math.max(1,Math.floor((Date.now()-cap.recStart)/1000));cap.recording=false;clearInterval(cap.recInterval);captureStore.recordings.unshift({id:&#x27;rec-&#x27;+Date.now(),name:&#x27;録音 &#x27;+String(captureStore.recordings.length+1).padStart(3,&#x27;0&#x27;)+&#x27;.m4a&#x27;,type:&#x27;M4A&#x27;,size:capTime(seconds)+&#x27; / デモ&#x27;,seconds,capture:&#x27;audio&#x27;});v.render();toast(&#x27;録音デモを停止。「Recordings」に見本を追加しました。&#x27;)}else{cap.recording=true;cap.recStart=Date.now();updateRecording();toast(&#x27;録音開始のデモです。マイクは使用していません。&#x27;);cap.recInterval=setInterval(()=&gt;{if(!root.isConnected){clearInterval(cap.recInterval);return}updateRecording()},500)}}
+function cleanupCapture(){cap.observer?.disconnect();cap.observer=null;clearInterval(cap.previewInterval);cap.previewInterval=null}
+function finishVideo(){if(!cap.video)return;const seconds=Math.max(1,Math.floor((Date.now()-cap.videoStart)/1000));cap.video=false;clearInterval(cap.videoInterval);captureStore.media.unshift({id:&#x27;video-&#x27;+Date.now(),name:&#x27;動画 &#x27;+String(captureStore.media.length+1).padStart(3,&#x27;0&#x27;)+&#x27;.mp4&#x27;,type:&#x27;MP4&#x27;,size:capTime(seconds)+&#x27; / デモ&#x27;,seconds,capture:&#x27;video&#x27;,scene:cap.scene});v.render()}
+function captureModal(title,body){cleanupCapture();finishVideo();showModal({title,body})}
+function openHistory(kind){const list=kind===&#x27;audio&#x27;?captureStore.recordings:kind===&#x27;media&#x27;?captureStore.media:captureStore.notes;const title=kind===&#x27;audio&#x27;?&#x27;録音データ&#x27;:kind===&#x27;media&#x27;?&#x27;写真と動画&#x27;:&#x27;手書きメモ&#x27;;const folder=kind===&#x27;audio&#x27;?&#x27;recordings&#x27;:kind===&#x27;media&#x27;?&#x27;captures&#x27;:&#x27;notes&#x27;;const body=kind===&#x27;audio&#x27;?list.map(f=&gt;`&lt;button class=&quot;tf-listrow cursor-interaction&quot; data-capdo=&quot;view:${f.id}&quot;&gt;${I(&#x27;audio-lines&#x27;)}&lt;span&gt;${f.name}&lt;small&gt;${capTime(f.seconds)} / 音声なしの見本&lt;/small&gt;&lt;/span&gt;${I(&#x27;play&#x27;)}&lt;/button&gt;`).join(&#x27;&#x27;):`&lt;div class=&quot;tf-caphistory&quot;&gt;${list.map(f=&gt;`&lt;button class=&quot;tf-capthumb cursor-interaction&quot; data-capdo=&quot;view:${f.id}&quot;&gt;&lt;div class=&quot;tf-capscene&quot; data-scene=&quot;${f.scene||0}&quot;&gt;${f.capture===&#x27;ink&#x27;?`&lt;img src=&quot;${f.data}&quot; alt=&quot;${f.name}&quot;&gt;`:I(f.capture===&#x27;video&#x27;?&#x27;play&#x27;:&#x27;image&#x27;)}${f.capture===&#x27;video&#x27;?`&lt;span class=&quot;tf-capduration&quot;&gt;${capTime(f.seconds)}&lt;/span&gt;`:&#x27;&#x27;}&lt;/div&gt;&lt;span&gt;${f.name}&lt;small&gt;${f.capture===&#x27;ink&#x27;?&#x27;手書き / この表示中のみ&#x27;:f.capture===&#x27;video&#x27;?&#x27;動画の見本&#x27;:&#x27;写真の見本&#x27;}&lt;/small&gt;&lt;/span&gt;&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;`;captureModal(title,`&lt;div class=&quot;tf-capheading&quot;&gt;&lt;span class=&quot;tf-small&quot;&gt;${list.length} items / この表示中のデモ&lt;/span&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-capdo=&quot;folder:${folder}&quot;&gt;${I(&#x27;folder-open&#x27;)}ファイラーへ&lt;/button&gt;&lt;/div&gt;${body||&#x27;&lt;div class=&quot;tf-capempty&quot;&gt;まだメモはありません。「手書き」から書けます。&lt;/div&gt;&#x27;}&lt;p class=&quot;tf-capnote&quot;&gt;録音・写真・動画は操作見本。手書きの試し書きは、この表示中だけ保持します。&lt;/p&gt;`)}
+function viewCapture(id){const f=captureFile(id);if(!f)return;const back=f.capture===&#x27;audio&#x27;?&#x27;audio&#x27;:f.capture===&#x27;ink&#x27;?&#x27;notes&#x27;:&#x27;media&#x27;;let content;if(f.capture===&#x27;ink&#x27;)content=`&lt;img class=&quot;tf-inkimage&quot; src=&quot;${f.data}&quot; alt=&quot;保存した手書きメモ&quot;&gt;&lt;p class=&quot;tf-capnote&quot;&gt;試し書きの保存見本です。この表示中のみ保持。&lt;/p&gt;`;else if(f.capture===&#x27;audio&#x27;)content=`&lt;div class=&quot;tf-today&quot;&gt;&lt;span class=&quot;tf-eyebrow&quot;&gt;VOICE / DEMO&lt;/span&gt;${I(&#x27;audio-lines&#x27;)}&lt;h3&gt;${capTime(f.seconds)}&lt;/h3&gt;&lt;p class=&quot;tf-capnote&quot;&gt;実際の音声は含まれていません。&lt;/p&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-capdo=&quot;playaudio:${f.id}&quot;&gt;${I(&#x27;play&#x27;)}再生の見本&lt;/button&gt;&lt;p class=&quot;tf-capnote&quot; data-audiostatus role=&quot;status&quot;&gt;&lt;/p&gt;&lt;/div&gt;`;else content=`&lt;div class=&quot;tf-viewfinder&quot;&gt;&lt;div class=&quot;tf-viewgrid&quot;&gt;&lt;/div&gt;&lt;div class=&quot;tf-lenslabel&quot;&gt;&lt;span&gt;${f.capture===&#x27;video&#x27;?&#x27;VIDEO&#x27;:&#x27;PHOTO&#x27;} / DEMO&lt;/span&gt;&lt;span&gt;${f.capture===&#x27;video&#x27;?capTime(f.seconds):&#x27;SAMPLE&#x27;}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;tf-lenscross&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;p class=&quot;tf-capnote&quot;&gt;${f.capture===&#x27;video&#x27;?&#x27;動画のプレビューを開く&#x27;:&#x27;写真を拡大する&#x27;}操作の見本です。実際の映像はありません。&lt;/p&gt;`;captureModal(f.name,content+`&lt;div class=&quot;tf-buttons&quot;&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-capdo=&quot;history:${back}&quot;&gt;一覧へ&lt;/button&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-do=&quot;share&quot;&gt;${I(&#x27;share-2&#x27;)}共有&lt;/button&gt;&lt;/div&gt;`)}
+function openCamera(mode){cap.cameraMode=mode;captureModal(&#x27;クイックカメラ&#x27;,`&lt;div class=&quot;tf-viewfinder&quot;&gt;&lt;div class=&quot;tf-viewgrid&quot;&gt;&lt;/div&gt;&lt;div class=&quot;tf-lenslabel&quot;&gt;&lt;span&gt;CAMERA / DEMO&lt;/span&gt;&lt;span data-videotime&gt;${mode===&#x27;video&#x27;?&#x27;00:00&#x27;:&#x27;PHOTO&#x27;}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;tf-lenscross&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;tf-cameramodes&quot;&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-capdo=&quot;camera:photo&quot; aria-pressed=&quot;${mode===&#x27;photo&#x27;}&quot;&gt;写真&lt;/button&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-capdo=&quot;camera:video&quot; aria-pressed=&quot;${mode===&#x27;video&#x27;}&quot;&gt;動画&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;tf-shutterrow&quot;&gt;&lt;button class=&quot;tf-iconbtn cursor-interaction&quot; aria-label=&quot;写真と動画の一覧&quot; data-capdo=&quot;history:media&quot;&gt;${I(&#x27;images&#x27;)}&lt;/button&gt;&lt;button class=&quot;tf-shutter cursor-interaction&quot; data-capdo=&quot;shutter&quot; aria-label=&quot;${mode===&#x27;photo&#x27;?&#x27;写真撮影&#x27;:&#x27;動画録画&#x27;}のデモ&quot;&gt;${I(mode===&#x27;photo&#x27;?&#x27;camera&#x27;:&#x27;video&#x27;)}&lt;/button&gt;&lt;button class=&quot;tf-iconbtn cursor-interaction&quot; aria-label=&quot;風景の見本を切り替える&quot; data-capdo=&quot;scene&quot;&gt;${I(&#x27;refresh-cw&#x27;)}&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;tf-captureresult&quot; role=&quot;status&quot;&gt;${mode===&#x27;photo&#x27;?&#x27;シャッターで写真の見本を追加&#x27;:&#x27;録画開始・停止の操作を試せます&#x27;}&lt;/div&gt;&lt;p class=&quot;tf-capnote&quot;&gt;操作のデモです。カメラを起動したり、撮影したりしません。&lt;/p&gt;`)}
+function shutter(){if(cap.cameraMode===&#x27;photo&#x27;){captureStore.media.unshift({id:&#x27;photo-&#x27;+Date.now(),name:&#x27;写真 &#x27;+String(captureStore.media.length+1).padStart(3,&#x27;0&#x27;)+&#x27;.png&#x27;,type:&#x27;PNG&#x27;,size:&#x27;写真 / デモ&#x27;,capture:&#x27;photo&#x27;,scene:cap.scene});v.render();modal.querySelector(&#x27;.tf-captureresult&#x27;).textContent=&#x27;「Camera」に写真の見本を追加しました。&#x27;}else if(!cap.video){cap.video=true;cap.videoStart=Date.now();modal.querySelector(&#x27;[data-capdo=shutter]&#x27;).innerHTML=I(&#x27;square&#x27;);modal.querySelector(&#x27;[data-capdo=shutter]&#x27;).setAttribute(&#x27;aria-label&#x27;,&#x27;動画録画デモを停止&#x27;);modal.querySelector(&#x27;.tf-captureresult&#x27;).textContent=&#x27;録画中のデモ / もう一度押して停止&#x27;;icons();cap.videoInterval=setInterval(()=&gt;{if(!root.isConnected){clearInterval(cap.videoInterval);return}const node=modal.querySelector(&#x27;[data-videotime]&#x27;);if(node)node.textContent=&#x27;REC &#x27;+capTime(Math.floor((Date.now()-cap.videoStart)/1000))},500)}else{finishVideo();modal.querySelector(&#x27;[data-capdo=shutter]&#x27;).innerHTML=I(&#x27;video&#x27;);modal.querySelector(&#x27;[data-capdo=shutter]&#x27;).setAttribute(&#x27;aria-label&#x27;,&#x27;動画録画デモを開始&#x27;);modal.querySelector(&#x27;.tf-captureresult&#x27;).textContent=&#x27;「Camera」に動画の見本を追加しました。&#x27;;icons()}}
+function openInk(){captureModal(&#x27;手書きメモ&#x27;,`&lt;div class=&quot;tf-inktools&quot;&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-capdo=&quot;inkundo&quot;&gt;${I(&#x27;undo-2&#x27;)}戻す&lt;/button&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-capdo=&quot;inkclear&quot;&gt;${I(&#x27;eraser&#x27;)}クリア&lt;/button&gt;&lt;label&gt;&lt;input type=&quot;checkbox&quot; data-capsetting=&quot;penonly&quot; ${cap.penOnly?&#x27;checked&#x27;:&#x27;&#x27;}&gt;ペン優先&lt;/label&gt;&lt;/div&gt;&lt;div class=&quot;tf-inkframe&quot;&gt;&lt;canvas class=&quot;tf-inkcanvas&quot; aria-label=&quot;手書きメモの試し書き欄。ペン・指・マウスで描けます。&quot;&gt;&lt;/canvas&gt;&lt;span class=&quot;tf-inkhint&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;tf-buttons&quot;&gt;&lt;button class=&quot;tf-button primary cursor-interaction&quot; data-capdo=&quot;saveink&quot;&gt;${I(&#x27;save&#x27;)}ファイラーに保存&lt;/button&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-capdo=&quot;history:notes&quot;&gt;メモ一覧&lt;/button&gt;&lt;/div&gt;&lt;p class=&quot;tf-capnote&quot;&gt;ペン優先では指の描画を抑えます。Sペンの実機対応はAndroid版で検証。下書きと保存見本は、この表示中だけ保持します。&lt;/p&gt;&lt;span class=&quot;tf-inkfallback&quot; role=&quot;status&quot; data-inkstatus&gt;&lt;/span&gt;`);const canvas=modal.querySelector(&#x27;canvas&#x27;),ctx=canvas.getContext(&#x27;2d&#x27;);let activePointer=null,penActive=false;function paint(){const r=canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);if(!r.width)return;canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=getComputedStyle(el).getPropertyValue(&#x27;--tf-bg&#x27;).trim();ctx.fillRect(0,0,r.width,r.height);ctx.strokeStyle=getComputedStyle(el).getPropertyValue(&#x27;--tf-ink&#x27;).trim();ctx.fillStyle=ctx.strokeStyle;ctx.lineCap=&#x27;round&#x27;;ctx.lineJoin=&#x27;round&#x27;;for(const stroke of cap.strokes){if(stroke.length===1){const p=stroke[0];ctx.beginPath();ctx.arc(p.x*r.width,p.y*r.height,1.2+p.p*1.4,0,Math.PI*2);ctx.fill()}for(let i=1;i&lt;stroke.length;i++){const a=stroke[i-1],b=stroke[i];ctx.lineWidth=1.2+(a.p+b.p)*1.5;ctx.beginPath();ctx.moveTo(a.x*r.width,a.y*r.height);ctx.lineTo(b.x*r.width,b.y*r.height);ctx.stroke()}}modal.querySelector(&#x27;.tf-inkhint&#x27;).hidden=cap.strokes.length&gt;0;modal.querySelector(&#x27;[data-capdo=saveink]&#x27;).disabled=!cap.strokes.length;modal.querySelector(&#x27;[data-capdo=inkundo]&#x27;).disabled=!cap.strokes.length}function point(e){const r=canvas.getBoundingClientRect();return{x:Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),y:Math.min(1,Math.max(0,(e.clientY-r.top)/r.height)),p:e.pointerType===&#x27;pen&#x27;?Math.max(.1,e.pressure||.5):.5}}canvas.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{if(e.button!==0||activePointer!==null||(e.pointerType===&#x27;touch&#x27;&amp;&amp;(cap.penOnly||penActive)))return;e.preventDefault();activePointer=e.pointerId;penActive=e.pointerType===&#x27;pen&#x27;;canvas.setPointerCapture(e.pointerId);cap.strokes.push([point(e)]);paint()});canvas.addEventListener(&#x27;pointermove&#x27;,e=&gt;{if(e.pointerId!==activePointer)return;e.preventDefault();const events=e.getCoalescedEvents?.();for(const p of events?.length?events:[e])cap.strokes.at(-1).push(point(p));paint()});function up(e){if(e.pointerId!==activePointer)return;activePointer=null;penActive=false;modal.querySelector(&#x27;[data-inkstatus]&#x27;).textContent=&#x27;下書きを保持しています。&#x27;}canvas.addEventListener(&#x27;pointerup&#x27;,up);canvas.addEventListener(&#x27;pointercancel&#x27;,up);cap.paint=paint;cap.observer=new ResizeObserver(paint);cap.observer.observe(canvas);paint()}
+function browseCapture(kind){
+ cleanupCapture();finishVideo();dismiss();
+ state.screen=&#x27;open&#x27;;v.drawer=null;
+ goFolder({record:&#x27;recordings&#x27;,camera:&#x27;captures&#x27;,ink:&#x27;notes&#x27;,text:&#x27;textnotes&#x27;}[kind]);sync();remember();
+}
+function doCapture(kind,action){
+ if(action===&#x27;cancel&#x27;)return;
+ if(action===&#x27;browse&#x27;){browseCapture(kind);return}
+ if(kind===&#x27;record&#x27;)toggleRecording();
+ else if(kind===&#x27;camera&#x27;)openCamera(&#x27;photo&#x27;);
+ else if(kind===&#x27;ink&#x27;)openInk();
+ else if(kind===&#x27;text&#x27;)openText();
+}
+const htmlText=value=&gt;String(value).replace(/[&amp;&lt;&gt;&quot;&#x27;]/g,c=&gt;({&#x27;&amp;&#x27;:&#x27;&amp;amp;&#x27;,&#x27;&lt;&#x27;:&#x27;&amp;lt;&#x27;,&#x27;&gt;&#x27;:&#x27;&amp;gt;&#x27;,&#x27;&quot;&#x27;:&#x27;&amp;quot;&#x27;,&quot;&#x27;&quot;:&#x27;&amp;#39;&#x27;}[c]));
+function openText(){
+ captureModal(&#x27;テキストメモ&#x27;,`&lt;label&gt;タイトル&lt;input data-texttitle maxlength=&quot;80&quot; value=&quot;${htmlText(cap.textTitle||&#x27;&#x27;)}&quot; placeholder=&quot;無題&quot;&gt;&lt;/label&gt;&lt;label&gt;本文&lt;textarea class=&quot;tf-texteditor&quot; data-textbody rows=&quot;9&quot; placeholder=&quot;メモを入力&quot;&gt;${htmlText(cap.textBody||&#x27;&#x27;)}&lt;/textarea&gt;&lt;/label&gt;&lt;div class=&quot;tf-buttons&quot;&gt;&lt;button class=&quot;tf-button primary cursor-interaction&quot; data-capdo=&quot;savetext&quot;&gt;保存&lt;/button&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-do=&quot;dismiss&quot;&gt;閉じる&lt;/button&gt;&lt;/div&gt;&lt;p class=&quot;tf-capnote&quot; data-textstatus role=&quot;status&quot;&gt;この表示中のみ保存&lt;/p&gt;`);
+ modal.querySelector(&#x27;[data-textbody]&#x27;).focus();
+}
+function saveText(){
+ const title=modal.querySelector(&#x27;[data-texttitle]&#x27;).value.trim()||&#x27;無題&#x27;;
+ const text=modal.querySelector(&#x27;[data-textbody]&#x27;).value;
+ if(!text.trim()){modal.querySelector(&#x27;[data-textstatus]&#x27;).textContent=&#x27;本文を入力してください。&#x27;;return}
+ const id=&#x27;text-&#x27;+Date.now();
+ captureStore.texts.unshift({id,name:title.replace(/[\\/:*?&quot;&lt;&gt;|]/g,&#x27;_&#x27;).slice(0,48)+&#x27;.txt&#x27;,type:&#x27;TXT&#x27;,size:text.length+&#x27;文字&#x27;,capture:&#x27;text&#x27;,text});
+ cap.textTitle=&#x27;&#x27;;cap.textBody=&#x27;&#x27;;cleanupCapture();dismiss();state.screen=&#x27;open&#x27;;v.drawer=null;goFolder(&#x27;textnotes&#x27;);v.selected=id;sync();remember();
+}
+el.addEventListener(&#x27;input&#x27;,e=&gt;{if(e.target.matches(&#x27;[data-texttitle]&#x27;))cap.textTitle=e.target.value;if(e.target.matches(&#x27;[data-textbody]&#x27;))cap.textBody=e.target.value});
+el.addEventListener(&#x27;click&#x27;,e=&gt;{const button=e.target.closest(&#x27;[data-capdo]&#x27;);if(!button)return;const [cmd,arg]=button.dataset.capdo.split(&#x27;:&#x27;);if(cmd===&#x27;savetext&#x27;||cmd===&#x27;new&#x27;){e.preventDefault();e.stopImmediatePropagation();if(cmd===&#x27;savetext&#x27;)saveText();else doCapture(arg,&#x27;create&#x27;)}},true);
+el.addEventListener(&#x27;keydown&#x27;,e=&gt;{const button=e.target.closest(&#x27;[data-capture]&#x27;);if(button&amp;&amp;e.shiftKey&amp;&amp;e.key===&#x27;Enter&#x27;){e.preventDefault();doCapture(button.dataset.capture,&#x27;create&#x27;)}});
+let gesture=null;
+el.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{const button=e.target.closest(&#x27;[data-capture]&#x27;);if(!button||e.button!==0)return;button.setPointerCapture(e.pointerId);gesture={button,kind:button.dataset.capture,pointer:e.pointerId,x:e.clientX,y:e.clientY,start:performance.now(),consumed:false};const g=gesture;g.timer=setTimeout(()=&gt;{if(gesture===g){g.consumed=true;doCapture(g.kind,&#x27;create&#x27;)}},560)});
+el.addEventListener(&#x27;pointermove&#x27;,e=&gt;{if(!gesture||gesture.pointer!==e.pointerId)return;if(Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)&gt;12){clearTimeout(gesture.timer);gesture.canceled=true}});
+function resetCaptureButton(g){g.button.style.transform=&#x27;&#x27;}
+el.addEventListener(&#x27;pointerup&#x27;,e=&gt;{if(!gesture||gesture.pointer!==e.pointerId)return;const g=gesture;gesture=null;clearTimeout(g.timer);resetCaptureButton(g);if(!g.consumed&amp;&amp;!g.canceled)doCapture(g.kind,captureGesture(g.kind,e.clientX-g.x,e.clientY-g.y,performance.now()-g.start))});
+el.addEventListener(&#x27;pointercancel&#x27;,e=&gt;{if(gesture?.pointer===e.pointerId){clearTimeout(gesture.timer);resetCaptureButton(gesture);gesture=null}});
+el.addEventListener(&#x27;contextmenu&#x27;,e=&gt;{if(e.target.closest(&#x27;[data-capture]&#x27;))e.preventDefault()});
+el.addEventListener(&#x27;click&#x27;,e=&gt;{const capture=e.target.closest(&#x27;[data-capture]&#x27;);if(capture){e.preventDefault();e.stopImmediatePropagation();if(e.detail===0)doCapture(capture.dataset.capture,&#x27;browse&#x27;);return}const b=e.target.closest(&#x27;[data-capdo]&#x27;);if(!b){if(e.target.closest(&#x27;[data-do=dismiss]&#x27;)){cleanupCapture();finishVideo()}return}e.preventDefault();e.stopImmediatePropagation();const [cmd,arg]=b.dataset.capdo.split(&#x27;:&#x27;);if(cmd===&#x27;history&#x27;)openHistory(arg);else if(cmd===&#x27;view&#x27;)viewCapture(arg);else if(cmd===&#x27;stoprecord&#x27;){if(cap.recording)toggleRecording()}else if(cmd===&#x27;folder&#x27;){cleanupCapture();finishVideo();dismiss();state.screen=&#x27;open&#x27;;v.drawer=null;goFolder(arg);sync();remember()}else if(cmd===&#x27;camera&#x27;)openCamera(arg);else if(cmd===&#x27;shutter&#x27;)shutter();else if(cmd===&#x27;scene&#x27;){cap.scene=(cap.scene+1)%3;modal.querySelector(&#x27;.tf-viewfinder&#x27;).style.background=cap.scene===1?&#x27;linear-gradient(160deg,#a08364,#455964)&#x27;:cap.scene===2?&#x27;linear-gradient(160deg,#535b70,#222e46)&#x27;:&#x27;&#x27;}else if(cmd===&#x27;inkundo&#x27;){cap.strokes.pop();cap.paint?.()}else if(cmd===&#x27;inkclear&#x27;){cap.strokes=[];cap.paint?.()}else if(cmd===&#x27;saveink&#x27;){if(!cap.strokes.length)return;const canvas=modal.querySelector(&#x27;canvas&#x27;);captureStore.notes.unshift({id:&#x27;ink-&#x27;+Date.now(),name:&#x27;手書きメモ &#x27;+String(captureStore.notes.length+1).padStart(3,&#x27;0&#x27;)+&#x27;.png&#x27;,type:&#x27;PNG&#x27;,size:&#x27;手書き / 表示中のみ&#x27;,capture:&#x27;ink&#x27;,data:canvas.toDataURL(&#x27;image/png&#x27;)});v.render();modal.querySelector(&#x27;[data-inkstatus]&#x27;).textContent=&#x27;「Handwriting」に保存見本を追加しました。&#x27;;toast(&#x27;手書きメモをファイラーの「Handwriting」に追加しました。&#x27;)}else if(cmd===&#x27;playaudio&#x27;){const status=modal.querySelector(&#x27;[data-audiostatus]&#x27;),f=captureFile(arg);if(!status||!f)return;clearInterval(cap.previewInterval);let t=0;status.textContent=&#x27;再生見本 00:00 / 音声は流れません&#x27;;cap.previewInterval=setInterval(()=&gt;{if(!root.isConnected||!status.isConnected){clearInterval(cap.previewInterval);return}t++;status.textContent=&#x27;再生見本 &#x27;+capTime(t)+&#x27; / 音声は流れません&#x27;;if(t&gt;=f.seconds){clearInterval(cap.previewInterval);status.textContent=&#x27;再生見本が終了しました。&#x27;}},1000)}},true);
+el.addEventListener(&#x27;change&#x27;,e=&gt;{if(e.target.dataset.capsetting===&#x27;penonly&#x27;)cap.penOnly=e.target.checked});
+el.addEventListener(&#x27;keydown&#x27;,e=&gt;{if(e.key===&#x27;Escape&#x27;){cleanupCapture();finishVideo()}},true);
+const renderBase=v.render;
+v.render=()=&gt;{renderBase();for(const [key,sel] of Object.entries({clock:&#x27;.tf-clockarea&#x27;,indicators:&#x27;.tf-indicators&#x27;,photo:&#x27;.tf-cover&gt;.tf-photoframe&#x27;,music:&#x27;.tf-player&#x27;}))el.querySelector(sel).hidden=!state.modules[key];cover.insertAdjacentHTML(&#x27;beforeend&#x27;,`&lt;div class=&quot;tf-covercapture&quot;&gt;${captureDock()}&lt;/div&gt;`);const f=file();if(f?.capture)el.querySelector(&#x27;.tf-preview&#x27;).innerHTML=capturePreview(f);updateRecording();icons()};
+function dismiss(){modal.hidden=true;el.querySelector(&#x27;.tf-modalback&#x27;).hidden=true;if(v.lastFocus?.isConnected)v.lastFocus.focus()}
+const choices=[[&#x27;layers&#x27;,&#x27;レイヤー&#x27;],[&#x27;briefcase-business&#x27;,&#x27;仕事&#x27;],[&#x27;contact-round&#x27;,&#x27;連絡先&#x27;],[&#x27;radio&#x27;,&#x27;通信&#x27;],[&#x27;grid-2x2&#x27;,&#x27;パッド&#x27;],[&#x27;archive&#x27;,&#x27;箱&#x27;]];
+function settings(){showModal({title:&#x27;アイコンとホーム&#x27;,body:`&lt;label&gt;アプリのアイコンスタイル&lt;select data-setting=&quot;mode&quot;&gt;&lt;option value=&quot;mono&quot; ${state.iconmode===&#x27;mono&#x27;?&#x27;selected&#x27;:&#x27;&#x27;}&gt;線画モノクロ&lt;/option&gt;&lt;option value=&quot;invert&quot; ${state.iconmode===&#x27;invert&#x27;?&#x27;selected&#x27;:&#x27;&#x27;}&gt;反転モノクロ&lt;/option&gt;&lt;option value=&quot;color&quot; ${state.iconmode===&#x27;color&#x27;?&#x27;selected&#x27;:&#x27;&#x27;}&gt;カラー（比較用の見本）&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&lt;div class=&quot;tf-settingsection&quot;&gt;&lt;h3&gt;アプリごとに変更&lt;/h3&gt;&lt;div class=&quot;tf-formgrid&quot;&gt;&lt;label&gt;アプリ&lt;select data-setting=&quot;app&quot;&gt;${Object.entries(apps).map(([k,a])=&gt;`&lt;option value=&quot;${k}&quot;&gt;${a.name}&lt;/option&gt;`).join(&#x27;&#x27;)}&lt;/select&gt;&lt;/label&gt;&lt;label&gt;モノクロの絵柄&lt;select data-setting=&quot;appicon&quot;&gt;${[[&#x27;globe&#x27;,&#x27;地球&#x27;],[&#x27;mail&#x27;,&#x27;封筒&#x27;],[&#x27;message-circle&#x27;,&#x27;吹き出し&#x27;],[&#x27;folder-open&#x27;,&#x27;フォルダ&#x27;],[&#x27;calendar-days&#x27;,&#x27;カレンダー&#x27;],[&#x27;circle&#x27;,&#x27;円&#x27;],[&#x27;square&#x27;,&#x27;四角&#x27;],[&#x27;command&#x27;,&#x27;コマンド&#x27;]].map(([i,l])=&gt;`&lt;option value=&quot;${i}&quot; ${i===state.icons.chrome?&#x27;selected&#x27;:&#x27;&#x27;}&gt;${l}&lt;/option&gt;`).join(&#x27;&#x27;)}&lt;/select&gt;&lt;/label&gt;&lt;/div&gt;&lt;div class=&quot;tf-buttons&quot;&gt;&lt;button class=&quot;tf-button primary cursor-interaction&quot; data-do=&quot;saveapp&quot;&gt;このアプリに適用&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;tf-settingsection&quot;&gt;&lt;h3&gt;「連絡」スタックの表紙&lt;/h3&gt;&lt;p&gt;中のアプリと独立して設定。アプリの集合画像には固定しません。&lt;/p&gt;&lt;div class=&quot;tf-symbolchoices&quot;&gt;${choices.map(([i,l])=&gt;`&lt;button class=&quot;cursor-interaction&quot; data-do=&quot;stackicon:${i}&quot; aria-pressed=&quot;${state.stackicon===i}&quot;&gt;${I(i)}${l}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;/div&gt;&lt;p&gt;アイコンは見本です。実装時のアイコンパック・画像指定も設定対象にします。&lt;/p&gt;&lt;button class=&quot;tf-button cursor-interaction&quot; data-do=&quot;dismiss&quot;&gt;完了&lt;/button&gt;`})}
+function goFolder(id){v.folder=id;v.selected=folders[id].items.find(f=&gt;!f.folder)?.id||null;if(folders[id].parent)v.expanded.add(folders[id].parent);v.render()}
+el.addEventListener(&#x27;click&#x27;,e=&gt;{const b=e.target.closest(&#x27;[data-do]&#x27;);if(!b)return;const action=b.dataset.do;const [cmd,arg]=action.split(&#x27;:&#x27;);
+if(cmd===&#x27;fold&#x27;){state.screen=[&#x27;closed&#x27;,&#x27;titan&#x27;].includes(state.screen)?&#x27;open&#x27;:&#x27;closed&#x27;;v.drawer=null;sync();remember();return}
+if(cmd===&#x27;settings&#x27;||cmd===&#x27;stacksettings&#x27;){settings();modal.insertAdjacentHTML(&#x27;beforeend&#x27;,`&lt;div class=&quot;tf-settingsection&quot;&gt;&lt;h3&gt;閉じたホームに表示&lt;/h3&gt;&lt;div style=&quot;display:flex;gap:10px;flex-wrap:wrap&quot;&gt;${[[&#x27;clock&#x27;,&#x27;時計&#x27;],[&#x27;photo&#x27;,&#x27;写真&#x27;],[&#x27;indicators&#x27;,&#x27;インジケーター&#x27;],[&#x27;music&#x27;,&#x27;音楽&#x27;]].map(([k,l])=&gt;`&lt;label style=&quot;display:flex;align-items:center;gap:6px&quot;&gt;&lt;input type=&quot;checkbox&quot; style=&quot;display:inline;width:auto;margin:0&quot; data-module=&quot;${k}&quot; ${state.modules[k]?&#x27;checked&#x27;:&#x27;&#x27;}&gt;${l}&lt;/label&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;/div&gt;`);return}
+if(cmd===&#x27;dismiss&#x27;){dismiss();return}
+if(cmd===&#x27;tree&#x27;){v.tree=!v.tree;v.render();return}
+if(cmd===&#x27;expand&#x27;){v.expanded.has(arg)?v.expanded.delete(arg):v.expanded.add(arg);v.render();return}
+if(cmd===&#x27;folder&#x27;){goFolder(arg);return}
+if(cmd===&#x27;select&#x27;){v.selected=arg;v.render();return}
+if(cmd===&#x27;up&#x27;){if(folders[v.folder].parent)goFolder(folders[v.folder].parent);return}
+if(cmd===&#x27;tab&#x27;){v.drawer=v.drawer===arg?null:arg;v.render();return}
+if(cmd===&#x27;close&#x27;){v.drawer=null;v.render();return}
+if(cmd===&#x27;tabsup&#x27;||cmd===&#x27;tabsdown&#x27;){el.querySelector(&#x27;.tf-tabscroll&#x27;).scrollBy({top:cmd===&#x27;tabsup&#x27;?-175:175,behavior:matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches?&#x27;instant&#x27;:&#x27;smooth&#x27;});return}
+if(cmd===&#x27;photo&#x27;){v.photo=1-v.photo;v.render();return}
+if(cmd===&#x27;play&#x27;){v.playing=!v.playing;v.render();toast(v.playing?&#x27;再生中の表示デモです。音声は流れません。&#x27;:&#x27;一時停止の表示に切り替えました。&#x27;);return}
+if(cmd===&#x27;nextsong&#x27;||cmd===&#x27;prevsong&#x27;){v.song=(v.song+(cmd===&#x27;nextsong&#x27;?1:2))%songs.length;v.render();return}
+if(cmd===&#x27;saveapp&#x27;){const k=modal.querySelector(&#x27;[data-setting=app]&#x27;).value;state.icons[k]=modal.querySelector(&#x27;[data-setting=appicon]&#x27;).value;sync();remember();toast(apps[k].name+&#x27; のアイコンを変更しました。&#x27;);return}
+if(cmd===&#x27;stackicon&#x27;){state.stackicon=arg;sync();remember();modal.querySelectorAll(&#x27;[data-do^=&quot;stackicon:&quot;]&#x27;).forEach(c=&gt;c.setAttribute(&#x27;aria-pressed&#x27;,String(c.dataset.do===action)));toast(&#x27;スタック専用アイコンを変更しました。&#x27;);return}
+if(cmd===&#x27;workspace&#x27;){state.screen=&#x27;open&#x27;;v.drawer=null;goFolder(arg);sync();remember();return}
+if(cmd===&#x27;drawfile&#x27;){const folder=[&#x27;work&#x27;,&#x27;personal&#x27;,&#x27;photos&#x27;].includes(v.drawer)?(v.drawer===&#x27;work&#x27;?v.assigned:v.drawer):&#x27;work&#x27;;const f=folders[folder].items.find(x=&gt;x.id===arg);if(f.folder){state.screen=&#x27;open&#x27;;v.drawer=null;goFolder(f.id);sync();remember()}else{showModal({title:f.name,body:preview(f)+`&lt;p&gt;ファイル内容はデザイン見本です。&lt;/p&gt;`})}return}
+if(cmd===&#x27;openfile&#x27;){toast(&#x27;デモ：対応アプリでファイルを開く操作です。実データには接続していません。&#x27;);return}
+if(cmd===&#x27;share&#x27;){showModal({title:&#x27;ファイルを渡す&#x27;,body:`&lt;p&gt;実装時はAndroidの共有シートから選びます。ここでは送信しません。&lt;/p&gt;&lt;div class=&quot;tf-buttons&quot;&gt;${[&#x27;LINE&#x27;,&#x27;メール&#x27;,&#x27;Hatch&#x27;].map(a=&gt;`&lt;button class=&quot;tf-button cursor-interaction&quot; data-do=&quot;shareto:${a}&quot;&gt;${a}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;`});return}
+if(cmd===&#x27;shareto&#x27;){dismiss();toast(arg+&#x27; へ共有する操作のデモです。送信していません。&#x27;);return}
+if(cmd===&#x27;app&#x27;){if(arg===&#x27;files&#x27;){state.screen=&#x27;open&#x27;;v.drawer=null;sync();remember()}else if(arg===&#x27;mail&#x27;){v.drawer=&#x27;mail&#x27;;v.render()}else if(arg===&#x27;calendar&#x27;){v.drawer=&#x27;calendar&#x27;;v.render()}else toast(apps[arg].name+&#x27; を開く操作の見本です。実際には移動しません。&#x27;);return}
+if(cmd===&#x27;widget&#x27;){v.widget=arg;v.render();return}
+if(cmd===&#x27;assign&#x27;){showModal({title:&#x27;「仕事」タブの割り当て&#x27;,body:`&lt;p&gt;実装時はAndroidの選択画面でフォルダを許可します。&lt;/p&gt;&lt;label&gt;サンプルの割り当て先&lt;select data-setting=&quot;assignment&quot;&gt;${[&#x27;work&#x27;,&#x27;projects&#x27;,&#x27;hatch&#x27;,&#x27;personal&#x27;,&#x27;archive&#x27;].map(id=&gt;`&lt;option value=&quot;${id}&quot; ${v.assigned===id?&#x27;selected&#x27;:&#x27;&#x27;}&gt;${path(id)}&lt;/option&gt;`).join(&#x27;&#x27;)}&lt;/select&gt;&lt;/label&gt;&lt;button class=&quot;tf-button primary cursor-interaction&quot; data-do=&quot;saveassignment&quot;&gt;この場所にする（デモ）&lt;/button&gt;`});return}
+if(cmd===&#x27;saveassignment&#x27;){v.assigned=modal.querySelector(&#x27;[data-setting=assignment]&#x27;).value;dismiss();v.render();toast(&#x27;サンプルの割り当てを変更しました。&#x27;);return}
+if(cmd===&#x27;install&#x27;){showModal({title:&#x27;Hatchの導入&#x27;,body:`&lt;p&gt;公式配布元の確認 → ダウンロード → Androidの許可・インストール確認 → 開く&lt;/p&gt;&lt;p&gt;この見本では配布先は未登録です。ダウンロード・インストールは実行しません。&lt;/p&gt;`});return}
+if(cmd===&#x27;hatchinfo&#x27;){showModal({title:&#x27;既存Hatchをつなぐ&#x27;,body:&#x27;&lt;p&gt;正式名称、対象OS、パッケージ名、受け取れるファイル、公式配布先を登録して接続する想定です。ここでは未接続です。&lt;/p&gt;&#x27;});return}
+if(cmd===&#x27;link&#x27;)toast(&#x27;ブックマークを開く操作のデモです。実際には移動しません。&#x27;);
+});
+el.addEventListener(&#x27;change&#x27;,e=&gt;{if(e.target.dataset.module){state.modules[e.target.dataset.module]=e.target.checked;sync();remember()}if(e.target.dataset.setting===&#x27;mode&#x27;){state.iconmode=e.target.value;sync();remember()}if(e.target.dataset.setting===&#x27;app&#x27;){modal.querySelector(&#x27;[data-setting=appicon]&#x27;).value=state.icons[e.target.value]}});
+el.addEventListener(&#x27;keydown&#x27;,e=&gt;{if(e.key===&#x27;Escape&#x27;){if(!modal.hidden)dismiss();else{v.drawer=null;v.render()}e.preventDefault()}if(!modal.hidden&amp;&amp;e.key===&#x27;Tab&#x27;){const f=[...modal.querySelectorAll(&#x27;button,select,input&#x27;)];if(e.shiftKey&amp;&amp;document.activeElement===f[0]){e.preventDefault();f.at(-1).focus()}else if(!e.shiftKey&amp;&amp;document.activeElement===f.at(-1)){e.preventDefault();f[0].focus()}}});
+});
+sync();
+if(globalThis.Tweak){const t=new Tweak({container:root,onChange:sync});t.addSelect(state,&#x27;iconmode&#x27;,{label:&#x27;アイコンの見た目&#x27;,options:[{label:&#x27;線画モノクロ&#x27;,value:&#x27;mono&#x27;},{label:&#x27;反転モノクロ&#x27;,value:&#x27;invert&#x27;},{label:&#x27;カラー見本&#x27;,value:&#x27;color&#x27;}]});}
+})();
+&lt;/script&gt;
+
+&lt;script src=&quot;https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set([&quot;top&quot;, &quot;right&quot;, &quot;bottom&quot;, &quot;left&quot;]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+  let lastPointerWasTouch = false;
+  let pinnedByTouch = false;
+
+  const getTrigger = (event) =&gt; {
+    for (const target of event.composedPath()) {
+      if (target?.nodeType === Node.ELEMENT_NODE) {
+        const trigger = target.closest(&quot;[data-tooltip]&quot;);
+        if (trigger) return trigger;
+      }
+    }
+    return null;
+  };
+  const containsTarget = (trigger, target) =&gt;
+    target?.nodeType != null &amp;&amp; trigger.contains(target);
+  const getContent = (trigger) =&gt;
+    trigger.getAttribute(&quot;data-tooltip&quot;)?.trim() ?? &quot;&quot;;
+  const getPlacement = (trigger) =&gt; {
+    const placement = trigger.getAttribute(&quot;data-tooltip-placement&quot;);
+    return tooltipPlacements.has(placement) ? placement : &quot;top&quot;;
+  };
+  const getTooltip = () =&gt; {
+    if (tooltip == null) {
+      tooltip = document.createElement(&quot;div&quot;);
+      tooltip.id = tooltipId;
+      tooltip.className = &quot;tooltip&quot;;
+      tooltip.setAttribute(&quot;role&quot;, &quot;tooltip&quot;);
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) =&gt; {
+    const ids = new Set(
+      (trigger.getAttribute(&quot;aria-describedby&quot;) ?? &quot;&quot;)
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute(&quot;aria-describedby&quot;);
+    } else {
+      trigger.setAttribute(&quot;aria-describedby&quot;, [...ids].join(&quot; &quot;));
+    }
+  };
+  const clearOpenTimeout = () =&gt; {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) =&gt; {
+    clearOpenTimeout();
+    pinnedByTouch = false;
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) =&gt; {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-width&quot;,
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-height&quot;,
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: &quot;fixed&quot;,
+    })
+      .then(({ x, y }) =&gt; {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = &quot;visible&quot;;
+      })
+      .catch(() =&gt; {
+        if (activeTrigger === trigger &amp;&amp; request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) =&gt; {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = &quot;hidden&quot;;
+    floating.style.transform = &quot;translate(0, 0)&quot;;
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () =&gt; {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) =&gt; {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() &lt; skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() =&gt; {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) =&gt; {
+    if (event.pointerType === &quot;touch&quot;) {
+      return;
+    }
+    const trigger = getTrigger(event);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handlePointer = (event) =&gt; {
+    lastPointerWasTouch =
+      event.type === &quot;pointerdown&quot; &amp;&amp; event.pointerType === &quot;touch&quot;;
+  };
+  const handleTouchClick = (event) =&gt; {
+    const isTouch = event.pointerType === &quot;touch&quot; || lastPointerWasTouch;
+    lastPointerWasTouch = false;
+    if (!isTouch || event.detail === 0) {
+      return;
+    }
+    const trigger = getTrigger(event);
+    if (
+      trigger == null ||
+      !trigger.isConnected ||
+      getContent(trigger).length === 0 ||
+      (pinnedByTouch &amp;&amp; activeTrigger === trigger)
+    ) {
+      if (pinnedByTouch) {
+        closeTooltip();
+      }
+      return;
+    }
+    openTooltip(trigger);
+    pinnedByTouch = activeTrigger === trigger;
+    window.setTimeout(() =&gt; {
+      if (activeTrigger === trigger &amp;&amp; !trigger.isConnected) {
+        closeTooltip(false);
+      }
+    }, 0);
+  };
+  const handleLeave = (event) =&gt; {
+    if (pinnedByTouch) {
+      return;
+    }
+    const trigger = getTrigger(event);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) =&gt; {
+    const trigger = getTrigger(event);
+    if (trigger?.matches(&quot;:focus-visible&quot;)) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) =&gt; {
+    if (event.key === &quot;Escape&quot;) {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) =&gt; {
+    lastPointerWasTouch = false;
+    const trigger = getTrigger(event);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handlers = {
+    pointerover: handlePointerOpen,
+    pointerdown: handlePointer,
+    pointercancel: handlePointer,
+    click: handleTouchClick,
+    pointerout: handleLeave,
+    focusin: handleFocusIn,
+    focusout: handleLeave,
+    keydown: handleKeyDown,
+    contextmenu: handleContextMenu,
+  };
+  const roots = new Map();
+  const handledEvents = new WeakSet();
+  const handleEvent = (event) =&gt; {
+    if (handledEvents.has(event)) return;
+    handledEvents.add(event);
+    handlers[event.type](event);
+  };
+  const discoverRoots = (node) =&gt; {
+    if (node.shadowRoot) listen(node.shadowRoot);
+    for (const element of node.querySelectorAll(&quot;*&quot;)) {
+      if (element.shadowRoot) listen(element.shadowRoot);
+    }
+  };
+  const listen = (root) =&gt; {
+    if (roots.has(root)) return;
+    for (const type of Object.keys(handlers)) root.addEventListener(type, handleEvent);
+    const observer = new window.MutationObserver((records) =&gt; {
+      for (const { addedNodes } of records) {
+        for (const node of addedNodes) {
+          if (node.nodeType === Node.ELEMENT_NODE) discoverRoots(node);
+        }
+      }
+      for (const [root, cleanup] of roots) {
+        if (root.host &amp;&amp; !root.host.isConnected) {
+          cleanup();
+          roots.delete(root);
+        }
+      }
+      if (activeTrigger &amp;&amp; !activeTrigger.isConnected) closeTooltip(false);
+    });
+    observer.observe(root, { childList: true, subtree: true });
+    roots.set(root, () =&gt; {
+      observer.disconnect();
+      for (const type of Object.keys(handlers)) root.removeEventListener(type, handleEvent);
+    });
+    discoverRoots(root);
+  };
+  const destroy = () =&gt; {
+    closeTooltip(false);
+    lastPointerWasTouch = false;
+    for (const cleanup of roots.values()) cleanup();
+    roots.clear();
+    tooltip = null;
+  };
+
+  // Events between children of one shadow root never reach the document.
+  listen(document);
+  window.addEventListener(&quot;pagehide&quot;, destroy, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-tabs&quot;&gt;
+(() =&gt; {
+  const selector = &#x27;.nav[role=&quot;tablist&quot;] [role=&quot;tab&quot;]&#x27;;
+  const disabled = &#x27;:disabled,[aria-disabled=&quot;true&quot;]&#x27;;
+  const selectTab = (selected) =&gt; {
+    const panelId = selected.getAttribute(&quot;aria-controls&quot;);
+    for (const tab of selected.closest(&#x27;[role=&quot;tablist&quot;]&#x27;).querySelectorAll(&#x27;[role=&quot;tab&quot;]&#x27;)) {
+      const active = tab === selected;
+      tab.classList.toggle(&quot;active&quot;, active);
+      tab.setAttribute(&quot;aria-selected&quot;, String(active));
+      const id = tab.getAttribute(&quot;aria-controls&quot;);
+      const panel = id &amp;&amp; document.getElementById(id);
+      if (panel != null) {
+        panel.hidden = id !== panelId;
+        if (!panel.hidden &amp;&amp; selected.id) {
+          panel.setAttribute(&quot;aria-labelledby&quot;, selected.id);
+        }
+      }
+    }
+  };
+  const interact = (event) =&gt; {
+    const tab = event.target?.closest?.(selector);
+    if (event.defaultPrevented || tab == null || tab.matches(disabled)) {
+      return;
+    }
+    if (event.type === &quot;click&quot;) {
+      selectTab(tab);
+      return;
+    }
+    const tabs = Array.from(
+      tab.closest(&#x27;[role=&quot;tablist&quot;]&#x27;).querySelectorAll(&#x27;[role=&quot;tab&quot;]&#x27;),
+    ).filter((candidate) =&gt; !candidate.matches(disabled));
+    const current = tabs.indexOf(tab);
+    let next;
+    if (event.key === &quot;ArrowRight&quot; || event.key === &quot;ArrowDown&quot;) {
+      next = (current + 1) % tabs.length;
+    } else if (event.key === &quot;ArrowLeft&quot; || event.key === &quot;ArrowUp&quot;) {
+      next = (current + tabs.length - 1) % tabs.length;
+    } else if (event.key === &quot;Home&quot;) {
+      next = 0;
+    } else if (event.key === &quot;End&quot;) {
+      next = tabs.length - 1;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    tabs[next].focus();
+    selectTab(tabs[next]);
+  };
+
+  for (const list of document.querySelectorAll(&#x27;.nav[role=&quot;tablist&quot;]&#x27;)) {
+    const selected =
+      list.querySelector(&#x27;[role=&quot;tab&quot;][aria-selected=&quot;true&quot;]&#x27;) ??
+      list.querySelector(&#x27;[role=&quot;tab&quot;].active&#x27;) ??
+      list.querySelector(&#x27;[role=&quot;tab&quot;]&#x27;);
+    if (selected != null) {
+      selectTab(selected);
+    }
+  }
+  document.addEventListener(&quot;click&quot;, interact);
+  document.addEventListener(&quot;keydown&quot;, interact);
+  window.addEventListener(&quot;pagehide&quot;, () =&gt; {
+    document.removeEventListener(&quot;click&quot;, interact);
+    document.removeEventListener(&quot;keydown&quot;, interact);
+  }, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-carousel&quot;&gt;
+  (() =&gt; {
+    for (const root of document.querySelectorAll(&quot;.viz-carousel&quot;)) {
+      const panels = Array.from(
+        root.querySelectorAll(&quot;:scope &gt; [data-variant]&quot;),
+      );
+      if (panels.length === 0) {
+        continue;
+      }
+      root.setAttribute(&quot;role&quot;, &quot;group&quot;);
+      panels.forEach((panel, index) =&gt; {
+        panel.hidden = index !== 0;
+        panel.setAttribute(&quot;role&quot;, &quot;group&quot;);
+        if (!panel.hasAttribute(&quot;aria-label&quot;)) {
+          panel.setAttribute(&quot;aria-label&quot;, panel.dataset.variant);
+        }
+      });
+      root.dataset.activeVariant = panels[0].dataset.variant;
+      if (panels.length === 1) {
+        continue;
+      }
+
+      const controls = document.createElement(&quot;div&quot;);
+      controls.className = &quot;viz-carousel-controls&quot;;
+      // Portable copy of the settings dropdown&#x27;s legacy glyph; no 14px icon-package preset matches it.
+      // https://github.com/openai/openai/blob/master/codex/codex-apps/webview/src/icons/chevron.svg
+      controls.innerHTML = `
+      &lt;button type=&quot;button&quot; class=&quot;viz-carousel-previous cursor-interaction&quot;&gt;&lt;i data-lucide=&quot;chevron-left&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/button&gt;
+      &lt;details class=&quot;viz-carousel-picker&quot;&gt;
+        &lt;summary class=&quot;cursor-interaction&quot;&gt;
+          &lt;span class=&quot;viz-carousel-count tabular-nums&quot;&gt;&lt;/span&gt;
+          &lt;span class=&quot;viz-carousel-name&quot;&gt;&lt;/span&gt;
+          &lt;svg class=&quot;viz-carousel-caret&quot; width=&quot;14&quot; height=&quot;14&quot; viewBox=&quot;0 0 20 21&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot; focusable=&quot;false&quot;&gt;
+            &lt;path d=&quot;M15.2793 7.71101C15.539 7.45131 15.961 7.45131 16.2207 7.71101C16.4804 7.97071 16.4804 8.39272 16.2207 8.65242L10.4707 14.4024C10.211 14.6621 9.78902 14.6621 9.52932 14.4024L3.77932 8.65242L3.69436 8.54792C3.52385 8.28979 3.55205 7.93828 3.77932 7.71101C4.00659 7.48374 4.3581 7.45554 4.61623 7.62605L4.72073 7.71101L10 12.9903L15.2793 7.71101Z&quot; fill=&quot;currentColor&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;0.6&quot; /&gt;
+          &lt;/svg&gt;
+        &lt;/summary&gt;
+        &lt;div class=&quot;viz-carousel-options&quot;&gt;&lt;/div&gt;
+      &lt;/details&gt;
+      &lt;button type=&quot;button&quot; class=&quot;viz-carousel-next cursor-interaction&quot;&gt;&lt;i data-lucide=&quot;chevron-right&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/button&gt;`;
+      const previous = controls.querySelector(&quot;.viz-carousel-previous&quot;);
+      const next = controls.querySelector(&quot;.viz-carousel-next&quot;);
+      const picker = controls.querySelector(&quot;.viz-carousel-picker&quot;);
+      const summary = picker.querySelector(&quot;summary&quot;);
+      const count = controls.querySelector(&quot;.viz-carousel-count&quot;);
+      const name = controls.querySelector(&quot;.viz-carousel-name&quot;);
+      const options = controls.querySelector(&quot;.viz-carousel-options&quot;);
+      const status = document.createElement(&quot;span&quot;);
+      status.className = &quot;sr-only&quot;;
+      status.setAttribute(&quot;role&quot;, &quot;status&quot;);
+      status.setAttribute(&quot;aria-live&quot;, &quot;polite&quot;);
+      status.setAttribute(&quot;aria-atomic&quot;, &quot;true&quot;);
+      previous.setAttribute(
+        &quot;aria-label&quot;,
+        root.dataset.previousLabel ?? &quot;Previous variant&quot;,
+      );
+      next.setAttribute(&quot;aria-label&quot;, root.dataset.nextLabel ?? &quot;Next variant&quot;);
+
+      let active = 0;
+      let mousePointerId = null;
+      let summaryPointerHandled = false;
+      summary.addEventListener(&quot;pointerdown&quot;, (event) =&gt; {
+        summaryPointerHandled =
+          event.pointerType === &quot;mouse&quot; &amp;&amp; event.button === 0 &amp;&amp; !event.ctrlKey;
+        if (!summaryPointerHandled) {
+          return;
+        }
+        event.preventDefault();
+        summary.focus({ preventScroll: true });
+        picker.open = !picker.open;
+        mousePointerId = picker.open ? event.pointerId : null;
+      });
+      summary.addEventListener(&quot;click&quot;, (event) =&gt; {
+        if (summaryPointerHandled &amp;&amp; event.detail &gt; 0) {
+          event.preventDefault();
+        }
+      });
+      const choices = panels.map((panel, index) =&gt; {
+        const choice = document.createElement(&quot;button&quot;);
+        choice.type = &quot;button&quot;;
+        choice.className = &quot;cursor-interaction&quot;;
+        choice.textContent = panel.dataset.variant;
+        choice.addEventListener(&quot;click&quot;, () =&gt; {
+          select(index);
+          summary.focus();
+        });
+        choice.addEventListener(&quot;pointerup&quot;, (event) =&gt; {
+          if (
+            picker.open &amp;&amp;
+            event.pointerType === &quot;mouse&quot; &amp;&amp;
+            event.button === 0 &amp;&amp;
+            event.pointerId === mousePointerId
+          ) {
+            choice.click();
+          }
+        });
+        options.appendChild(choice);
+        return choice;
+      });
+      const select = (index) =&gt; {
+        const changed = active !== index;
+        active = index;
+        panels.forEach((panel, position) =&gt; {
+          panel.hidden = position !== active;
+          choices[position].setAttribute(
+            &quot;aria-current&quot;,
+            String(position === active),
+          );
+        });
+        root.dataset.activeVariant = panels[active].dataset.variant;
+        count.textContent = `${active + 1} / ${panels.length}`;
+        name.textContent = panels[active].dataset.variant;
+        picker.open = false;
+        mousePointerId = null;
+        if (changed) {
+          status.textContent = `${count.textContent}: ${name.textContent}`;
+        }
+      };
+      previous.addEventListener(&quot;click&quot;, () =&gt;
+        select((active + panels.length - 1) % panels.length),
+      );
+      next.addEventListener(&quot;click&quot;, () =&gt;
+        select((active + 1) % panels.length),
+      );
+      picker.addEventListener(&quot;keydown&quot;, (event) =&gt; {
+        if (event.key === &quot;Escape&quot; &amp;&amp; picker.open) {
+          event.preventDefault();
+          picker.open = false;
+          mousePointerId = null;
+          summary.focus();
+          return;
+        }
+        if (event.altKey || event.ctrlKey || event.metaKey) {
+          return;
+        }
+        const index = choices.indexOf(document.activeElement);
+        let nextIndex;
+        if (event.key === &quot;ArrowDown&quot;) {
+          nextIndex = index &lt; 0 ? active : (index + 1) % choices.length;
+        } else if (event.key === &quot;ArrowUp&quot;) {
+          nextIndex = index &lt; 0 ? active : (index + choices.length - 1) % choices.length;
+        } else if (picker.open &amp;&amp; event.key === &quot;Home&quot;) {
+          nextIndex = 0;
+        } else if (picker.open &amp;&amp; event.key === &quot;End&quot;) {
+          nextIndex = choices.length - 1;
+        } else {
+          return;
+        }
+        event.preventDefault();
+        picker.open = true;
+        choices[nextIndex].focus();
+      });
+      picker.addEventListener(&quot;focusout&quot;, (event) =&gt; {
+        if (!picker.contains(event.relatedTarget)) {
+          picker.open = false;
+          mousePointerId = null;
+        }
+      });
+      const dismiss = (event) =&gt; {
+        if (!summary.contains(event.target)) {
+          mousePointerId = null;
+        }
+        if (!picker.contains(event.target)) {
+          picker.open = false;
+        }
+      };
+      const endPointerSelection = () =&gt; {
+        mousePointerId = null;
+      };
+      const sizePicker = () =&gt; {
+        root.style.setProperty(
+          &quot;--viz-carousel-picker-height&quot;,
+          `${picker.open ? options.offsetHeight : 0}px`,
+        );
+      };
+      picker.addEventListener(&quot;toggle&quot;, sizePicker);
+      window.addEventListener(&quot;resize&quot;, sizePicker);
+      document.addEventListener(&quot;pointerdown&quot;, dismiss);
+      document.addEventListener(&quot;pointerup&quot;, endPointerSelection);
+      document.addEventListener(&quot;pointercancel&quot;, endPointerSelection);
+      window.addEventListener(&quot;blur&quot;, endPointerSelection);
+      window.addEventListener(
+        &quot;pagehide&quot;,
+        () =&gt; {
+          document.removeEventListener(&quot;pointerdown&quot;, dismiss);
+          document.removeEventListener(&quot;pointerup&quot;, endPointerSelection);
+          document.removeEventListener(&quot;pointercancel&quot;, endPointerSelection);
+          window.removeEventListener(&quot;blur&quot;, endPointerSelection);
+          window.removeEventListener(&quot;resize&quot;, sizePicker);
+        },
+        { once: true },
+      );
+      root.append(controls, status);
+      select(0);
+    }
+  })();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-lucide&quot; async src=&quot;https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const initialize = () =&gt; {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById(&quot;codex-visualization-lucide&quot;)
+    ?.addEventListener(&quot;load&quot;, initialize, { once: true });
+})();
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+
+<script>(() => {
+  const frame = document.getElementById("codex-visualization");
+  if (!(frame instanceof HTMLIFrameElement)) {
+    return;
+  }
+  const isShare = document.documentElement.classList.contains(
+    "visualization-share-root",
+  );
+  let viewportHeight = globalThis.innerHeight;
+  let sizeFingerprint = null;
+  let sizeWriteTimeout;
+  let lastSize = null;
+  let pendingSize = null;
+  const storageKey = `codex:visualization-widget-state-v2:${JSON.stringify([
+    globalThis.location.pathname,
+    globalThis.location.search,
+  ])}`;
+  const sizeStorageKey = `${storageKey}:share-size-v1`;
+  const parseState = (serializedState) => {
+    if (
+      typeof serializedState !== "string" ||
+      new TextEncoder().encode(serializedState).length > 16 * 1024
+    ) {
+      throw new TypeError(
+        "Widget state must be a JSON object of at most 16 KiB",
+      );
+    }
+    /** @type {unknown} */
+    const state = JSON.parse(serializedState);
+    if (
+      state == null ||
+      typeof state !== "object" ||
+      Array.isArray(state) ||
+      ("imageIds" in state &&
+        (!Array.isArray(state.imageIds) || state.imageIds.length > 0))
+    ) {
+      throw new TypeError("Widget state must be a JSON object");
+    }
+    const storedState = { modelContent: null, privateContent: null, ...state };
+    const canonicalState = JSON.stringify(
+      storedState,
+      (_key, /** @type {unknown} */ value) => {
+        if (typeof value === "number" && !Number.isFinite(value)) {
+          throw new TypeError("Widget state must contain finite numbers");
+        }
+        return value;
+      },
+    );
+    if (new TextEncoder().encode(canonicalState).length > 16 * 1024) {
+      throw new TypeError(
+        "Widget state must be a JSON object of at most 16 KiB",
+      );
+    }
+    return storedState;
+  };
+  let storage = null;
+  let state = null;
+  try {
+    const localStorage = globalThis.localStorage;
+    const probeKey = `${storageKey}:probe`;
+    localStorage.setItem(probeKey, "1");
+    localStorage.removeItem(probeKey);
+    storage = localStorage;
+    const savedState = storage.getItem(storageKey);
+    if (savedState != null) {
+      try {
+        state = parseState(savedState);
+      } catch {
+        // Invalid saved state does not disable future writes.
+      }
+    }
+  } catch {
+    storage = null;
+  }
+  const persistSize = () => {
+    globalThis.clearTimeout(sizeWriteTimeout);
+    if (pendingSize == null) {
+      return;
+    }
+    try {
+      storage?.setItem(sizeStorageKey, pendingSize);
+    } catch {
+      // A denied or full cache must not affect the visualization.
+    }
+    pendingSize = null;
+  };
+  if (isShare) {
+    globalThis.addEventListener("pagehide", persistSize);
+  }
+  const initialGlobals = {
+    widgetState: state,
+    statePersistence: storage == null ? "none" : "local",
+  };
+
+  const channel = new MessageChannel();
+  channel.port1.addEventListener("message", (event) => {
+    const data = event.data;
+    if (typeof data !== "object" || data == null) {
+      return;
+    }
+    if (data.type === "widget-state-write") {
+      if (!Number.isSafeInteger(data.id) || data.id <= 0) {
+        return;
+      }
+      let ok = false;
+      try {
+        if (storage != null) {
+          const state = parseState(data.state);
+          storage.setItem(storageKey, JSON.stringify(state));
+          ok = true;
+        }
+      } catch {
+        // Storage denial, quota limits, and invalid state return a failed receipt.
+      }
+      channel.port1.postMessage({
+        type: "widget-state-result",
+        id: data.id,
+        ok,
+      });
+      return;
+    }
+    if (data.type === "height") {
+      const height = data.height;
+      if (
+        typeof height !== "number" ||
+        !Number.isFinite(height) ||
+        height < 0
+      ) {
+        return;
+      }
+      if (height <= 10_000) {
+        const width = isShare && storage != null ? frame.clientWidth : null;
+        frame.style.height = Math.ceil(height) + "px";
+        if (isShare && storage != null) {
+          const size = JSON.stringify({
+            fingerprint: sizeFingerprint,
+            width,
+            viewportHeight: globalThis.innerHeight,
+            dark: globalThis.matchMedia("(prefers-color-scheme: dark)").matches,
+            scale: globalThis.devicePixelRatio,
+            height: Math.ceil(height),
+          });
+          if (size !== lastSize) {
+            lastSize = size;
+            pendingSize = size;
+            globalThis.clearTimeout(sizeWriteTimeout);
+            sizeWriteTimeout = globalThis.setTimeout(persistSize, 100);
+          }
+        }
+      }
+      if (isShare) {
+        // Keep unusually tall content accessible without accepting an unbounded height.
+        if (height > 10_000 && Number.parseFloat(frame.style.height) === 0) {
+          frame.style.removeProperty("height");
+        }
+        frame.scrolling = height > 10_000 ? "auto" : "no";
+        document.documentElement.classList.add("visualization-share-ready");
+      }
+      return;
+    }
+    if (data.type === "scroll-to") {
+      const top = data.top;
+      if (
+        typeof top === "number" &&
+        Number.isFinite(top) &&
+        top >= 0 &&
+        globalThis.navigator.userActivation?.isActive === true
+      ) {
+        globalThis.scrollTo({
+          top: Math.ceil(
+            globalThis.scrollY + frame.getBoundingClientRect().top + top,
+          ),
+        });
+      }
+      return;
+    }
+    if (data.type === "open-external") {
+      const rawHref = data.href;
+      if (typeof rawHref !== "string") {
+        return;
+      }
+      let href;
+      try {
+        const url = new URL(rawHref, document.baseURI);
+        if (url.protocol !== "https:") {
+          return;
+        }
+        href = url.href;
+      } catch {
+        return;
+      }
+      if (globalThis.navigator.userActivation?.isActive === true) {
+        const anchor = document.createElement("a");
+        anchor.href = href;
+        anchor.rel = "noopener noreferrer";
+        anchor.target = "_blank";
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      }
+      return;
+    }
+    if (data.type === "follow-up") {
+      const prompt = data.prompt;
+      if (
+        typeof prompt !== "string" ||
+        globalThis.navigator.userActivation?.isActive !== true
+      ) {
+        return;
+      }
+      const title = data.title;
+      globalThis.prompt(typeof title === "string" ? title : prompt, prompt);
+    }
+  });
+  channel.port1.start();
+  const srcdoc = frame.dataset.srcdoc;
+  if (srcdoc == null) {
+    return;
+  }
+  globalThis.addEventListener("resize", () => {
+    const height = Number.parseFloat(frame.style.height);
+    if (!isShare && (!Number.isFinite(height) || height <= viewportHeight)) {
+      frame.style.removeProperty("height");
+    }
+    viewportHeight = globalThis.innerHeight;
+    channel.port1.postMessage({ type: "measure" });
+  });
+  frame.addEventListener(
+    "load",
+    () => {
+      frame.contentWindow?.postMessage(
+        { type: "codex-visualization-initialize" },
+        "*",
+        [channel.port2],
+      );
+    },
+    { once: true },
+  );
+  // Match the trusted bootstrap element, not the same text in an authored title.
+  const frameHtml = srcdoc.replace(
+    '<script type="application/json" id="codex-visualization-widget-state">__CODEX_VISUALIZATION_WIDGET_STATE__<\/script>',
+    () =>
+      '<script type="application/json" id="codex-visualization-widget-state">' +
+      JSON.stringify(initialGlobals).replaceAll("<", "\\u003c") +
+      "<\/script>",
+  );
+  if (isShare && storage != null) {
+    // Fingerprint the rendered document, including restored widget state, without
+    // storing its content. This is a layout cache, not a security identity.
+    let hash = 5381;
+    for (let index = 0; index < frameHtml.length; index += 1) {
+      hash = (hash * 33 + frameHtml.charCodeAt(index)) % 4_294_967_296;
+    }
+    sizeFingerprint = hash.toString(36);
+    try {
+      const size = JSON.parse(storage.getItem(sizeStorageKey) ?? "null");
+      if (
+        size?.fingerprint === sizeFingerprint &&
+        size.width === frame.clientWidth &&
+        size.viewportHeight === globalThis.innerHeight &&
+        size.dark ===
+          globalThis.matchMedia("(prefers-color-scheme: dark)").matches &&
+        size.scale === globalThis.devicePixelRatio &&
+        typeof size.height === "number" &&
+        Number.isFinite(size.height) &&
+        size.height >= 0 &&
+        size.height <= 10_000
+      ) {
+        frame.style.height = size.height + "px";
+      }
+    } catch {
+      // Ignore missing or invalid cache entries and measure the live frame.
+    }
+  }
+  frame.srcdoc = frameHtml;
+  delete frame.dataset.srcdoc;
+})();
+</script>
+</body>
+</html>
