@@ -391,12 +391,18 @@ private fun AppsDrawer(model: HomeModel) {
                         DropdownMenu(expanded = menuFor == app.key, onDismissRequest = { menuFor = null }) {
                             DropdownMenuItem(text = { Text("カテゴリーを変える") }, onClick = { menuFor = null; moving = app })
                             DropdownMenuItem(text = { Text("アプリ情報") }, onClick = { actions.start(Apps.infoIntent(app.packageName)); menuFor = null })
+                            if (!Apps.isSystem(actions.activity, app.packageName)) {
+                                DropdownMenuItem(text = { Text("アンインストール") }, onClick = { actions.start(Apps.uninstallIntent(app.packageName)); menuFor = null })
+                            }
+                            if (model.iconMode == jp.yaegaki.theta.home.data.IconStyle.GEMINI && model.hasGeminiKey) {
+                                DropdownMenuItem(text = { Text("アイコンを Gemini で作り直す") }, onClick = { menuFor = null; model.clearGeminiIcons(app); model.startGeminiIcons(app) })
+                            }
                         }
                     }
                 }
             }
         }
-        item { Note("長押しで「カテゴリーを変える」。") }
+        item { Note("長押しで「カテゴリーを変える」「アンインストール」など。") }
     }
 
     moving?.let { app ->

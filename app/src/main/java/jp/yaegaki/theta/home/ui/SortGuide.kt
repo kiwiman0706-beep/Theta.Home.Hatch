@@ -49,6 +49,9 @@ import jp.yaegaki.theta.home.HomeModel
 import jp.yaegaki.theta.home.data.AppEntry
 import jp.yaegaki.theta.home.data.Apps
 import jp.yaegaki.theta.home.data.Categories
+import jp.yaegaki.theta.home.data.IconStyle
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -188,11 +191,16 @@ private fun SortStep(model: HomeModel, onBackToPrepare: () -> Unit, onDone: () -
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             PillButton("戻す", { model.undoSort() }, enabled = done > 0 || model.skipped.isNotEmpty())
             PillButton("あとで", { model.skip(app) })
-            PillButton("アプリ情報", { actions.start(Apps.infoIntent(app.packageName)) })
+            if (Apps.isSystem(actions.activity, app.packageName)) {
+                PillButton("無効化（アプリ情報）", { actions.start(Apps.infoIntent(app.packageName)) })
+            } else {
+                PillButton("アンインストール", { actions.start(Apps.uninstallIntent(app.packageName)) })
+                PillButton("アプリ情報", { actions.start(Apps.infoIntent(app.packageName)) })
+            }
             PillButton("カテゴリーを見直す", onBackToPrepare)
             PillButton("ここで終わる", onDone)
         }
-        Note("押すとすぐ次のアプリへ進みます。分からないものは「あとで」で後ろに回せます。")
+        Note("押すとすぐ次のアプリへ進みます。分からないものは「あとで」で後ろに回せます。要らないアプリは「アンインストール」（確認画面が出ます）。消すと一覧から外れます。")
     }
 }
 
@@ -236,14 +244,41 @@ fun ChoiceButton(text: String, selected: Boolean, suggested: Boolean = false, on
     }
 }
 
+/** アイコンの見せ方（設定の ICON）。version は型を作り直したときに増え、描き直しのきっかけになる。 */
+data class IconLook(val mode: String, val version: Int)
+
+val LocalIconLook = androidx.compose.runtime.staticCompositionLocalOf { IconLook(IconStyle.MONO, 0) }
+
+/**
+ * アプリのアイコン。ツートーンのときは白黒の型をテーマの 2 色（形＝オレンジ、地＝面の色）で塗る。
+ * Gemini で加工していないアプリは、端末内で作った型で代わりに見せる（世界観をそろえるため）。
+ */
 @Composable
 fun AppIcon(app: AppEntry, size: Dp) {
     val ctx = LocalActions.current.activity
-    val px = with(LocalDensity.current) { size.roundToPx() }
-    val icon by produceState<android.graphics.Bitmap?>(null, app.key) { value = withContext(Dispatchers.IO) { Apps.icon(ctx, app, px) } }
+    val look = LocalIconLook.current
     val p = LocalPalette.current
+    val px = with(LocalDensity.current) { size.roundToPx() }
+    val icon by produceState<android.graphics.Bitmap?>(null, app.key, look) {
+        value = withContext(Dispatchers.IO) {
+            val original = Apps.icon(ctx, app, maxOf(px, 192)) ?: return@withContext null
+            when (look.mode) {
+                IconStyle.GEMINI -> IconStyle.cached(ctx, app.key) ?: IconStyle.localMaskCached(app.key, original)
+                IconStyle.LOCAL -> IconStyle.localMaskCached(app.key, original)
+                else -> original
+            }
+        }
+    }
+    val filter = remember(look.mode, p) {
+        when (look.mode) {
+            IconStyle.MONO -> ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+            IconStyle.LOCAL, IconStyle.GEMINI -> IconStyle.twoTone(glyph = p.accent, plate = p.raised)
+            else -> null
+        }
+    }
+    val inset = if (look.mode == IconStyle.LOCAL || look.mode == IconStyle.GEMINI) 0.dp else 8.dp
     Box(Modifier.size(size).border(1.dp, p.line), contentAlignment = Alignment.Center) {
-        icon?.let { Image(it.asImageBitmap(), contentDescription = null, modifier = Modifier.size(size - 8.dp)) }
+        icon?.let { Image(it.asImageBitmap(), contentDescription = null, colorFilter = filter, modifier = Modifier.size(size - inset)) }
             ?: Text(app.label.take(1), color = p.fg, fontSize = (size.value * 0.4f).sp)
     }
 }

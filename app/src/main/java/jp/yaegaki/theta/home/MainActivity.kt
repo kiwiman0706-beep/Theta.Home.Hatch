@@ -86,6 +86,8 @@ class MainActivity : ComponentActivity() {
         model.reloadClips()
         model.refreshCaptures()
         model.refreshStatus()
+        model.refreshHomeRole()
+        model.checkUpdate()
     }
 
     override fun onStop() {

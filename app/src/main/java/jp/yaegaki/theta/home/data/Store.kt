@@ -130,6 +130,29 @@ class Store(context: Context) {
         prefs.edit().putString("appCats", JSONObject(map).toString()).apply()
     }
 
+    /** アプリのアイコンの見せ方："original"・"mono"・"local"（端末内でツートーン）・"gemini"。0.6.0 までのモノクロ設定から引き継ぐ。 */
+    var iconMode: String
+        get() = prefs.getString("iconMode", null) ?: if (prefs.getBoolean("monoIcons", true)) "mono" else "original"
+        set(v) = prefs.edit().putString("iconMode", v).apply()
+
+    var geminiModel: String
+        get() = prefs.getString("geminiModel", null) ?: IconStyle.DEFAULT_MODEL
+        set(v) = prefs.edit().putString("geminiModel", v.trim().ifEmpty { IconStyle.DEFAULT_MODEL }).apply()
+
+    /** Gemini の API キー。端末の鍵で暗号化して保存し、書き出し（バックアップ）には含めない。 */
+    var geminiKey: String
+        get() = jp.yaegaki.theta.home.nas.Secret.open(prefs.getString("geminiKey", ""))
+        set(v) = prefs.edit().putString("geminiKey", if (v.isBlank()) "" else jp.yaegaki.theta.home.nas.Secret.seal(v.trim())).apply()
+
+    /** 起動・復帰のときに更新を確かめる（1 日 1 回まで）。 */
+    var autoUpdate: Boolean
+        get() = prefs.getBoolean("autoUpdate", true)
+        set(v) = prefs.edit().putBoolean("autoUpdate", v).apply()
+
+    var lastUpdateCheck: Long
+        get() = prefs.getLong("lastUpdateCheck", 0)
+        set(v) = prefs.edit().putLong("lastUpdateCheck", v).apply()
+
     var monoIcons: Boolean
         get() = prefs.getBoolean("monoIcons", true)
         set(v) = prefs.edit().putBoolean("monoIcons", v).apply()

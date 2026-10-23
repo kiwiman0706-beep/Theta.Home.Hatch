@@ -242,6 +242,12 @@ private fun StatusStrip(model: HomeModel, openNasSettings: () -> Unit) {
             }, if (s == null || s.nas == Nas.UNSET) null else nasOk) {
                 if (s?.nas == Nas.OK) model.openNas("") else openNasSettings()
             }
+            if (!model.isDefaultHome) chip("HOME", "未設定 ›", false) { requestHomeRole(actions) }
+            val u = model.update
+            if (u.newer && u.latest != null) {
+                chip("UPDATE", if (u.progress != null) "%d%%".format((u.progress * 100).toInt()) else "v${u.latest.version} ›", false) { installUpdate(model, actions) }
+            }
+            chip("REQUEST", "依頼 ↗", null) { openRequest(actions) }
         }
         if (s != null && s.nas != Nas.OK && s.nas != Nas.UNSET && !model.checking) {
             Text(s.message, color = p.muted, fontSize = 12.sp)
@@ -633,5 +639,24 @@ private fun SearchResults(model: HomeModel) {
                 actions.start(Intent(Intent.ACTION_WEB_SEARCH).putExtra(android.app.SearchManager.QUERY, q))
             }.padding(vertical = 12.dp),
         )
+    }
+}
+
+/** 機能追加を頼むための開発の会話（Claude Code）を開く。 */
+fun openRequest(actions: Actions) {
+    actions.start(Intent(Intent.ACTION_VIEW, Uri.parse(jp.yaegaki.theta.home.hatch.SelfUpdate.REQUEST_URL)))
+}
+
+/** 新しい版を入れる：提供元不明のアプリの許可 → 取得とハッシュ照合 → Android の確認画面。 */
+fun installUpdate(model: HomeModel, actions: Actions) {
+    val ctx = actions.activity
+    jp.yaegaki.theta.home.hatch.HatchInstaller.permissionIntent(ctx)?.let {
+        actions.toast("「この提供元のアプリを許可」をオンにしてから、もう一度押してください")
+        actions.start(it)
+        return
+    }
+    actions.toast("新しい版を取得しています…")
+    model.downloadUpdate { file ->
+        runCatching { jp.yaegaki.theta.home.hatch.HatchInstaller.install(ctx, file) }.onFailure { actions.toast("更新を始められませんでした") }
     }
 }

@@ -139,7 +139,7 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity) {
         )
         LaunchedEffect(w >= 600.dp) { model.changeProfile(if (w >= 600.dp) "wide" else "narrow") }
         val available = w - railW
-        CompositionLocalProvider(LocalActions provides actions, LocalLayout provides layout) {
+        CompositionLocalProvider(LocalActions provides actions, LocalLayout provides layout, LocalIconLook provides IconLook(model.iconMode, model.iconVersion)) {
             val docked = model.docked.takeLast(layout.maxDocked)
             Row(Modifier.fillMaxSize()) {
                 if (model.railLeft) Rail(model, railW)

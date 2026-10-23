@@ -4,6 +4,8 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.border
+import jp.yaegaki.theta.home.data.IconStyle
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -47,6 +49,7 @@ fun SettingsPanel(model: HomeModel) {
     var renamingCategory by remember { mutableStateOf<jp.yaegaki.theta.home.data.Category?>(null) }
     var renamingPreset by remember { mutableStateOf<String?>(null) }
     var importConfirm by remember { mutableStateOf(false) }
+    var geminiDialog by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(start = 22.dp, end = 8.dp, top = 18.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -56,13 +59,34 @@ fun SettingsPanel(model: HomeModel) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         DrawerList {
             item {
+                Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                    Readout("HOME", if (model.isDefaultHome) "既定のホーム" else "未設定", accent = !model.isDefaultHome)
+                    Readout("VERSION", model.versionName)
+                }
                 FlowRow2 {
-                    PillButton("既定のホームにする", { requestHomeRole(actions) }, primary = true)
+                    PillButton(if (model.isDefaultHome) "既定のホーム：設定済み" else "既定のホームにする", { requestHomeRole(actions) }, primary = !model.isDefaultHome)
+                    PillButton("機能を頼む（開発の会話を開く）↗", { openRequest(actions) })
                     PillButton(
                         if (HatchNotificationListener.isEnabled(actions.activity)) "通知へのアクセス：許可済み" else "通知へのアクセス（LINE・メール）",
                         { actions.start(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                     )
                 }
+                Gap(18.dp)
+                SectionTitle("UPDATE / 更新", Modifier.padding(horizontal = 10.dp))
+                val u = model.update
+                Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                    Readout("NOW", model.versionName)
+                    Readout("LATEST", u.latest?.version ?: if (u.checking) "確認中…" else "----", accent = u.newer)
+                    if (u.progress != null) Readout("DOWNLOAD", "%d%%".format((u.progress * 100).toInt()), accent = true)
+                }
+                u.error?.let { Note("確認・取得できませんでした：$it") }
+                FlowRow2 {
+                    if (u.newer) PillButton("v${u.latest?.version} に更新", { installUpdate(model, actions) }, primary = true)
+                    PillButton("今すぐ確認", { model.checkUpdate(force = true) })
+                    PillButton("更新履歴（Releases）↗", { actions.start(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(jp.yaegaki.theta.home.hatch.SelfUpdate.RELEASES_URL))) })
+                }
+                Toggle("起動・復帰のときに新しい版を確かめる（1 日 1 回）", model.autoUpdate) { model.changeAutoUpdate(it) }
+                Note("新しい版があると、画面上部に「UPDATE」が出ます。押すと取得して SHA-256 を照合し、Android の確認画面へ進みます（2 回目からは確認を省けることがあります）。")
                 Gap(18.dp)
                 SectionTitle("NAS とウィジェット", Modifier.padding(horizontal = 10.dp))
                 FlowRow2 {
@@ -127,7 +151,41 @@ fun SettingsPanel(model: HomeModel) {
                         PillButton(label, { model.changeTheme(mode) }, primary = model.themeMode == mode)
                     }
                 }
-                Toggle("ホームのアプリアイコンをモノクロに", model.monoIcons) { model.changeMonoIcons(it) }
+                Gap(18.dp)
+                SectionTitle("ICON / アプリのアイコン", Modifier.padding(horizontal = 10.dp))
+                Note("世界観をそろえるため、アイコンをテーマの 2 色（形＝オレンジ、地＝面の色）に塗れます。Gemini はアイコンの形を整理して描き直します（1 アプリ 1 回、自分の API キーで課金。アイコンの画像を Google に送ります）。まだ加工していないアプリは端末内の簡易加工で表示します。")
+                FlowRow2 {
+                    listOf(
+                        IconStyle.ORIGINAL to "そのまま", IconStyle.MONO to "モノクロ",
+                        IconStyle.LOCAL to "ツートーン（簡易）", IconStyle.GEMINI to "ツートーン（Gemini）",
+                    ).forEach { (mode, label) -> PillButton(label, { model.changeIconMode(mode) }, primary = model.iconMode == mode) }
+                }
+                if (model.iconMode == IconStyle.GEMINI) {
+                    val job = model.iconJob
+                    Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                        Readout("API KEY", if (model.hasGeminiKey) "SET" else "未設定", accent = !model.hasGeminiKey)
+                        Readout("MODEL", model.geminiModel)
+                        Readout("DONE", "%03d / %03d".format(model.geminiDone(), model.apps.size))
+                    }
+                    if (job != null) {
+                        Column(Modifier.padding(horizontal = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Box(Modifier.fillMaxWidth().height(8.dp).border(1.dp, p.line)) {
+                                Box(Modifier.fillMaxWidth(if (job.total == 0) 0f else job.done.toFloat() / job.total).height(8.dp).background(p.accent))
+                            }
+                            Text(
+                                if (job.running) "加工中 %d / %d：%s".format(job.done + 1, job.total, job.current) else "終わりました（%d 件、失敗 %d 件）".format(job.total, job.failed),
+                                color = p.muted, fontSize = 12.sp,
+                            )
+                            job.lastError?.let { Text("直近の失敗：$it", color = p.accent, fontSize = 12.sp) }
+                        }
+                    }
+                    FlowRow2 {
+                        PillButton(if (model.hasGeminiKey) "API キー・モデル" else "API キーを入れる", { geminiDialog = true }, primary = !model.hasGeminiKey)
+                        if (job?.running == true) PillButton("止める", { model.cancelGeminiIcons() })
+                        else PillButton("未加工のアプリを Gemini で加工", { model.startGeminiIcons() }, primary = model.hasGeminiKey, enabled = model.hasGeminiKey)
+                        PillButton("加工した型をすべて消す", { model.clearGeminiIcons() })
+                    }
+                }
                 Gap(18.dp)
                 SectionTitle("端のタブ（押すと名前の変更・並べ替え）", Modifier.padding(horizontal = 10.dp))
             }
@@ -193,6 +251,31 @@ fun SettingsPanel(model: HomeModel) {
                 }, enabled = name.isNotBlank()) { Text("保存") }
             },
             dismissButton = { TextButton(onClick = { renamingPreset = null }) { Text("やめる") } },
+        )
+    }
+    if (geminiDialog) {
+        var key by remember { mutableStateOf("") }
+        var modelName by remember { mutableStateOf(model.geminiModel) }
+        AlertDialog(
+            onDismissRequest = { geminiDialog = false },
+            title = { Text("Gemini（アイコンの加工）") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Field(key, { key = it.trim() }, if (model.hasGeminiKey) "API キー（変えるときだけ）" else "API キー", password = true)
+                    Field(modelName, { modelName = it.trim() }, IconStyle.DEFAULT_MODEL)
+                    Text(
+                        "Google AI Studio で作った自分の API キーを使います（画像の生成は有料のプロジェクトのキーが必要なことがあります）。キーは端末の鍵で暗号化して保存し、設定の書き出しには含めません。モデルが使えないときは gemini-2.5-flash-image も試します。",
+                        color = p.muted, fontSize = 12.sp, lineHeight = 18.sp,
+                    )
+                }
+            },
+            confirmButton = { TextButton(onClick = { model.saveGemini(key.ifEmpty { null }, modelName); geminiDialog = false }) { Text("保存") } },
+            dismissButton = {
+                Row {
+                    if (model.hasGeminiKey) TextButton(onClick = { model.saveGemini("", modelName); geminiDialog = false }) { Text("キーを消す") }
+                    TextButton(onClick = { geminiDialog = false }) { Text("やめる") }
+                }
+            },
         )
     }
     if (importConfirm) {

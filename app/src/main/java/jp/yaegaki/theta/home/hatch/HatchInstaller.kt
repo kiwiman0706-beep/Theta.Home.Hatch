@@ -96,6 +96,8 @@ object HatchInstaller {
     fun install(context: Context, apk: File) {
         val installer = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
+        // 前回このアプリが入れたもの（自分自身の更新を含む）なら、Android 12 以降は確認を省ける場合がある
+        if (android.os.Build.VERSION.SDK_INT >= 31) params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
         val id = installer.createSession(params)
         installer.openSession(id).use { session ->
             session.openWrite("base.apk", 0, apk.length()).use { o ->

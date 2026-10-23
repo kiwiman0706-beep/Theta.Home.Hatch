@@ -35,11 +35,13 @@ class ScreenshotTest {
 
     private var scenario: ActivityScenario<MainActivity>? = null
 
-    private fun launch(theme: String = "dark") {
+    private fun launch(theme: String = "dark", iconMode: String = "mono") {
         val app = ApplicationProvider.getApplicationContext<HomeApp>()
         // 前のテストの設定（テーマ・カテゴリー）を持ち越さない
         app.store.prefs.edit().clear().commit()
         app.store.themeMode = theme
+        app.store.iconMode = iconMode
+        app.store.autoUpdate = false
         val pm = shadowOf(app.packageManager)
         val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         listOf(
@@ -129,6 +131,15 @@ class ScreenshotTest {
         compose.onNodeWithText("仕分け 5").performClick()
         startSorting()
         shot("sort-step2-assign-light")
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun twoToneIcons() {
+        launch(iconMode = "local")
+        compose.onNodeWithContentDescription("APPS（Alt+A）").performClick()
+        compose.mainClock.advanceTimeBy(600)
+        shot("apps-two-tone")
     }
 
     @Test

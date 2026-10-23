@@ -40,6 +40,8 @@ object Backup {
             .put("railLeft", store.railLeft)
             .put("theme", store.themeMode)
             .put("monoIcons", store.monoIcons)
+            .put("iconMode", store.iconMode)
+            .put("geminiModel", store.geminiModel)
             .put("favoriteApps", JSONArray(store.favoriteApps))
             .put("location", store.location)
             .put("categories", JSONArray(store.categories().map { JSONObject().put("id", it.id).put("name", it.name) }))
@@ -70,6 +72,8 @@ object Backup {
         e.putBoolean("railLeft", o.optBoolean("railLeft", store.railLeft))
         e.putString("theme", o.optString("theme", store.themeMode))
         e.putBoolean("monoIcons", o.optBoolean("monoIcons", store.monoIcons))
+        if (o.has("iconMode")) e.putString("iconMode", o.optString("iconMode"))
+        if (o.has("geminiModel")) e.putString("geminiModel", o.optString("geminiModel"))
         o.optJSONArray("favoriteApps")?.let { e.putString("favApps", it.toString()) }
         o.optJSONArray("categories")?.let { e.putString("categories", it.toString()) }
         o.optJSONObject("appCategories")?.let { e.putString("appCats", it.toString()) }

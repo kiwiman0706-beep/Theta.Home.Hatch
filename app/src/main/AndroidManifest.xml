@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- 仕分けやアプリの一覧から「アンインストール」の確認画面を出す -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <!-- ウィジェットホストはこの宣言が必要。実際の割り当ては ACTION_APPWIDGET_BIND の確認画面で利用者が許可する。 -->
     <uses-permission
         android:name="android.permission.BIND_APPWIDGET"

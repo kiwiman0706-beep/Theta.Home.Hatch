@@ -41,6 +41,16 @@ object Apps {
             .setComponent(app.component)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
 
+    /** Android のアンインストール確認画面。 */
+    fun uninstallIntent(packageName: String): Intent =
+        Intent(Intent.ACTION_DELETE, Uri.fromParts("package", packageName, null))
+
+    /** 端末に最初から入っているアプリ（アンインストールできず、無効化だけできる）。 */
+    fun isSystem(context: Context, packageName: String): Boolean = runCatching {
+        val flags = context.packageManager.getApplicationInfo(packageName, 0).flags
+        flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM != 0 && flags and android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP == 0
+    }.getOrDefault(false)
+
     fun infoIntent(packageName: String): Intent =
         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null))
 

@@ -494,6 +494,135 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         categoryDefaults = store.categoryDefaults
     }
 
+    // ---- このアプリの更新・ホームの登録 ----
+
+    data class UpdateState(
+        val latest: Release? = null,
+        val newer: Boolean = false,
+        val checking: Boolean = false,
+        val progress: Float? = null,
+        val error: String? = null,
+        val checkedAt: Long = 0,
+    )
+
+    var update by mutableStateOf(UpdateState()); private set
+    var autoUpdate by mutableStateOf(store.autoUpdate); private set
+    /** 既定のホームアプリになっているか。onResume で調べ直す。 */
+    var isDefaultHome by mutableStateOf(true); private set
+
+    val versionName: String = jp.yaegaki.theta.home.BuildConfigInfo.versionName(app)
+
+    fun changeAutoUpdate(v: Boolean) { autoUpdate = v; store.autoUpdate = v }
+
+    fun refreshHomeRole() {
+        val rm = ctx.getSystemService(android.app.role.RoleManager::class.java)
+        isDefaultHome = rm == null || !rm.isRoleAvailable(android.app.role.RoleManager.ROLE_HOME) || rm.isRoleHeld(android.app.role.RoleManager.ROLE_HOME)
+    }
+
+    /** 新しい版があるか確かめる。force でなければ自動更新がオンのときだけ、1 日 1 回まで。 */
+    fun checkUpdate(force: Boolean = false) {
+        if (update.checking) return
+        if (!force && (!autoUpdate || System.currentTimeMillis() - store.lastUpdateCheck < 24L * 3600_000)) return
+        update = update.copy(checking = true, error = null)
+        viewModelScope.launch {
+            val r = runCatching { jp.yaegaki.theta.home.hatch.SelfUpdate.latest() }
+            store.lastUpdateCheck = System.currentTimeMillis()
+            val latest = r.getOrNull()
+            update = UpdateState(
+                latest = latest,
+                newer = latest != null && jp.yaegaki.theta.home.ui.isNewer(latest.version, versionName),
+                error = r.exceptionOrNull()?.message,
+                checkedAt = store.lastUpdateCheck,
+            )
+        }
+    }
+
+    /** 新しい版を取得して、ハッシュを照合し、インストールへ（onReady で確認画面を出す）。 */
+    fun downloadUpdate(onReady: (File) -> Unit) {
+        val r = update.latest ?: return
+        if (update.progress != null) return
+        update = update.copy(progress = 0f, error = null)
+        viewModelScope.launch {
+            var shown = 0
+            val result = runCatching {
+                HatchInstaller.download(ctx, r) { p ->
+                    val pct = (p * 100).toInt()
+                    if (pct > shown) { shown = pct; viewModelScope.launch { update = update.copy(progress = p) } }
+                }
+            }
+            update = update.copy(progress = null, error = result.exceptionOrNull()?.message)
+            result.getOrNull()?.let(onReady)
+        }
+    }
+
+    // ---- アイコンのツートーン ----
+
+    var iconMode by mutableStateOf(store.iconMode); private set
+    var geminiModel by mutableStateOf(store.geminiModel); private set
+    var hasGeminiKey by mutableStateOf(store.geminiKey.isNotEmpty()); private set
+    /** 型を作り直したら増やす。アイコンを描き直すきっかけ。 */
+    var iconVersion by mutableStateOf(0); private set
+
+    data class IconJob(val done: Int, val total: Int, val current: String, val failed: Int, val lastError: String?, val running: Boolean)
+    var iconJob by mutableStateOf<IconJob?>(null); private set
+    private var iconWork: kotlinx.coroutines.Job? = null
+
+    fun changeIconMode(mode: String) { iconMode = mode; store.iconMode = mode }
+
+    fun saveGemini(key: String?, model: String) {
+        if (key != null) store.geminiKey = key
+        store.geminiModel = model
+        geminiModel = store.geminiModel
+        hasGeminiKey = store.geminiKey.isNotEmpty()
+    }
+
+    /** Gemini で加工済みのアプリの数。 */
+    fun geminiDone(): Int = apps.count { jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, it.key).exists() }
+
+    /** まだ型の無いアプリ（only を渡せばそれだけ）を、1 つずつ Gemini で加工する。 */
+    fun startGeminiIcons(only: AppEntry? = null) {
+        if (iconWork?.isActive == true) return
+        val key = store.geminiKey
+        if (key.isEmpty()) {
+            (ctx as HomeApp).toast("先に Gemini の API キーを入れてください"); return
+        }
+        val targets = only?.let { listOf(it) } ?: apps.filter { !jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, it.key).exists() }
+        if (targets.isEmpty()) {
+            (ctx as HomeApp).toast("すべてのアプリを加工済みです"); return
+        }
+        iconWork = viewModelScope.launch {
+            var failed = 0
+            var lastError: String? = null
+            targets.forEachIndexed { i, app ->
+                iconJob = IconJob(i, targets.size, app.label, failed, lastError, true)
+                val r = runCatching {
+                    withContext(Dispatchers.IO) {
+                        val icon = Apps.icon(ctx, app, 192) ?: error("アイコンを読めません")
+                        val mask = jp.yaegaki.theta.home.data.IconStyle.geminiMask(key, store.geminiModel, icon)
+                        jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, app.key).outputStream().use { mask.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                    }
+                }
+                r.onFailure { failed++; lastError = "${app.label}：${it.message}" }
+                r.onSuccess { iconVersion++ }
+                // 混み合い（429）を避けるため、少し間をあける
+                kotlinx.coroutines.delay(if (r.exceptionOrNull()?.message?.contains("429") == true) 20_000 else 1_500)
+            }
+            iconJob = IconJob(targets.size, targets.size, "", failed, lastError, false)
+        }
+    }
+
+    fun cancelGeminiIcons() {
+        iconWork?.cancel()
+        iconJob = iconJob?.copy(running = false)
+    }
+
+    /** Gemini の型を消して、簡易加工の表示に戻す。app を渡せばそのアプリだけ。 */
+    fun clearGeminiIcons(app: AppEntry? = null) {
+        if (app != null) jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, app.key).delete()
+        else File(ctx.filesDir, "icons").listFiles()?.forEach { it.delete() }
+        iconVersion++
+    }
+
     // ---- 設定の書き出し・読み込み（引っ越し） ----
 
     /** 読み込み後の案内（入っていないアプリなど）。閉じるまで出しておく。 */
@@ -530,6 +659,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         railLeft = store.railLeft
         themeMode = store.themeMode
         monoIcons = store.monoIcons
+        iconMode = store.iconMode
+        geminiModel = store.geminiModel
         favoriteApps = store.favoriteApps
         categories = store.categories()
         appCategories = store.appCategories()

@@ -12,7 +12,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 
 /** NAS のパスワードを端末の鍵（Android Keystore）で暗号化して保存する。鍵は端末の外へ出ない。 */
-final class Secret {
+public final class Secret {
     private static final String ALIAS = "theta-home-nas";
 
     private Secret() {}
@@ -29,14 +29,14 @@ final class Secret {
         return g.generateKey();
     }
 
-    static String seal(String plain) throws Exception {
+    public static String seal(String plain) throws Exception {
         Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
         c.init(Cipher.ENCRYPT_MODE, key());
         byte[] iv = c.getIV(), body = c.doFinal(plain.getBytes(StandardCharsets.UTF_8));
         return Base64.encodeToString(ByteBuffer.allocate(1 + iv.length + body.length).put((byte) iv.length).put(iv).put(body).array(), Base64.NO_WRAP);
     }
 
-    static String open(String sealed) {
+    public static String open(String sealed) {
         if (sealed == null || sealed.isEmpty()) return "";
         try {
             ByteBuffer b = ByteBuffer.wrap(Base64.decode(sealed, Base64.NO_WRAP));
