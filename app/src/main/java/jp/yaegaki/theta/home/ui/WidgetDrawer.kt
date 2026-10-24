@@ -1,5 +1,7 @@
 package jp.yaegaki.theta.home.ui
 
+import kotlin.math.roundToInt
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.clickable
@@ -83,6 +85,7 @@ private fun WidgetCellView(model: HomeModel, t: WidgetTab, c: WidgetCell, index:
     val maxH = config.screenHeightDp - 160
     var w by remember(c.id, c.w) { mutableIntStateOf(c.w) }
     var h by remember(c.id, c.h) { mutableIntStateOf(c.h) }
+    var handle by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
     val info = host.info(c.id)
     // ドロワーは端に付いているので、角を内側（画面の中央側）へなぞると広がる
     val grow = if (model.railLeft) 1 else -1
@@ -105,11 +108,26 @@ private fun WidgetCellView(model: HomeModel, t: WidgetTab, c: WidgetCell, index:
                         .clip(RoundedCornerShape(0.dp))
                         .background(p.accent.copy(alpha = 0.85f))
                         .semantics { contentDescription = "なぞって大きさを変える" }
+                        .onGloballyPositioned { handle = it }
                         .pointerInput(c.id, grow) {
-                            detectDragGestures(onDragEnd = { model.updateWidgetCell(t.id, c.copy(w = w, h = h)) }) { change, drag ->
+                            // 角はパネルの端と一緒に動くので、角から見た動きではなく、画面全体から見た「なぞり始めからの移動」で決める。
+                            // 端数も捨てずに、始めの大きさ＋移動で毎回計算し直す
+                            var startRoot = androidx.compose.ui.geometry.Offset.Zero
+                            var startW = 0
+                            var startH = 0
+                            detectDragGestures(
+                                onDragStart = { pos ->
+                                    startRoot = handle?.localToRoot(pos) ?: pos
+                                    startW = w
+                                    startH = h
+                                },
+                                onDragEnd = { model.updateWidgetCell(t.id, c.copy(w = w, h = h)) },
+                            ) { change, _ ->
                                 change.consume()
-                                w = (w + grow * drag.x / density).toInt().coerceIn(120, maxW.coerceAtLeast(120))
-                                h = (h + drag.y / density).toInt().coerceIn(80, maxH.coerceAtLeast(80))
+                                val root = handle?.localToRoot(change.position) ?: return@detectDragGestures
+                                val d = root - startRoot
+                                w = (startW + grow * d.x / density).roundToInt().coerceIn(120, maxW.coerceAtLeast(120))
+                                h = (startH + d.y / density).roundToInt().coerceIn(80, maxH.coerceAtLeast(80))
                                 model.resizeLive(c.id, w)
                             }
                         },
