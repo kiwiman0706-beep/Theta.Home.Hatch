@@ -179,9 +179,10 @@ fun SettingsPanel(model: HomeModel) {
                 SectionTitle("ONE UI / Galaxy の見た目を合わせる", Modifier.padding(horizontal = 10.dp))
                 Note("One UI のテーマは自分では配れないので、材料を作ります。壁紙を HUD にすると、One UI が壁紙から色を取って、クイックパネル・設定・キーボードなども黒とオレンジ寄りになります。アイコンは今の 3 色・配色で PNG に書き出し、Good Lock の Theme Park でアプリごとに選べます（手順は README）。")
                 FlowRow2 {
-                    val wm = actions.activity.windowManager.currentWindowMetrics.bounds
-                    PillButton("壁紙を HUD に（ダーク）", { model.applyHudWallpaper(wm.width(), wm.height(), dark = true) }, primary = true)
-                    PillButton("壁紙を HUD に（ライト）", { model.applyHudWallpaper(wm.width(), wm.height(), dark = false) })
+                    // 今の画面（閉じた／開いた）全体の大きさ。端まで描いているので、窓の大きさがそのまま画面の大きさ
+                    val root = actions.activity.window.decorView
+                    PillButton("壁紙を HUD に（ダーク）", { model.applyHudWallpaper(root.width, root.height, dark = true) }, primary = true)
+                    PillButton("壁紙を HUD に（ライト）", { model.applyHudWallpaper(root.width, root.height, dark = false) })
                     val job = model.artJob
                     if (job != null) PillButton("書き出し中 %d / %d".format(job.first, job.second), {}, enabled = false)
                     else PillButton("アイコンを PNG で書き出す（${model.apps.size} 個）", { model.exportIcons() })

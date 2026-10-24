@@ -1,1 +1,1 @@
-336cc8d0fee959a5f19da69ca0f530745dd260e27f6a0036fc88d2ba11806d6b  ThetaHomeHatch-0.17.0-alpha.apk
+381c5abccbdd97fec8abb92f99ffd7cef9f00a299d15cb38f24ef2a22efae608  ThetaHomeHatch-0.17.0-alpha.apk
