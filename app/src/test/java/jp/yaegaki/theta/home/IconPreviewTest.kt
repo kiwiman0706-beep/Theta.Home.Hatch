@@ -50,6 +50,7 @@ class IconPreviewTest {
             1 -> { // チャット風：緑の地に白い吹き出し
                 p.color = Color.rgb(6, 199, 85); c.drawRoundRect(RectF(8f, 8f, 184f, 184f), 40f, 40f, p)
                 p.color = Color.WHITE; c.drawOval(RectF(36f, 48f, 156f, 136f), p)
+                p.color = Color.rgb(255, 120, 0); c.drawCircle(130f, 70f, 18f, p) // 未読の点（アクセント）
             }
             2 -> { // カメラ風：黒の円に灰色のレンズ
                 p.color = Color.rgb(30, 30, 30); c.drawCircle(96f, 96f, 88f, p)
@@ -57,7 +58,8 @@ class IconPreviewTest {
             }
             else -> { // 音楽風：赤い地に白い音符
                 p.color = Color.rgb(250, 45, 72); c.drawRoundRect(RectF(8f, 8f, 184f, 184f), 40f, 40f, p)
-                p.color = Color.WHITE; c.drawCircle(80f, 130f, 22f, p); c.drawRect(96f, 50f, 108f, 130f, p); c.drawRect(96f, 50f, 140f, 64f, p)
+                p.color = Color.WHITE; c.drawCircle(80f, 130f, 22f, p); c.drawRect(96f, 50f, 108f, 130f, p)
+                p.color = Color.rgb(255, 215, 0); c.drawRect(96f, 50f, 140f, 64f, p) // 旗（アクセント）
             }
         }
         return b
@@ -73,11 +75,11 @@ class IconPreviewTest {
                     HomeTheme(dark = dark) {
                         val p = LocalPalette.current
                         Column(Modifier.background(p.bg).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(if (dark) "DARK  original → two-tone" else "LIGHT original → two-tone", color = p.muted)
+                            Text(if (dark) "DARK  original → 3-tone" else "LIGHT original → 3-tone", color = p.muted)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 icons.forEachIndexed { i, ic ->
                                     Image(ic.asImageBitmap(), null, Modifier.size(40.dp))
-                                    Image(masks[i].asImageBitmap(), null, Modifier.size(40.dp).border(1.dp, p.line), colorFilter = IconStyle.twoTone(p.accent, p.raised))
+                                    Image(masks[i].asImageBitmap(), null, Modifier.size(40.dp).border(1.dp, p.line), colorFilter = IconStyle.threeTone(p.raised, p.fg, p.accent))
                                 }
                             }
                         }
@@ -85,6 +87,6 @@ class IconPreviewTest {
                 }
             }
         }
-        compose.onRoot().captureRoboImage("build/screenshots/icon-two-tone-preview.png")
+        compose.onRoot().captureRoboImage("build/screenshots/icon-3-tone-preview.png")
     }
 }

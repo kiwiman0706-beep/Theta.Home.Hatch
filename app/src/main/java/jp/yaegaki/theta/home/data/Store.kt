@@ -285,6 +285,21 @@ class Store(context: Context) {
 
     fun saveHiddenCalendars(where: String, ids: Set<Long>) = putStrings("calHidden_$where", ids.map { it.toString() })
 
+    /** アイコンの 3 色："hud"・"orange"・"solid"・"mono"、または "custom:地,基本,アクセント"（ARGB の 16 進）。 */
+    var iconColors: String
+        get() = prefs.getString("iconColors", "hud") ?: "hud"
+        set(v) = prefs.edit().putString("iconColors", v).apply()
+
+    /** アプリの一覧を開いたときの音声起動："off"・"tap"（押したとき）・"long"（長押ししたとき）。 */
+    var voiceApps: String
+        get() = prefs.getString("voiceApps", "long") ?: "long"
+        set(v) = prefs.edit().putString("voiceApps", v).apply()
+
+    /** カテゴリーのタブの通知の並び："time"（時系列）・"app"（アプリ別）。 */
+    var noticeOrder: String
+        get() = prefs.getString("noticeOrder", "time") ?: "time"
+        set(v) = prefs.edit().putString("noticeOrder", v).apply()
+
     /** カレンダーのドロワーの表示："month"・"week"・"day"。 */
     var calendarMode: String
         get() = prefs.getString("calMode", "month") ?: "month"

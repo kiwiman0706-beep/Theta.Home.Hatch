@@ -245,7 +245,19 @@ fun ChoiceButton(text: String, selected: Boolean, suggested: Boolean = false, on
 }
 
 /** アイコンの見せ方（設定の ICON）。version は型を作り直したときに増え、描き直しのきっかけになる。 */
-data class IconLook(val mode: String, val version: Int)
+data class IconLook(val mode: String, val version: Int, val colors: String = "hud")
+
+/** アイコンの 3 色（地・基本・アクセント）を、配色の設定とテーマから決める。 */
+fun iconTriple(p: Palette, spec: String): Triple<androidx.compose.ui.graphics.Color, androidx.compose.ui.graphics.Color, androidx.compose.ui.graphics.Color> = when {
+    spec == "orange" -> Triple(p.raised, p.accent, p.fg)
+    spec == "solid" -> Triple(p.accent, p.onAccent, p.fg)
+    spec == "mono" -> Triple(p.raised, p.fg, p.faint)
+    spec.startsWith("custom:") -> spec.removePrefix("custom:").split(',').mapNotNull { it.toLongOrNull(16) }.let { c ->
+        if (c.size == 3) Triple(androidx.compose.ui.graphics.Color(c[0].toInt()), androidx.compose.ui.graphics.Color(c[1].toInt()), androidx.compose.ui.graphics.Color(c[2].toInt()))
+        else Triple(p.raised, p.fg, p.accent)
+    }
+    else -> Triple(p.raised, p.fg, p.accent)
+}
 
 val LocalIconLook = androidx.compose.runtime.staticCompositionLocalOf { IconLook(IconStyle.MONO, 0) }
 
@@ -283,10 +295,10 @@ fun LookIcon(key: String, label: String, size: Dp, load: () -> android.graphics.
             }
         }
     }
-    val filter = remember(look.mode, p) {
+    val filter = remember(look.mode, look.colors, p) {
         when (look.mode) {
             IconStyle.MONO -> ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-            IconStyle.LOCAL, IconStyle.GEMINI -> IconStyle.twoTone(glyph = p.accent, plate = p.raised)
+            IconStyle.LOCAL, IconStyle.GEMINI -> iconTriple(p, look.colors).let { (plate, base, accent) -> IconStyle.threeTone(plate, base, accent) }
             else -> null
         }
     }

@@ -160,7 +160,7 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity) {
         )
         LaunchedEffect(w >= 600.dp) { model.changeProfile(if (w >= 600.dp) "wide" else "narrow") }
         val available = w - railW
-        CompositionLocalProvider(LocalActions provides actions, LocalLayout provides layout, LocalIconLook provides IconLook(model.iconMode, model.iconVersion)) {
+        CompositionLocalProvider(LocalActions provides actions, LocalLayout provides layout, LocalIconLook provides IconLook(model.iconMode, model.iconVersion, model.iconColors)) {
             val docked = model.docked.takeLast(layout.maxDocked)
             Row(Modifier.fillMaxSize()) {
                 if (model.railLeft) Rail(model, railW)
@@ -322,7 +322,7 @@ private fun StartButton(model: HomeModel) {
             .width(40.dp)
             .background(if (on) p.accent else p.raised)
             .border(1.dp, p.accent)
-            .clickable(role = Role.Button, onClickLabel = "すべてのアプリを開く") { model.toggle(model.appsId()) }
+            .combinedClickable(role = Role.Button, onClickLabel = "すべてのアプリを開く", onLongClick = { model.pressApps(long = true) }, onLongClickLabel = "声でアプリを開く") { model.pressApps(long = false) }
             .semantics { contentDescription = "START すべてのアプリ（Alt+A）"; selected = on }
             .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

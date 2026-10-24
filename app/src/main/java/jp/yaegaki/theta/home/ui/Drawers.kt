@@ -1,5 +1,6 @@
 package jp.yaegaki.theta.home.ui
 
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.horizontalScroll
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
@@ -199,6 +200,64 @@ private fun NoticeRow(n: Notice, zebra: Int, app: jp.yaegaki.theta.home.data.App
             Text(n.text, color = p.muted, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
+}
+
+/** 音声認識（端末の SpeechRecognizer）。聞き取り中は partial、終わったら候補（よい順）を返す。 */
+class VoiceState(val start: () -> Unit, val stop: () -> Unit, val listening: Boolean)
+
+@Composable
+private fun rememberVoice(onPartial: (String) -> Unit, onFinal: (List<String>) -> Unit): VoiceState {
+    val actions = LocalActions.current
+    val ctx = actions.activity
+    var listening by remember { mutableStateOf(false) }
+    val partial by androidx.compose.runtime.rememberUpdatedState(onPartial)
+    val final by androidx.compose.runtime.rememberUpdatedState(onFinal)
+    val recognizer = remember {
+        if (android.speech.SpeechRecognizer.isRecognitionAvailable(ctx)) android.speech.SpeechRecognizer.createSpeechRecognizer(ctx) else null
+    }
+    androidx.compose.runtime.DisposableEffect(recognizer) {
+        recognizer?.setRecognitionListener(object : android.speech.RecognitionListener {
+            override fun onReadyForSpeech(params: android.os.Bundle?) {}
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() {}
+            override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
+            override fun onError(error: Int) {
+                listening = false
+                if (error == android.speech.SpeechRecognizer.ERROR_NO_MATCH || error == android.speech.SpeechRecognizer.ERROR_SPEECH_TIMEOUT) actions.toast("聞き取れませんでした")
+                else if (error == android.speech.SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) actions.toast("マイクの許可がありません")
+            }
+            override fun onResults(results: android.os.Bundle?) {
+                listening = false
+                val list = results?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
+                if (list.isNotEmpty()) final(list)
+            }
+            override fun onPartialResults(partialResults: android.os.Bundle?) {
+                partialResults?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { partial(it) }
+            }
+        })
+        onDispose { runCatching { recognizer?.destroy() } }
+    }
+    fun begin() {
+        val r = recognizer ?: run { actions.toast("この端末では音声認識が使えません（Google の音声入力を入れると使えます）"); return }
+        val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "ja-JP")
+            .putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 5)
+        runCatching { r.startListening(intent); listening = true }.onFailure { actions.toast("音声認識を始められませんでした") }
+    }
+    return VoiceState(
+        start = {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) begin()
+            else actions.requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO)) {
+                if (androidx.core.content.ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) begin()
+            }
+        },
+        stop = { runCatching { recognizer?.stopListening() }; listening = false },
+        listening = listening,
+    )
 }
 
 /** アイコンの右上に付ける通知の件数。 */
@@ -423,10 +482,39 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
     var scRenaming by remember { mutableStateOf<jp.yaegaki.theta.home.data.PinnedShortcut?>(null) }
     var shortcutsFor by remember { mutableStateOf<Pair<jp.yaegaki.theta.home.data.AppEntry, String>?>(null) }
 
+    // 音声でアプリを開く：聞き取った言葉を絞り込みに入れ、1 つに決まればそのまま開く
+    val voice = rememberVoice(
+        onPartial = { q = it },
+        onFinal = { heard ->
+            val hit = jp.yaegaki.theta.home.data.VoiceMatch.pick(model.apps, { it.label }, heard)
+            if (hit != null) {
+                actions.toast("「${hit.label}」を開きます")
+                model.close()
+                actions.start(Apps.launchIntent(hit))
+            } else {
+                q = heard.firstOrNull()?.let { jp.yaegaki.theta.home.data.VoiceMatch.core(it) }.orEmpty()
+            }
+        },
+    )
+    LaunchedEffect(model.voicePending) {
+        if (model.voicePending && only == null) {
+            model.voicePending = false
+            voice.start()
+        }
+    }
+
     DrawerList {
+        if (voice.listening) item {
+            Row(Modifier.fillMaxWidth().padding(bottom = 8.dp).border(1.dp, p.accent).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                GlyphIcon(Glyph.MIC, p.accent)
+                Text("LISTENING… アプリの名前を言ってください", color = p.fg, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Text("やめる", color = p.accent, fontSize = 13.sp, modifier = Modifier.clickable { voice.stop() }.padding(4.dp))
+            }
+        }
         item {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 8.dp)) {
                 Field(q, { q = it }, "名前で絞り込み", Modifier.weight(1f))
+                GlyphButton(Glyph.MIC, "声でアプリを開く", { if (voice.listening) voice.stop() else voice.start() }, filled = voice.listening)
                 if (only == null) PillButton(if (unsorted > 0) "仕分け %d".format(unsorted) else "仕分け", { sorting = true }, primary = unsorted > 0)
                 GlyphButton(if (spec.grid) Glyph.LIST else Glyph.GRID, if (spec.grid) "一覧で見る" else "グリッドで見る", { model.setView(viewKey, spec.copy(grid = !spec.grid)) })
                 Box(Modifier.size(44.dp).clickable(onClickLabel = "大きさを変える") { model.setView(viewKey, spec.copy(size = (spec.size + 1) % ViewSpec.SIZES)) }, contentAlignment = Alignment.Center) {
@@ -560,6 +648,13 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
                     SectionTitle("NOTICE / 通知")
                     Text("%02d".format(mine.size), color = if (mine.isEmpty()) p.faint else p.accent, fontSize = 11.sp)
                     Ticks(Modifier.weight(1f).height(5.dp))
+                    // 並び：時系列・アプリ別
+                    listOf("time" to "時系列", "app" to "アプリ別").forEach { (k, label) ->
+                        val on = model.noticeOrder == k
+                        Text(label, color = if (on) p.onAccent else p.muted, fontSize = 11.sp,
+                            modifier = Modifier.background(if (on) p.accent else Color.Transparent).border(1.dp, if (on) p.accent else p.line)
+                                .clickable { model.changeNoticeOrder(k) }.padding(horizontal = 8.dp, vertical = 4.dp))
+                    }
                 }
             }
             if (!HatchNotificationListener.isEnabled(actions.activity)) item(key = "n:perm") {
@@ -568,7 +663,22 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
                     PillButton("通知へのアクセスを許可", { actions.start(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) })
                 }
             } else if (mine.isEmpty()) item(key = "n:none") { Note("新しい通知はありません") }
-            itemsIndexed(mine, key = { _, it -> "n:" + it.key }) { zi, n -> NoticeRow(n, zi, pkgs[n.packageName]) }
+            if (model.noticeOrder == "app") {
+                // アプリ別：新しい通知が来たアプリから順に、アプリの見出しの下にまとめる
+                mine.groupBy { it.packageName }.forEach { (pkg, list) ->
+                    val app = pkgs[pkg]
+                    item(key = "ng:$pkg") {
+                        Row(Modifier.padding(top = 8.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            app?.let { AppIcon(it, 20.dp) }
+                            Text(app?.label ?: pkg, color = p.fg, fontSize = 13.sp, fontFamily = Hud.mono)
+                            Text("%02d".format(list.size), color = p.accent, fontSize = 11.sp, fontFamily = Hud.mono)
+                        }
+                    }
+                    itemsIndexed(list, key = { _, it -> "n:" + it.key }) { zi, n -> NoticeRow(n, zi) }
+                }
+            } else {
+                itemsIndexed(mine, key = { _, it -> "n:" + it.key }) { zi, n -> NoticeRow(n, zi, pkgs[n.packageName]) }
+            }
         }
         item { Note("長押しして動かすと並べ替え、動かさずに離すと「カテゴリーを変える」「アンインストール」など。") }
     }

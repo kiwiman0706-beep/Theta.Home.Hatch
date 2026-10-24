@@ -1,5 +1,7 @@
 package jp.yaegaki.theta.home.ui
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.PaddingValues
@@ -225,7 +227,12 @@ internal fun SearchRow(model: HomeModel, leading: (@Composable () -> Unit)? = nu
     Row(verticalAlignment = Alignment.CenterVertically) {
         leading?.invoke()
         Field(model.query, { model.query = it }, "SEARCH  検索", Modifier.weight(1f).focusRequester(focus), leading = { GlyphIcon(Glyph.SEARCH, p.accent) })
-        GlyphButton(Glyph.GRID, "APPS（Alt+A）", { model.toggle(model.appsId()) }, tint = if (model.open == model.appsId()) p.accent else null)
+        Box(
+            Modifier.size(44.dp)
+                .combinedClickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = "アプリ", onLongClick = { model.pressApps(long = true) }, onLongClickLabel = "声でアプリを開く") { model.pressApps(long = false) }
+                .semantics { contentDescription = "APPS（Alt+A）" },
+            contentAlignment = Alignment.Center,
+        ) { GlyphIcon(Glyph.GRID, if (model.open == model.appsId()) p.accent else p.muted) }
         GlyphButton(Glyph.GEAR, "設定", { model.settingsOpen = true })
     }
 }

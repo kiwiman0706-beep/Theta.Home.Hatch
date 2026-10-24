@@ -67,10 +67,13 @@ private fun addMonths(t: Long, n: Int): Long = JCal.getInstance().apply { timeIn
 
 private fun field(t: Long, f: Int) = JCal.getInstance().apply { timeInMillis = t }.get(f)
 
-/** その日の予定。終日が先、あとは始まる順。 */
+/** 日をまたぐ予定か（終日の 2 日以上、または時刻つきで日付が変わる）。 */
+private fun Event.multiDay(): Boolean = Calendar.startOfDay(localBegin) != Calendar.startOfDay(maxOf(localBegin, localEnd - 1))
+
+/** その日の予定。日をまたぐものを先に（隣の日と並びがそろうように）、次に終日、あとは始まる順。 */
 private fun eventsOn(all: List<Event>, day: Long): List<Event> {
     val next = Calendar.addDays(day, 1)
-    return all.filter { it.overlaps(day, next) }.sortedWith(compareBy({ !it.allDay }, { it.localBegin }, { it.title }))
+    return all.filter { it.overlaps(day, next) }.sortedWith(compareBy({ !it.multiDay() }, { !it.allDay }, { it.localBegin }, { it.eventId }))
 }
 
 private fun Event.tint(p: Palette): Color = if (color != 0) Color(color) else p.widget
@@ -202,14 +205,18 @@ internal fun MonthView(all: List<Event>, from: Long, to: Long, anchor: Long, tod
                         )
                         list.forEach { e ->
                             val c = e.tint(p)
-                            Row(
-                                Modifier.fillMaxWidth().background(if (e.allDay) c.copy(alpha = 0.28f) else Color.Transparent).clipToBounds(),
+                            // 日をまたぐ予定は、始まりの日と週の頭（日曜）にだけ名前を出し、ほかの日は色の帯で続ける
+                            val named = !e.multiDay() || day == Calendar.startOfDay(e.localBegin) || i == 0
+                            if (!named) {
+                                Box(Modifier.fillMaxWidth().height(11.dp).padding(vertical = 2.dp).background(c.copy(alpha = 0.55f)))
+                            } else Row(
+                                Modifier.fillMaxWidth().background(if (e.allDay || e.multiDay()) c.copy(alpha = 0.28f) else Color.Transparent).clipToBounds(),
                                 verticalAlignment = Alignment.Top,
                             ) {
                                 Box(Modifier.width(2.dp).height(11.dp).background(c))
                                 Text(
                                     e.title, color = if (inMonth) p.fg else p.muted, fontSize = 9.sp, lineHeight = 11.sp,
-                                    maxLines = 2, overflow = TextOverflow.Clip, modifier = Modifier.padding(start = 2.dp),
+                                    maxLines = if (e.multiDay()) 1 else 2, overflow = TextOverflow.Clip, softWrap = !e.multiDay(), modifier = Modifier.padding(start = 2.dp),
                                 )
                             }
                         }

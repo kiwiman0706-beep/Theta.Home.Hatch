@@ -1,5 +1,10 @@
 package jp.yaegaki.theta.home.ui
 
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.background
@@ -163,14 +168,23 @@ fun SettingsPanel(model: HomeModel) {
                     }
                 }
                 Gap(18.dp)
+                SectionTitle("VOICE / 声でアプリを開く", Modifier.padding(horizontal = 10.dp))
+                FlowRow2 {
+                    listOf("off" to "使わない", "tap" to "START を押したとき", "long" to "START を長押ししたとき").forEach { (k, label) ->
+                        PillButton(label, { model.changeVoiceApps(k) }, primary = model.voiceApps == k)
+                    }
+                }
+                Note("START（または検索の横のアプリのボタン）でアプリの一覧を開くと同時に聞き取り、「LINE」「カメラ開いて」のように言うとそのアプリを開きます。決まらないときは、聞き取った言葉で一覧を絞り込みます。一覧の中のマイクのボタンからも使えます。")
+                Gap(18.dp)
                 SectionTitle("ICON / アプリのアイコン", Modifier.padding(horizontal = 10.dp))
-                Note("世界観をそろえるため、アイコンをテーマの 2 色（形＝オレンジ、地＝面の色）に塗れます。Gemini はアイコンの形を整理して描き直します（1 アプリ 1 回、自分の API キーで課金。アイコンの画像を Google に送ります）。まだ加工していないアプリは端末内の簡易加工で表示します。")
+                Note("世界観をそろえるため、アイコンを 3 色（地・基本・アクセント）に塗れます。色は下の配色で変えられ、型を作り直す必要はありません。Gemini はアイコンの形を整理して 3 色で描き直します（1 アプリ 1 回、自分の API キーで課金。アイコンの画像を Google に送ります）。まだ加工していないアプリは端末内の簡易加工で表示します。")
                 FlowRow2 {
                     listOf(
                         IconStyle.ORIGINAL to "そのまま", IconStyle.MONO to "モノクロ",
-                        IconStyle.LOCAL to "ツートーン（簡易）", IconStyle.GEMINI to "ツートーン（Gemini）",
+                        IconStyle.LOCAL to "3 色（簡易）", IconStyle.GEMINI to "3 色（Gemini）",
                     ).forEach { (mode, label) -> PillButton(label, { model.changeIconMode(mode) }, primary = model.iconMode == mode) }
                 }
+                if (model.iconMode == IconStyle.LOCAL || model.iconMode == IconStyle.GEMINI) IconColorPicker(model)
                 if (model.iconMode == IconStyle.GEMINI) {
                     val job = model.iconJob
                     Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
@@ -193,7 +207,11 @@ fun SettingsPanel(model: HomeModel) {
                     FlowRow2 {
                         PillButton(if (model.hasGeminiKey) "API キー・モデル" else "API キーを入れる", { geminiDialog = true }, primary = !model.hasGeminiKey)
                         if (job?.running == true) PillButton("止める", { model.cancelGeminiIcons() })
-                        else PillButton("未加工のアプリを Gemini で加工", { model.startGeminiIcons() }, primary = model.hasGeminiKey, enabled = model.hasGeminiKey)
+                        else {
+                            PillButton("未加工のアプリを Gemini で加工", { model.startGeminiIcons() }, primary = model.hasGeminiKey, enabled = model.hasGeminiKey)
+                            val legacy = model.geminiLegacy()
+                            if (legacy > 0) PillButton("2 色のもの（$legacy 件）を 3 色で作り直す", { model.startGeminiIcons(upgrade = true) }, enabled = model.hasGeminiKey)
+                        }
                         PillButton("加工した型をすべて消す", { model.clearGeminiIcons() })
                     }
                 }
@@ -362,3 +380,59 @@ private fun addRescueTile(actions: Actions) {
         }
     }.onFailure { actions.toast("足せませんでした。通知パネルのクイック設定の編集から「ホームのレスキュー」を足してください") }
 }
+
+/** アイコンの配色：決まった組み合わせか、地・基本・アクセントを 1 色ずつ。見本のアイコンで確かめられる。 */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun IconColorPicker(model: HomeModel) {
+    val p = LocalPalette.current
+    val spec = model.iconColors
+    val (plate, base, accent) = iconTriple(p, spec)
+    var slot by remember { mutableStateOf(-1) }
+    Column(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("COLORS / 配色", color = p.faint, fontSize = 11.sp, letterSpacing = 1.5.sp, fontFamily = Hud.mono)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            IconStyle.PRESETS.forEach { (id, label) ->
+                val on = if (id == "custom") spec.startsWith("custom:") else spec == id
+                PillButton(label, {
+                    if (id == "custom") {
+                        if (!spec.startsWith("custom:")) model.changeIconColors(customSpec(plate, base, accent))
+                        slot = 1
+                    } else {
+                        model.changeIconColors(id); slot = -1
+                    }
+                }, primary = on)
+            }
+        }
+        // 見本：3 色の型をその場で塗る
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            listOf("地" to plate, "基本" to base, "アクセント" to accent).forEachIndexed { i, (label, c) ->
+                Column(
+                    Modifier.clickable(enabled = spec.startsWith("custom:")) { slot = i }.padding(2.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(Modifier.size(36.dp).background(c).border(if (slot == i) 2.dp else 1.dp, if (slot == i) p.accent else p.line))
+                    Text(label, color = p.muted, fontSize = 10.sp)
+                }
+            }
+            Box(Modifier.size(52.dp).background(plate).border(1.dp, p.line), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(28.dp).background(base), contentAlignment = Alignment.TopEnd) { Box(Modifier.size(10.dp).background(accent)) }
+            }
+        }
+        if (spec.startsWith("custom:") && slot in 0..2) {
+            Text("「${listOf("地", "基本", "アクセント")[slot]}」の色", color = p.muted, fontSize = 12.sp)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                IconStyle.SWATCHES.forEach { argb ->
+                    val c = androidx.compose.ui.graphics.Color(argb.toInt())
+                    Box(Modifier.size(32.dp).background(c).border(1.dp, p.line).clickable {
+                        val now = listOf(plate, base, accent).toMutableList().also { it[slot] = c }
+                        model.changeIconColors(customSpec(now[0], now[1], now[2]))
+                    })
+                }
+            }
+        }
+    }
+}
+
+private fun customSpec(a: androidx.compose.ui.graphics.Color, b: androidx.compose.ui.graphics.Color, c: androidx.compose.ui.graphics.Color) =
+    "custom:" + listOf(a, b, c).joinToString(",") { "%08X".format(it.toArgb()) }

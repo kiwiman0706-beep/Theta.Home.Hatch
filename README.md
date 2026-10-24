@@ -4,7 +4,7 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**0.15.0-alpha（versionCode 18）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.16.0-alpha（versionCode 19）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
@@ -96,11 +96,11 @@ DSBooks と同じく、Synology の DSM File Station API でつなぐ（設定 �
 - **自動更新**：起動・復帰のとき（1 日 1 回まで）Releases を確かめ、新しい版があれば画面上部に「UPDATE」。押すと取得・照合してインストールへ。設定の「UPDATE」で今すぐ確認・オフ
 - **機能を頼む**：画面上部の「REQUEST 依頼 ↗」から、開発の会話（Claude Code）を開く
 
-## アイコンのツートーン
+## アイコンの 3 色
 
-設定の「ICON」で、アプリのアイコンをテーマの 2 色に塗れる（そのまま・モノクロ・ツートーン（簡易）・ツートーン（Gemini））。Gemini を使うときは自分の API キーを入れ、「未加工のアプリを Gemini で加工」。アイコンの画像を Google に送り、1 アプリ 1 回課金される。
+設定の「ICON」で、アプリのアイコンを 3 色（地・基本・アクセント）に塗れる（そのまま・モノクロ・3 色（簡易）・3 色（Gemini））。配色は HUD・オレンジ・塗り・モノクロ・自分で選ぶ。Gemini を使うときは自分の API キーを入れ、「未加工のアプリを Gemini で加工」。アイコンの画像を Google に送り、1 アプリ 1 回課金される。
 
-![](docs/screenshots/icon-two-tone-preview.png)
+![](docs/screenshots/icon-3-tone-preview.png)
 
 ## 引っ越し（設定の書き出し・読み込み）
 

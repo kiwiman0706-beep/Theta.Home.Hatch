@@ -101,6 +101,39 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     /** セーフモード（レスキュー画面から）：ウィジェット・天気を読み込まない。 */
     var safeMode by mutableStateOf(false)
 
+    var iconColors by mutableStateOf(store.iconColors); private set
+    fun changeIconColors(v: String) { iconColors = v; store.iconColors = v }
+
+    var voiceApps by mutableStateOf(store.voiceApps); private set
+    fun changeVoiceApps(v: String) { voiceApps = v; store.voiceApps = v }
+
+    var noticeOrder by mutableStateOf(store.noticeOrder); private set
+    fun changeNoticeOrder(v: String) { noticeOrder = v; store.noticeOrder = v }
+
+    /** アプリの一覧を開いたら、すぐ音声で聞き取る（一覧の側が始めたら false に戻す）。 */
+    var voicePending by mutableStateOf(false)
+
+    /** アプリの一覧を開く。voice なら同時に聞き取りを始める。 */
+    fun openApps(voice: Boolean) {
+        val id = appsId()
+        if (open != id) toggle(id)
+        if (voice) voicePending = true
+    }
+
+    /** START・アプリのボタンを押した（long は長押し）。設定に合わせて、音声も一緒に始める。 */
+    fun pressApps(long: Boolean) {
+        val voice = when (voiceApps) {
+            "tap" -> !long
+            "long" -> long
+            else -> false
+        }
+        if (!voice && !long && open == appsId()) {
+            close()
+            return
+        }
+        openApps(voice)
+    }
+
     var settingsOpen by mutableStateOf(false)
     var query by mutableStateOf("")
     var focusSearch by mutableStateOf(0); private set
@@ -932,14 +965,22 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     /** Gemini で加工済みのアプリの数。 */
     fun geminiDone(): Int = apps.count { jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, it.key).exists() }
 
+    /** 0.15 までの 2 色の型だけがあるアプリの数（3 色で作り直せる）。 */
+    fun geminiLegacy(): Int = apps.count { !jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, it.key).exists() && jp.yaegaki.theta.home.data.IconStyle.legacyFile(ctx, it.key).exists() }
+
     /** まだ型の無いアプリ（only を渡せばそれだけ）を、1 つずつ Gemini で加工する。 */
-    fun startGeminiIcons(only: AppEntry? = null) {
+    fun startGeminiIcons(only: AppEntry? = null, upgrade: Boolean = false) {
         if (iconWork?.isActive == true) return
         val key = store.geminiKey
         if (key.isEmpty()) {
             (ctx as HomeApp).toast("先に Gemini の API キーを入れてください"); return
         }
-        val targets = only?.let { listOf(it) } ?: apps.filter { !jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, it.key).exists() }
+        val targets = only?.let { listOf(it) } ?: apps.filter {
+            val done = jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, it.key).exists()
+            val legacy = jp.yaegaki.theta.home.data.IconStyle.legacyFile(ctx, it.key).exists()
+            // ふだんは型の無いものだけ。upgrade なら 2 色の型しか無いものを 3 色で作り直す
+            !done && (if (upgrade) legacy else !legacy)
+        }
         if (targets.isEmpty()) {
             (ctx as HomeApp).toast("すべてのアプリを加工済みです"); return
         }
@@ -971,8 +1012,13 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     /** Gemini の型を消して、簡易加工の表示に戻す。app を渡せばそのアプリだけ。 */
     fun clearGeminiIcons(app: AppEntry? = null) {
-        if (app != null) jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, app.key).delete()
-        else File(ctx.filesDir, "icons").listFiles()?.forEach { it.delete() }
+        if (app != null) {
+            jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, app.key).delete()
+            jp.yaegaki.theta.home.data.IconStyle.legacyFile(ctx, app.key).delete()
+        } else {
+            File(ctx.filesDir, "icons").listFiles()?.forEach { it.delete() }
+            File(ctx.filesDir, "icons3").listFiles()?.forEach { it.delete() }
+        }
         iconVersion++
     }
 
@@ -1013,6 +1059,9 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         themeMode = store.themeMode
         monoIcons = store.monoIcons
         iconMode = store.iconMode
+        iconColors = store.iconColors
+        voiceApps = store.voiceApps
+        noticeOrder = store.noticeOrder
         geminiModel = store.geminiModel
         favoriteApps = store.favoriteApps
         categories = store.categories()

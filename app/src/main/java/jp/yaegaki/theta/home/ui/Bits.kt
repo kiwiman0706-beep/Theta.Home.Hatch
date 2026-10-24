@@ -213,7 +213,7 @@ fun VerticalLabel(text: String, color: Color, fontSize: Int = 13) {
 }
 
 /** 線で描く小さな記号（虫めがね・ピン・×・‹・＋）。アイコン用ライブラリに頼らない。 */
-enum class Glyph { SEARCH, PIN, CLOSE, BACK, PLUS, GEAR, LIST, GRID, FOLDER }
+enum class Glyph { SEARCH, PIN, CLOSE, BACK, PLUS, GEAR, LIST, GRID, FOLDER, MIC }
 
 @Composable
 fun GlyphIcon(g: Glyph, color: Color, size: Dp = 18.dp) {
@@ -262,6 +262,12 @@ private fun DrawScope.drawGlyph(g: Glyph, color: Color) {
                 lineTo(w * 0.9f, w * 0.8f); lineTo(w * 0.1f, w * 0.8f); close()
             }
             drawPath(path, color, style = s)
+        }
+        Glyph.MIC -> {
+            drawRoundRect(color, Offset(w * 0.38f, w * 0.12f), androidx.compose.ui.geometry.Size(w * 0.24f, w * 0.44f), androidx.compose.ui.geometry.CornerRadius(w * 0.12f), style = s)
+            drawArc(color, 0f, 180f, false, Offset(w * 0.26f, w * 0.3f), androidx.compose.ui.geometry.Size(w * 0.48f, w * 0.4f), style = s)
+            drawLine(color, Offset(w * 0.5f, w * 0.7f), Offset(w * 0.5f, w * 0.86f), s.width, StrokeCap.Square)
+            drawLine(color, Offset(w * 0.36f, w * 0.88f), Offset(w * 0.64f, w * 0.88f), s.width, StrokeCap.Square)
         }
         Glyph.GEAR -> {
             drawCircle(color, radius = w * 0.16f, center = Offset(w / 2, w / 2), style = s)
