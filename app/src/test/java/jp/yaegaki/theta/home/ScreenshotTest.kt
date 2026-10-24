@@ -405,4 +405,34 @@ class ScreenshotTest {
         launch()
         shot("titan-home")
     }
+
+    /** エッジ：ほかのアプリの上に引き出したタブ（本物はサービスの窓。ここでは画面の中に同じものを描く）。 */
+    private fun edgeShot(name: String, left: Boolean, theme: String) {
+        launch(theme = theme)
+        val app = ApplicationProvider.getApplicationContext<HomeApp>()
+        val apps = jp.yaegaki.theta.home.data.Apps.load(app)
+        scenario!!.onActivity { a ->
+            a.setContent {
+                jp.yaegaki.theta.home.ui.HomeTheme(dark = theme == "dark", pop = theme == "pop") {
+                    androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.background(androidx.compose.ui.graphics.Color(0xFF3A4A5A))) {
+                        jp.yaegaki.theta.home.edge.EdgePanel(
+                            tabs = listOf(jp.yaegaki.theta.home.edge.EdgeTab("c1", "COM"), jp.yaegaki.theta.home.edge.EdgeTab("c2", "MEDIA"), jp.yaegaki.theta.home.edge.EdgeTab("", "ALL")),
+                            selected = "c1", apps = apps, shortcuts = emptyList(), left = left, counts = mapOf("com.example.chat" to 3),
+                            onSelect = {}, onApp = {}, onShortcut = {}, onHome = {}, onClose = {},
+                        )
+                    }
+                }
+            }
+        }
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("build/screenshots/$name.png")
+    }
+
+    @Test
+    @Config(qualifiers = "w340dp-h760dp-xxhdpi")
+    fun edgeLeft() = edgeShot("edge-left", left = true, theme = "dark")
+
+    @Test
+    @Config(qualifiers = "w340dp-h760dp-xxhdpi")
+    fun edgeRightPop() = edgeShot("edge-right-pop", left = false, theme = "pop")
 }

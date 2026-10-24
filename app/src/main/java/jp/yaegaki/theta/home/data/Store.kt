@@ -310,6 +310,24 @@ class Store(context: Context) {
         get() = prefs.getString("calMode", "month") ?: "month"
         set(v) = prefs.edit().putString("calMode", v).apply()
 
+    /** エッジ：どのアプリの上でも、画面の端からタブを引き出す。side は "left"・"right"、pos は取っ手の上端（画面の高さの %）。 */
+    var edgeOn: Boolean
+        get() = prefs.getBoolean("edgeOn", false)
+        set(v) = prefs.edit().putBoolean("edgeOn", v).apply()
+
+    var edgeSide: String
+        get() = prefs.getString("edgeSide", "left") ?: "left"
+        set(v) = prefs.edit().putString("edgeSide", v).apply()
+
+    var edgePos: Int
+        get() = prefs.getInt("edgePos", 35)
+        set(v) = prefs.edit().putInt("edgePos", v).apply()
+
+    /** エッジで最後に開いていたタブ（カテゴリーの id。"" はすべてのアプリ）。 */
+    var edgeTab: String
+        get() = prefs.getString("edgeTab", "") ?: ""
+        set(v) = prefs.edit().putString("edgeTab", v).apply()
+
     fun appOrder(): Map<String, List<String>> = runCatching {
         val o = JSONObject(prefs.getString("appOrder", "{}") ?: "{}")
         o.keys().asSequence().associateWith { k -> o.getJSONArray(k).let { a -> (0 until a.length()).map { a.getString(it) } } }

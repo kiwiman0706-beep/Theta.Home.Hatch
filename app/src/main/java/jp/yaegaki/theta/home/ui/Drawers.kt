@@ -371,7 +371,7 @@ private fun rememberVoice(onPartial: (String) -> Unit, onFinal: (List<String>) -
 
 /** アイコンの右上に付ける通知の件数。 */
 @Composable
-private fun CountBadge(n: Int, modifier: Modifier) {
+internal fun CountBadge(n: Int, modifier: Modifier) {
     if (n <= 0) return
     val p = LocalPalette.current
     Text(if (n > 99) "99+" else n.toString(), color = p.onAccent, fontSize = 10.sp, fontFamily = Hud.mono,

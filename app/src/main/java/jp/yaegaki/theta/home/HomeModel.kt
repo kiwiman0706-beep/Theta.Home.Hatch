@@ -107,6 +107,23 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     var voiceApps by mutableStateOf(store.voiceApps); private set
     fun changeVoiceApps(v: String) { voiceApps = v; store.voiceApps = v }
 
+    // ---- エッジ（どのアプリの上でも画面の端からタブを引き出す） ----
+    var edgeOn by mutableStateOf(store.edgeOn); private set
+    var edgeSide by mutableStateOf(store.edgeSide); private set
+    var edgePos by mutableStateOf(store.edgePos); private set
+    /** 「ほかのアプリの上に表示」を許可しているか。設定から戻ったときに見直す。 */
+    var edgeAllowed by mutableStateOf(android.provider.Settings.canDrawOverlays(ctx)); private set
+
+    fun changeEdge(on: Boolean) { edgeOn = on; store.edgeOn = on; syncEdge() }
+    fun changeEdgeSide(v: String) { edgeSide = v; store.edgeSide = v; syncEdge() }
+    fun changeEdgePos(v: Int) { edgePos = v; store.edgePos = v; syncEdge() }
+
+    fun syncEdge() {
+        edgeAllowed = android.provider.Settings.canDrawOverlays(ctx)
+        edgeOn = store.edgeOn
+        jp.yaegaki.theta.home.edge.EdgeService.sync(ctx)
+    }
+
     var noticeLeft by mutableStateOf(store.noticeLeft); private set
     fun changeNoticeLeft(v: String) { noticeLeft = v; store.noticeLeft = v }
 

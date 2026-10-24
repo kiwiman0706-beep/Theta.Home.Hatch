@@ -268,7 +268,7 @@ val LocalIconLook = androidx.compose.runtime.staticCompositionLocalOf { IconLook
  */
 @Composable
 fun AppIcon(app: AppEntry, size: Dp) {
-    val ctx = LocalActions.current.activity
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val px = with(LocalDensity.current) { size.roundToPx() }
     LookIcon(app.key, app.label, size) { Apps.icon(ctx, app, maxOf(px, 192)) }
 }
@@ -276,14 +276,14 @@ fun AppIcon(app: AppEntry, size: Dp) {
 /** アプリのショートカット（LINE のトークルームなど）のアイコン。置いたときに保存した絵を、アプリと同じ見た目で。 */
 @Composable
 fun ShortcutIcon(sc: jp.yaegaki.theta.home.data.PinnedShortcut, size: Dp) {
-    val ctx = LocalActions.current.activity
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     LookIcon("sc:" + sc.id, sc.label, size) { jp.yaegaki.theta.home.data.Shortcuts.icon(ctx, sc.id) }
 }
 
 /** アイコンを、設定の見た目（そのまま・モノクロ・ツートーン）で描く。key は簡易加工の型を使い回すため。 */
 @Composable
 fun LookIcon(key: String, label: String, size: Dp, load: () -> android.graphics.Bitmap?) {
-    val ctx = LocalActions.current.activity
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val look = LocalIconLook.current
     val p = LocalPalette.current
     val icon by produceState<android.graphics.Bitmap?>(null, key, look) {

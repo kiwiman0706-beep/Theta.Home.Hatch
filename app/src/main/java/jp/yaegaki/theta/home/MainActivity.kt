@@ -110,6 +110,14 @@ class MainActivity : ComponentActivity() {
         model.reloadShortcuts()
         model.refreshHomeRole()
         model.checkUpdate()
+        // エッジ：ホームが見えている間は端の取っ手を隠す
+        jp.yaegaki.theta.home.edge.EdgeService.homeShown.value = true
+        model.syncEdge()
+    }
+
+    override fun onPause() {
+        jp.yaegaki.theta.home.edge.EdgeService.homeShown.value = false
+        super.onPause()
     }
 
     override fun onStop() {

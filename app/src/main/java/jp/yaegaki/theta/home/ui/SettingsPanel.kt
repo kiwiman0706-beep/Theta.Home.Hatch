@@ -176,6 +176,33 @@ fun SettingsPanel(model: HomeModel) {
                 }
                 Note("START（または検索の横のアプリのボタン）でアプリの一覧を開くと同時に聞き取り、「LINE」「カメラ開いて」のように言うとそのアプリを開きます。決まらないときは、聞き取った言葉で一覧を絞り込みます。一覧の中のマイクのボタンからも使えます。")
                 Gap(18.dp)
+                SectionTitle("EDGE / ほかのアプリの上で、端からタブ", Modifier.padding(horizontal = 10.dp))
+                Toggle("どのアプリの上でも、画面の端をなぞるとタブを出す", model.edgeOn) {
+                    model.changeEdge(it)
+                    if (it && !model.edgeAllowed) actions.start(Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:" + actions.activity.packageName)))
+                }
+                if (model.edgeOn && !model.edgeAllowed) {
+                    Note("「ほかのアプリの上に表示」の許可が要ります。許可して戻ると使えるようになります。")
+                    FlowRow2 {
+                        PillButton("許可する画面を開く", {
+                            actions.start(Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:" + actions.activity.packageName)))
+                        }, primary = true)
+                    }
+                }
+                if (model.edgeOn) {
+                    FlowRow2 {
+                        listOf("left" to "左の端", "right" to "右の端").forEach { (k, label) ->
+                            PillButton(label, { model.changeEdgeSide(k) }, primary = model.edgeSide == k)
+                        }
+                    }
+                    FlowRow2 {
+                        listOf(10 to "上", 35 to "やや上", 55 to "まん中", 75 to "やや下", 90 to "下").forEach { (k, label) ->
+                            PillButton(label, { model.changeEdgePos(k) }, primary = model.edgePos == k)
+                        }
+                    }
+                }
+                Note("端の細い線を内側へなぞる（または押す）と、カテゴリーのタブとアプリが出ます。HOME でホーム全体へ。外側を押すか「戻る」で閉じます。ホームを開いている間は線を隠します。消されないように常駐の通知が出ます（通知は長押しでしまえます）。右の端は Galaxy のエッジパネルと重なりやすいので、初めは左にしています。")
+                Gap(18.dp)
                 SectionTitle("ONE UI / Galaxy の見た目を合わせる", Modifier.padding(horizontal = 10.dp))
                 Note("One UI のテーマは自分では配れないので、材料を作ります。壁紙を HUD にすると、One UI が壁紙から色を取って、クイックパネル・設定・キーボードなども黒とオレンジ寄りになります。アイコンは今の 3 色・配色で PNG に書き出し、Good Lock の Theme Park でアプリごとに選べます（手順は README）。")
                 FlowRow2 {
