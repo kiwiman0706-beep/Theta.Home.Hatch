@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Theta Home Hatch</title>
+<meta name="description" content="背景はファイラー、画面の端にタブ。アイコンを並べない Android のホームアプリ。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#F4F3EE; --panel:#FFFFFF; --raised:#E9E8E2; --fg:#121212; --muted:#474747; --faint:#5E5E5E;
+  --line:#BDBCB4; --accent:#B8400C; --on-accent:#FFFFFF; --zebra:rgba(0,0,0,.05);
+  --display:"Oswald","Noto Sans JP",sans-serif; --mono:"Share Tech Mono",ui-monospace,"Noto Sans JP",monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#0A0A0B; --panel:#111113; --raised:#19191C; --fg:#EDEDED; --muted:#A3A3A3; --faint:#858585;
+    --line:#333336; --accent:#FF6B1A; --on-accent:#0A0A0B; --zebra:rgba(255,255,255,.06);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#0A0A0B; --panel:#111113; --raised:#19191C; --fg:#EDEDED; --muted:#A3A3A3; --faint:#858585;
+  --line:#333336; --accent:#FF6B1A; --on-accent:#0A0A0B; --zebra:rgba(255,255,255,.06);
+}
+* { box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.75 system-ui,"Hiragino Sans","Noto Sans JP",sans-serif; }
+img { max-width:100%; display:block; }
+a { color:var(--accent); }
+.wrap { max-width:1120px; margin:0 auto; padding:0 20px; }
+
+/* 部品 */
+.label { font:11px var(--mono); letter-spacing:.2em; text-transform:uppercase; color:var(--faint); }
+.label.dot::before { content:""; display:inline-block; width:6px; height:6px; margin-right:8px; background:var(--accent); vertical-align:middle; }
+.code { font:12px var(--mono); letter-spacing:.2em; color:var(--accent); }
+.display { font-family:var(--display); font-weight:300; letter-spacing:.02em; line-height:1; margin:0; }
+.btn { display:inline-flex; align-items:center; gap:8px; font:14px var(--mono); color:var(--fg); background:transparent; border:1px solid var(--line);
+  min-height:44px; padding:10px 18px; text-decoration:none; cursor:pointer; clip-path:polygon(9px 0,100% 0,100% 100%,0 100%,0 9px); }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
+.btn:hover { border-color:var(--accent); }
+.chip { font:12px var(--mono); padding:7px 12px; border:1px solid var(--line); background:transparent; color:var(--fg); cursor:pointer; }
+.chip[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
+.panel { position:relative; background:var(--panel); border:1px solid var(--line); padding:18px; }
+.panel::before,.panel::after { content:""; position:absolute; width:12px; height:12px; border:1.5px solid var(--accent); pointer-events:none; }
+.panel::before { top:-1px; left:-1px; border-right:0; border-bottom:0; }
+.panel::after { bottom:-1px; right:-1px; border-left:0; border-top:0; }
+.stripes { height:8px; background:repeating-linear-gradient(-45deg,var(--accent) 0 3px,transparent 3px 7px); }
+.ticks { height:8px; background:repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px 6px) bottom/100% 50% no-repeat,
+  repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px 30px); }
+.readout { display:inline-flex; flex-direction:column; margin-right:26px; }
+.readout b { font:400 17px var(--mono); color:var(--fg); }
+.readout.alert b { color:var(--accent); }
+.head { display:flex; align-items:center; gap:12px; margin:0 0 18px; }
+.head .rule { flex:1; height:6px; background:repeating-linear-gradient(-45deg,var(--line) 0 2px,transparent 2px 6px); }
+section { padding:72px 0 0; }
+h2 { font:400 34px var(--display); margin:0; letter-spacing:.02em; }
+h3 { font:400 22px var(--display); margin:0 0 6px; letter-spacing:.02em; }
+p { margin:0 0 12px; }
+.muted { color:var(--muted); }
+.note { font-size:13px; color:var(--faint); }
+
+/* 上の帯 */
+header { position:sticky; top:0; z-index:10; background:var(--bg); border-bottom:1px solid var(--line); }
+header .wrap { display:flex; align-items:center; gap:16px; min-height:56px; }
+header .brand { font:13px var(--mono); letter-spacing:.2em; color:var(--fg); text-decoration:none; white-space:nowrap; }
+header .brand span { color:var(--accent); }
+header nav { display:flex; gap:18px; flex:1; min-width:0; overflow-x:auto; scrollbar-width:none; }
+header nav a { font:12px var(--mono); letter-spacing:.15em; color:var(--muted); text-decoration:none; white-space:nowrap; }
+header nav a:hover { color:var(--accent); }
+.icon-btn { width:40px; height:40px; border:1px solid var(--line); background:transparent; color:var(--fg); cursor:pointer; font:16px var(--mono); }
+
+/* はじめ */
+.hero { display:grid; grid-template-columns:1.1fr .9fr; gap:40px; align-items:center; padding-top:48px; }
+.hero h1 { font-size:clamp(56px,10vw,112px); }
+.hero .lead { font-size:18px; margin:18px 0 22px; }
+.hero .actions { display:flex; gap:10px; flex-wrap:wrap; margin:24px 0; }
+.device { position:relative; }
+.device .frame { border:1px solid var(--line); background:var(--panel); padding:10px; }
+.device .screen { position:relative; overflow:hidden; background:#0A0A0B; aspect-ratio:var(--ratio,1808/2208); }
+.device .screen img { width:100%; height:100%; object-fit:cover; object-position:top; transition:opacity .25s; }
+.device .screen::after { content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(to bottom,transparent 0,rgba(255,107,26,.18) 50%,transparent 100%) 0 -120%/100% 40% no-repeat; }
+.device .screen.scan::after { animation:scan .55s ease-out; }
+@keyframes scan { to { background-position:0 260%; } }
+.device .bar { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+.device .cap { margin-top:10px; min-height:3.5em; }
+
+/* 機能（端のタブ風の一覧） */
+.systems { display:grid; grid-template-columns:260px 1fr; gap:24px; }
+.rail { display:flex; flex-direction:column; border-top:1px solid var(--line); }
+.rail button { all:unset; cursor:pointer; display:grid; grid-template-columns:34px 1fr; align-items:center; padding:10px 10px; border-bottom:1px solid var(--line); }
+.rail button:nth-child(even) { background:var(--zebra); }
+.rail button .n { font:11px var(--mono); color:var(--faint); }
+.rail button .t { font:400 17px var(--display); letter-spacing:.03em; }
+.rail button[aria-selected="true"] { background:var(--accent); color:var(--on-accent); }
+.rail button[aria-selected="true"] .n { color:var(--on-accent); }
+.rail button:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+.detail { display:grid; grid-template-columns:1fr 280px; gap:24px; align-items:start; }
+.detail ul { margin:8px 0 0; padding-left:1.1em; }
+.detail li { margin:4px 0; }
+.detail .shot { border:1px solid var(--line); background:#0A0A0B; max-height:560px; overflow:hidden; }
+.detail .shot img { width:100%; object-fit:cover; object-position:top; }
+
+/* 試せるもの */
+.demos { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+.demos .panel { display:flex; flex-direction:column; gap:12px; }
+.swipe { position:relative; overflow:hidden; border:1px solid var(--line); touch-action:pan-y; user-select:none; }
+.swipe .under { position:absolute; inset:0; display:flex; align-items:center; padding:0 14px; font:13px var(--mono); }
+.swipe .row { position:relative; display:flex; gap:12px; align-items:center; padding:10px 12px; background:var(--panel); cursor:grab; transition:transform .2s; }
+.swipe .row.dragging { transition:none; cursor:grabbing; }
+.swipe .face { width:36px; height:36px; display:grid; place-items:center; background:var(--raised); border:1px solid var(--line); font:15px var(--mono); flex:none; }
+.swipe .t { font-weight:700; font-size:14px; }
+.swipe .s { font-size:12px; color:var(--muted); }
+.log { font:12px var(--mono); color:var(--faint); min-height:1.6em; }
+.icons3 { display:flex; gap:12px; flex-wrap:wrap; }
+.icons3 svg { width:64px; height:64px; border:1px solid var(--line); }
+.swatches { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.swatches label { display:flex; flex-direction:column; align-items:center; gap:2px; font-size:11px; color:var(--muted); }
+.swatches input[type=color] { width:40px; height:32px; border:1px solid var(--line); padding:0; background:none; cursor:pointer; }
+.field { font:15px system-ui,sans-serif; color:var(--fg); background:var(--raised); border:1px solid var(--line); padding:11px 14px; width:100%;
+  clip-path:polygon(9px 0,100% 0,100% 100%,0 100%,0 9px); }
+.applist { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+.applist div { font:12px var(--mono); text-align:center; padding:8px 4px; border:1px solid var(--line); }
+.applist div.hit { background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
+
+/* そのほか */
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th,td { text-align:left; padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+th { font:11px var(--mono); letter-spacing:.15em; color:var(--faint); font-weight:normal; }
+tbody tr:nth-child(odd) { background:var(--zebra); }
+ol.steps { padding-left:1.3em; margin:0; }
+ol.steps li { margin:6px 0; }
+footer { margin-top:80px; border-top:1px solid var(--line); padding:24px 0 40px; }
+.gallery { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+.gallery figure { margin:0; border:1px solid var(--line); background:#0A0A0B; }
+.gallery img { width:100%; aspect-ratio:9/16; object-fit:cover; object-position:top; }
+.gallery figcaption { font:11px var(--mono); letter-spacing:.1em; color:var(--faint); padding:6px 8px; background:var(--panel); }
+
+.hero > *, .systems > *, .detail > *, .demos > *, .grid2 > *, .grid3 > * { min-width:0; }
+.rail { min-width:0; }
+@media (max-width: 900px) {
+  .hero, .detail, .grid2 { grid-template-columns:1fr; }
+  .systems { grid-template-columns:1fr; }
+  .rail { flex-direction:row; overflow-x:auto; border-top:0; scrollbar-width:thin; }
+  .rail button { grid-template-columns:auto; min-width:120px; border:1px solid var(--line); margin-right:-1px; }
+  .demos, .grid3 { grid-template-columns:1fr; }
+  .gallery { grid-template-columns:repeat(2,1fr); }
+  .detail .shot { max-height:420px; }
+}
+@media (prefers-reduced-motion: reduce) { .device .screen.scan::after { animation:none; } html { scroll-behavior:auto; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="#top">THETA <span>//</span> HOME.HATCH</a>
+    <nav aria-label="目次">
+      <a href="#systems">SYSTEMS</a>
+      <a href="#try">TRY</a>
+      <a href="#devices">DEVICES</a>
+      <a href="#install">INSTALL</a>
+      <a href="#rescue">RESCUE</a>
+    </nav>
+    <button class="icon-btn" id="theme" aria-label="ダーク・ライトを切り替える" title="ダーク・ライト">◐</button>
+  </div>
+</header>
+
+<main id="top" class="wrap">
+  <!-- はじめ -->
+  <div class="hero">
+    <div>
+      <div class="label dot">SYS.HOME // ANDROID LAUNCHER</div>
+      <h1 class="display">HOME.HATCH</h1>
+      <p class="lead">背景はファイラー、画面の端にタブ。<br>アイコンを並べない、計器盤（HUD）のようなホームアプリ。</p>
+      <div class="ticks"></div>
+      <div style="margin:16px 0">
+        <span class="readout"><span class="label">VERSION</span><b id="ver">0.17.0-alpha</b></span>
+        <span class="readout"><span class="label">ANDROID</span><b>10+</b></span>
+        <span class="readout alert"><span class="label">STATUS</span><b>BETA</b></span>
+      </div>
+      <div class="actions">
+        <a class="btn primary" href="https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases">▼ APK をダウンロード</a>
+        <a class="btn" href="https://github.com/kiwiman0706-beep/Theta.Home.Hatch">GitHub</a>
+        <a class="btn" href="#try">試してみる ›</a>
+      </div>
+      <p class="note">Galaxy Z Fold5（閉じた画面・開いた画面）、Alldocube iPlay 60/80 Pro、Unihertz Titan 2 を想定。実機での確認は進行中のベータ版です。</p>
+    </div>
+    <div class="device" aria-label="画面の見本">
+      <div class="frame">
+        <div class="screen" id="screen"><img id="shot" src="screenshots/fold5-main-filer.png" alt="Fold5 の開いた画面：背景のファイラー"></div>
+      </div>
+      <div class="bar" role="group" aria-label="画面を切り替える" id="heroBar"></div>
+      <div class="cap muted" id="heroCap"></div>
+    </div>
+  </div>
+
+  <!-- 機能 -->
+  <section id="systems">
+    <div class="head"><span class="code">[ SYSTEMS ]</span><h2>できること</h2><span class="rule"></span></div>
+    <div class="systems">
+      <div class="rail" role="tablist" aria-label="機能" id="rail"></div>
+      <div class="panel detail" role="tabpanel" id="detail" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- 試せるもの -->
+  <section id="try">
+    <div class="head"><span class="code">[ TRY ]</span><h2>ここで試せる</h2><span class="rule"></span></div>
+    <div class="demos">
+      <div class="panel">
+        <div class="label dot">NOTICE // SWIPE</div>
+        <h3>通知をスワイプ</h3>
+        <p class="note">右へ＝既読（「既読」のボタンがあればそれを押す）、左へ＝返信。カテゴリーのタブに、そのカテゴリーのアプリの通知が集まります。</p>
+        <div id="swipes"></div>
+        <div class="log" id="swipeLog">› 行を左右にドラッグ</div>
+      </div>
+      <div class="panel">
+        <div class="label dot">ICON // 3-TONE</div>
+        <h3>アイコンを 3 色に</h3>
+        <p class="note">地・基本・アクセントの 3 段の「型」を作り、表示のときに色を塗ります。配色を変えても作り直しは要りません。</p>
+        <div class="icons3" id="icons3"></div>
+        <div class="swatches" id="presets" role="group" aria-label="配色"></div>
+        <div class="swatches">
+          <label><input type="color" id="cPlate" value="#19191c">地</label>
+          <label><input type="color" id="cBase" value="#ededed">基本</label>
+          <label><input type="color" id="cAccent" value="#ff6b1a">アクセント</label>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="label dot">VOICE // LAUNCH</div>
+        <h3>声でアプリを開く</h3>
+        <p class="note">START を長押しして話すと、そのアプリを開きます。下に言葉を入れてみてください（例：かめら開いて・line・電話）。</p>
+        <input class="field" id="voice" value="かめらを起動して" aria-label="話した言葉">
+        <div class="log" id="voiceLog"></div>
+        <div class="applist" id="apps"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 画面 -->
+  <section id="gallery">
+    <div class="head"><span class="code">[ SCREENS ]</span><h2>画面</h2><span class="rule"></span></div>
+    <div class="gallery">
+      <figure><img loading="lazy" src="screenshots/dashboard-narrow.png" alt="閉じた画面のダッシュボード"><figcaption>DASHBOARD // COVER</figcaption></figure>
+      <figure><img loading="lazy" src="screenshots/category-tab.png" alt="カテゴリーのタブ"><figcaption>CATEGORY TAB</figcaption></figure>
+      <figure><img loading="lazy" src="screenshots/calendar-month.png" alt="月のカレンダー"><figcaption>CALENDAR // MONTH</figcaption></figure>
+      <figure><img loading="lazy" src="screenshots/filer-grid.png" alt="ファイラーのグリッド"><figcaption>FILER // GRID</figcaption></figure>
+      <figure><img loading="lazy" src="screenshots/sort-step2-assign.png" alt="アプリの仕分け"><figcaption>SORT GUIDE</figcaption></figure>
+      <figure><img loading="lazy" src="screenshots/query-dialog.png" alt="検索フォルダ"><figcaption>VIRTUAL FOLDER</figcaption></figure>
+      <figure><img loading="lazy" src="screenshots/rescue.png" alt="レスキュー"><figcaption>RESCUE</figcaption></figure>
+      <figure><img loading="lazy" src="oneui/wallpaper-fold5-cover-dark.png" alt="HUD の壁紙"><figcaption>ONE UI WALLPAPER</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- 端末 -->
+  <section id="devices">
+    <div class="head"><span class="code">[ DEVICES ]</span><h2>画面の幅で形が変わる</h2><span class="rule"></span></div>
+    <div class="panel">
+      <table>
+        <thead><tr><th>端末</th><th>幅</th><th>背景</th><th>ドロワー</th></tr></thead>
+        <tbody>
+          <tr><td>Galaxy Z Fold5（閉じた画面）・Titan 2</td><td>600dp 未満</td><td>ダッシュボード（今日の予定・天気・つながり・ファイル・端末）</td><td>重ねて出す</td></tr>
+          <tr><td>Galaxy Z Fold5（開いた画面）</td><td>690dp〜</td><td>ファイラー（場所の一覧＋中身）</td><td>1 枚を横に並べて出しておける</td></tr>
+          <tr><td>iPlay 60 / 80 Pro（横）</td><td>1180dp〜</td><td>ファイラー（＋中身のプレビュー）</td><td>2 枚まで並べられる</td></tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin-top:12px">ウィジェットの並びと大きさは、閉じた画面と開いた画面で別々に覚えます。Titan 2 は物理キーボードで Alt＋キー（C 予定・M メール・L LINE・A アプリ…）、文字を打つとすぐ検索。</p>
+    </div>
+  </section>
+
+  <!-- 入れ方 -->
+  <section id="install">
+    <div class="head"><span class="code">[ INSTALL ]</span><h2>入れ方</h2><span class="rule"></span></div>
+    <div class="grid2">
+      <div class="panel">
+        <ol class="steps">
+          <li><a href="https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases">Releases</a> から <code>ThetaHomeHatch-&lt;版&gt;.apk</code> を入れる（提供元不明のアプリの許可が要ります）</li>
+          <li>普通のアプリとして開き、フォルダのタブにフォルダを割り当てる</li>
+          <li>画面上部の「HOME 未設定」から、既定のホームにする</li>
+          <li>以後は画面上部の「UPDATE」から更新（1 時間ごとに確かめます）</li>
+          <li>欲しい機能は「REQUEST 依頼 ↗」から</li>
+        </ol>
+      </div>
+      <div class="panel">
+        <div class="label dot">PRIVACY</div>
+        <p class="muted" style="margin-top:8px">通知・連絡先・予定は端末の中だけで使い、送りません。NAS のパスワードと Gemini の API キーは端末の鍵で暗号化して保存します。外へ送るのは、自分で使うと決めたもの（Gemini へのアイコン画像、天気のおおよその位置、Google ドライブの読み取り）だけです。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- レスキュー -->
+  <section id="rescue">
+    <div class="head"><span class="code">[ RESCUE ]</span><h2>ベータ版でも詰まない</h2><span class="rule"></span></div>
+    <div class="grid3">
+      <div class="panel"><h3>クイック設定のタイル</h3><p class="muted">通知パネルの「ホームのレスキュー」。本体と別のプロセスで動くので、ホームが固まっていても開けます。</p></div>
+      <div class="panel"><h3>自動でレスキュー画面</h3><p class="muted">起動してすぐ止まるのが続いたら、ホームの代わりにレスキュー画面。別のホームを選ぶ・セーフモード・最新版を入れる。</p></div>
+      <div class="panel"><h3>固定の START</h3><p class="muted">端のタブのいちばん下に、いつでも全アプリを開ける START。タブを全部外しても詰みません。</p></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="stripes" style="width:180px;margin-bottom:16px"></div>
+    <p class="note">Theta Home Hatch — Theta Hatch シリーズ。書体：Oswald・Share Tech Mono（SIL Open Font License）。
+      <a href="https://github.com/kiwiman0706-beep/Theta.Home.Hatch">GitHub</a> ·
+      <a href="https://github.com/kiwiman0706-beep/Theta.Home.Hatch/blob/HEAD/CHANGELOG.md">変更履歴</a> ·
+      <a href="https://github.com/kiwiman0706-beep/Theta.Home.Hatch/tree/HEAD/docs/design-kit">デザインキット</a></p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // ---- テーマ（このブラウザだけで覚える） ----
+  var root = document.documentElement;
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+  var saved = store("hud-theme");
+  if (saved) root.setAttribute("data-theme", saved);
+  document.getElementById("theme").addEventListener("click", function () {
+    var dark = root.getAttribute("data-theme") ? root.getAttribute("data-theme") === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    var next = dark ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    store("hud-theme", next);
+  });
+
+  // ---- はじめの画面の切り替え ----
+  var shots = [
+    { k: "FILER", img: "screenshots/fold5-main-filer.png", r: "1808/2208", cap: "開いた画面：背景はファイラー。左に場所（フォルダのタブ・Google ドライブ・NAS・最近）、右の端にタブ。" },
+    { k: "HATCH", img: "screenshots/fold5-main-hatch.png", r: "1808/2208", cap: "タブを押すとドロワーがスライドイン。Theta Hatch シリーズの起動・取得・更新。" },
+    { k: "DASHBOARD", img: "screenshots/fold5-cover-filer.png", r: "1080/2580", cap: "閉じた画面：今日の予定・天気・つながり・ファイル・端末のダッシュボード。" },
+    { k: "CATEGORY", img: "screenshots/category-tab.png", r: "1080/2580", cap: "仕分けたアプリのカテゴリーをタブに。アイコンを長押し→ドラッグで並べ替え。" },
+    { k: "CALENDAR", img: "screenshots/calendar-month.png", r: "1020/2700", cap: "月（日曜始まり・予定は全部）・週・日を切り替えるカレンダー。" },
+    { k: "TABLET", img: "screenshots/tablet-home.png", r: "1280/800", cap: "タブレットの横向き：ドロワーを 2 枚まで並べて出しておける。" }
+  ];
+  var bar = document.getElementById("heroBar"), img = document.getElementById("shot"), screen = document.getElementById("screen"), cap = document.getElementById("heroCap");
+  function show(i) {
+    var s = shots[i];
+    Array.prototype.forEach.call(bar.children, function (b, j) { b.setAttribute("aria-pressed", String(i === j)); });
+    screen.style.setProperty("--ratio", s.r);
+    img.style.opacity = 0;
+    setTimeout(function () { img.src = s.img; img.alt = s.cap; img.style.opacity = 1; }, 120);
+    screen.classList.remove("scan"); void screen.offsetWidth; screen.classList.add("scan");
+    cap.textContent = s.cap;
+  }
+  shots.forEach(function (s, i) {
+    var b = document.createElement("button");
+    b.className = "chip"; b.textContent = s.k; b.addEventListener("click", function () { show(i); });
+    bar.appendChild(b);
+  });
+  show(0);
+
+  // ---- 機能の一覧 ----
+  var systems = [
+    { t: "背景のファイラー", img: "screenshots/fold5-main-filer.png", d: "スマホでもファイルの置き場をホームに。",
+      li: ["フォルダのタブは背景の場所を切り替える（端末・SD・NAS・Google ドライブ）", "一覧／グリッド、大きさ 4 段。見せ方はフォルダごとに覚える", "写真・動画・PDF のサムネイル（NAS・ドライブも）", "広い画面では選んだファイルの中身を右に"] },
+    { t: "端のタブとドロワー", img: "screenshots/fold5-main-hatch.png", d: "アイコンの代わりに、画面の端に縦のタブ。",
+      li: ["予定・メール・LINE・人・栞・Clip・記録・Hatch・ウィジェット", "長押し→ドラッグで並べ替え、離すと名前・外す", "下に固定の START（全アプリ）。長押しで声でも", "広い画面ではドロワーを横に並べて出しておける"] },
+    { t: "閉じた画面のダッシュボード", img: "screenshots/dashboard-narrow.png", d: "狭い画面では、ファイラーの代わりに今の情報を。",
+      li: ["今日の予定（終わったものは薄く）", "天気（Open-Meteo）：今・24 時間・7 日", "ネット・Tailscale・NAS の状態", "ファイルの入口と最近のファイル、電池と空き容量"] },
+    { t: "カレンダー", img: "screenshots/calendar-month.png", d: "月・週・日。予定は省略しない。",
+      li: ["月は日曜始まり、予定は何件でも全部（週の行が伸びる）", "日をまたぐ予定は色の帯でつなぐ", "日は時間割、重なりは横に並べ、今の時刻に線", "出すカレンダーをタブとホームで別々に選ぶ"] },
+    { t: "アプリの仕分けとカテゴリーのタブ", img: "screenshots/category-tab.png", d: "アプリが多くても、1 つずつ振り分けるだけ。",
+      li: ["候補から選ぶ／その場で作る、おすすめ付き", "カテゴリーをタブに（アイコンのグリッド）", "アプリのショートカット（LINE のトークルームなど）も置ける", "そのカテゴリーのアプリの通知を下に。スワイプで既読・返信"] },
+    { t: "3 色アイコン", img: "screenshots/icon-3-tone-preview.png", d: "世界観を崩さないよう、アイコンを地・基本・アクセントの 3 色に。",
+      li: ["端末内の簡易加工（無料・すぐ）", "Gemini で形を整理して描き直す（自分の API キー）", "配色は HUD・オレンジ・塗り・モノクロ・自分で選ぶ", "PNG に書き出して Galaxy の Theme Park にも"] },
+    { t: "NAS・Google ドライブ・検索フォルダ", img: "screenshots/query-dialog.png", d: "ファイルに行きやすいホーム。",
+      li: ["Synology（DSM）：Tailscale 経由も、自己署名の証明書・2 段階認証も", "Google ドライブ（Drive API）：マイドライブ・共有・スター付き", "検索フォルダ：種類・名前・本文・期間・場所の条件を保存", "フォルダも検索フォルダも端のタブに割り当てられる"] },
+    { t: "ウィジェット", img: "screenshots/fold5-main-hatch.png", d: "1 つのタブに何個でも縦に。",
+      li: ["パネルは中身の高さだけの小さなもの", "角をなぞって大きさ、並べ替え・外す", "閉じた画面と開いた画面で別の設定、もう一方から取り込み", "アプリごとにまとめた選び方（見本の絵つき）"] },
+    { t: "One UI にも合わせる", img: "oneui/wallpaper-fold5-cover-dark.png", d: "ホームの外も同じ空気に。",
+      li: ["HUD の壁紙を作ってホーム・ロック画面に（One UI が色を取る）", "アイコンを 3 色の PNG で書き出す", "Theme Park で組む手順と色の値"] },
+    { t: "自動更新とレスキュー", img: "screenshots/rescue.png", d: "使いながら版を重ねる。でも詰まない。",
+      li: ["Releases を 1 時間ごとに確かめ、UPDATE から取得・照合・インストール", "REQUEST から開発の会話へ", "クイック設定のタイル・自動のレスキュー画面・セーフモード", "設定を JSON で書き出し、新しいスマホでは足りないアプリを案内"] }
+  ];
+  var rail = document.getElementById("rail"), detail = document.getElementById("detail");
+  function select(i, focus) {
+    var s = systems[i];
+    Array.prototype.forEach.call(rail.children, function (b, j) { b.setAttribute("aria-selected", String(i === j)); b.tabIndex = i === j ? 0 : -1; });
+    if (focus) rail.children[i].focus();
+    detail.innerHTML = "";
+    var left = document.createElement("div");
+    left.innerHTML = '<div class="label dot">SYS.' + String(i + 1).padStart(2, "0") + '</div>';
+    var h = document.createElement("h3"); h.textContent = s.t; h.style.fontSize = "30px"; left.appendChild(h);
+    var p = document.createElement("p"); p.className = "muted"; p.textContent = s.d; left.appendChild(p);
+    var ul = document.createElement("ul");
+    s.li.forEach(function (x) { var li = document.createElement("li"); li.textContent = x; ul.appendChild(li); });
+    left.appendChild(ul);
+    var shot = document.createElement("div"); shot.className = "shot";
+    var im = document.createElement("img"); im.src = s.img; im.alt = s.t; im.loading = "lazy"; shot.appendChild(im);
+    detail.appendChild(left); detail.appendChild(shot);
+  }
+  systems.forEach(function (s, i) {
+    var b = document.createElement("button");
+    b.setAttribute("role", "tab");
+    b.innerHTML = '<span class="n">' + String(i + 1).padStart(2, "0") + '</span><span class="t"></span>';
+    b.querySelector(".t").textContent = s.t;
+    b.addEventListener("click", function () { select(i); });
+    b.addEventListener("keydown", function (e) {
+      var n = systems.length;
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") { e.preventDefault(); select((i + 1) % n, true); }
+      if (e.key === "ArrowUp" || e.key === "ArrowLeft") { e.preventDefault(); select((i - 1 + n) % n, true); }
+    });
+    rail.appendChild(b);
+  });
+  select(0);
+
+  // ---- 通知のスワイプ ----
+  var notices = [
+    { f: "田", t: "田中", s: "明日の打ち合わせ、10 時からで大丈夫？", read: true },
+    { f: "G", t: "Gmail · 請求書のお知らせ", s: "10 月分の請求書を送付しました", read: false },
+    { f: "家", t: "家族", s: "牛乳買ってきて〜", read: true }
+  ];
+  var box = document.getElementById("swipes"), log = document.getElementById("swipeLog");
+  function renderNotices() {
+    box.innerHTML = "";
+    notices.forEach(function (n, idx) {
+      var wrap = document.createElement("div"); wrap.className = "swipe";
+      var under = document.createElement("div"); under.className = "under";
+      var row = document.createElement("div"); row.className = "row";
+      row.innerHTML = '<div class="face"></div><div><div class="t"></div><div class="s"></div></div>';
+      row.querySelector(".face").textContent = n.f; row.querySelector(".t").textContent = n.t; row.querySelector(".s").textContent = n.s;
+      wrap.appendChild(under); wrap.appendChild(row); box.appendChild(wrap);
+      var x0 = 0, dx = 0, on = false;
+      row.addEventListener("pointerdown", function (e) { on = true; x0 = e.clientX; dx = 0; row.classList.add("dragging"); row.setPointerCapture(e.pointerId); });
+      row.addEventListener("pointermove", function (e) {
+        if (!on) return;
+        dx = e.clientX - x0; row.style.transform = "translateX(" + dx + "px)";
+        if (dx > 0) { under.style.background = "var(--accent)"; under.style.color = "var(--on-accent)"; under.style.justifyContent = "flex-start"; under.textContent = "✓ " + (n.read ? "既読" : "消す"); }
+        else { under.style.background = "var(--raised)"; under.style.color = "var(--fg)"; under.style.justifyContent = "flex-end"; under.textContent = "返信 ‹"; }
+      });
+      function end() {
+        if (!on) return; on = false; row.classList.remove("dragging");
+        var w = wrap.offsetWidth;
+        if (dx > w * 0.35) {
+          row.style.transform = "translateX(" + w + "px)";
+          log.textContent = "› " + n.t + "：" + (n.read ? "「既読にする」を押しました（相手にも既読）" : "既読のボタンが無いので、通知を消しました");
+          setTimeout(function () { notices.splice(idx, 1); if (!notices.length) { log.textContent += "　— 全部読みました"; } renderNotices(); }, 200);
+        } else if (dx < -w * 0.35) {
+          row.style.transform = "";
+          var r = prompt(n.t + " に返信", "了解です");
+          log.textContent = r ? "› 返信を送りました：「" + r + "」" : "› 返信をやめました";
+        } else { row.style.transform = ""; }
+      }
+      row.addEventListener("pointerup", end); row.addEventListener("pointercancel", end);
+    });
+  }
+  renderNotices();
+
+  // ---- 3 色アイコン ----
+  var shapes = [
+    '<rect width="64" height="64" fill="var(--p)"/><ellipse cx="32" cy="32" rx="20" ry="15" fill="var(--b)"/><circle cx="46" cy="18" r="6" fill="var(--a)"/>',
+    '<rect width="64" height="64" fill="var(--p)"/><circle cx="24" cy="44" r="8" fill="var(--b)"/><rect x="30" y="14" width="5" height="30" fill="var(--b)"/><rect x="30" y="14" width="18" height="6" fill="var(--a)"/>',
+    '<rect width="64" height="64" fill="var(--p)"/><rect x="14" y="20" width="36" height="26" fill="var(--b)"/><circle cx="32" cy="33" r="8" fill="var(--p)"/><circle cx="32" cy="33" r="4" fill="var(--a)"/><rect x="24" y="15" width="12" height="6" fill="var(--b)"/>',
+    '<rect width="64" height="64" fill="var(--p)"/><path d="M32 12a12 12 0 0 0-12 12c0 9 12 26 12 26s12-17 12-26a12 12 0 0 0-12-12z" fill="var(--b)"/><circle cx="32" cy="24" r="5" fill="var(--a)"/>'
+  ];
+  var icons = document.getElementById("icons3");
+  icons.innerHTML = shapes.map(function (s) { return '<svg viewBox="0 0 64 64" aria-hidden="true">' + s + "</svg>"; }).join("");
+  var cP = document.getElementById("cPlate"), cB = document.getElementById("cBase"), cA = document.getElementById("cAccent");
+  function paint() { icons.style.setProperty("--p", cP.value); icons.style.setProperty("--b", cB.value); icons.style.setProperty("--a", cA.value); }
+  [cP, cB, cA].forEach(function (i) { i.addEventListener("input", function () { pressPreset(-1); paint(); }); });
+  var presets = [["HUD", "#19191c", "#ededed", "#ff6b1a"], ["ORANGE", "#19191c", "#ff6b1a", "#ededed"], ["SOLID", "#ff6b1a", "#0a0a0b", "#ededed"], ["MONO", "#19191c", "#ededed", "#858585"]];
+  var pre = document.getElementById("presets");
+  function pressPreset(k) { Array.prototype.forEach.call(pre.children, function (b, j) { b.setAttribute("aria-pressed", String(j === k)); }); }
+  presets.forEach(function (p, k) {
+    var b = document.createElement("button"); b.className = "chip"; b.textContent = p[0];
+    b.addEventListener("click", function () { cP.value = p[1]; cB.value = p[2]; cA.value = p[3]; pressPreset(k); paint(); });
+    pre.appendChild(b);
+  });
+  pressPreset(0); paint();
+
+  // ---- 声でアプリを開く（アプリ本体の VoiceMatch と同じ考え方） ----
+  var apps = ["LINE", "LINE WORKS", "カメラ", "Gmail", "Google マップ", "電話", "メッセージ", "カレンダー"];
+  var SUF = ["を開いて", "開いて", "をひらいて", "ひらいて", "を起動して", "を起動", "起動して", "起動", "を開く", "開く", "アプリ", "お願い", "して"];
+  function norm(s) {
+    s = s.normalize("NFKC").toLowerCase();
+    var out = "";
+    for (var i = 0; i < s.length; i++) {
+      var ch = s[i], c = ch.charCodeAt(0);
+      if (/\s|[・･\-_.,、。!?！？「」()（）]/.test(ch)) continue;
+      out += (c >= 0x3041 && c <= 0x3096) ? String.fromCharCode(c + 0x60) : ch;
+    }
+    return out;
+  }
+  function core(s) {
+    s = norm(s); var changed = true;
+    while (changed) { changed = false; SUF.forEach(function (x) { x = norm(x); if (s.length > x.length && s.slice(-x.length) === x) { s = s.slice(0, -x.length); changed = true; } }); }
+    return s;
+  }
+  function lcs(a, b) { var dp = new Array(b.length + 1).fill(0); for (var i = 1; i <= a.length; i++) { var prev = 0; for (var j = 1; j <= b.length; j++) { var t = dp[j]; dp[j] = a[i - 1] === b[j - 1] ? prev + 1 : Math.max(dp[j], dp[j - 1]); prev = t; } } return dp[b.length]; }
+  function score(label, spoken) {
+    var a = norm(label), b = core(spoken);
+    if (!a || !b) return 0;
+    if (a === b) return 100;
+    if (b.length >= 2 && (a.indexOf(b) === 0 || b.indexOf(a) === 0)) return 80;
+    if (b.length >= 2 && (a.indexOf(b) >= 0 || b.indexOf(a) >= 0)) return 60;
+    return Math.floor(lcs(a, b) * 50 / Math.max(a.length, b.length));
+  }
+  var input = document.getElementById("voice"), vlog = document.getElementById("voiceLog"), list = document.getElementById("apps");
+  function match() {
+    var scored = apps.map(function (a) { return [a, score(a, input.value)]; }).sort(function (x, y) { return y[1] - x[1]; });
+    var best = scored[0], second = scored[1] ? scored[1][1] : 0;
+    var hit = best[1] >= 80 && best[1] > second ? best[0] : null;
+    list.innerHTML = "";
+    apps.forEach(function (a) { var d = document.createElement("div"); d.textContent = a; if (a === hit) d.className = "hit"; list.appendChild(d); });
+    vlog.textContent = "› 聞き取り「" + core(input.value) + "」 → " + (hit ? "「" + hit + "」を開きます" : "1 つに決まらないので、一覧を絞り込みます");
+  }
+  input.addEventListener("input", match); match();
+})();
+</script>
+</body>
+</html>

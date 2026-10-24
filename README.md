@@ -1,5 +1,9 @@
 # Theta Home Hatch
 
+[![Theta Home Hatch — 背景はファイラー、画面の端にタブ](docs/hero.png)](https://kiwiman0706-beep.github.io/Theta.Home.Hatch/)
+
+**▶ [機能紹介（インタラクティブ）](https://kiwiman0706-beep.github.io/Theta.Home.Hatch/)**　·　**▼ [APK をダウンロード](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**　·　[変更履歴](CHANGELOG.md)
+
 **背景（デスクトップ）にファイラーを置き、画面の端のタブでドロワーやウィジェットを切り替える** Android のホームアプリ。
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
