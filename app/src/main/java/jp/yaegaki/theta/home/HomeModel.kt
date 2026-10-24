@@ -107,6 +107,9 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     var voiceApps by mutableStateOf(store.voiceApps); private set
     fun changeVoiceApps(v: String) { voiceApps = v; store.voiceApps = v }
 
+    var noticeLeft by mutableStateOf(store.noticeLeft); private set
+    fun changeNoticeLeft(v: String) { noticeLeft = v; store.noticeLeft = v }
+
     var noticeOrder by mutableStateOf(store.noticeOrder); private set
     fun changeNoticeOrder(v: String) { noticeOrder = v; store.noticeOrder = v }
 
@@ -1062,6 +1065,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         iconColors = store.iconColors
         voiceApps = store.voiceApps
         noticeOrder = store.noticeOrder
+        noticeLeft = store.noticeLeft
         geminiModel = store.geminiModel
         favoriteApps = store.favoriteApps
         categories = store.categories()

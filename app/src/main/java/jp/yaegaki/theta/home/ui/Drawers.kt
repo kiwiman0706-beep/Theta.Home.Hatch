@@ -1,5 +1,10 @@
 package jp.yaegaki.theta.home.ui
 
+import kotlinx.coroutines.launch
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.horizontalScroll
 import kotlinx.coroutines.withContext
@@ -126,8 +131,8 @@ fun DrawerFrame(model: HomeModel, id: String, docked: Boolean) {
             when (t!!.kind) {
                 TabKind.FOLDER -> Unit
                 TabKind.CALENDAR -> CalendarDrawer(model)
-                TabKind.MAIL -> NoticeDrawer(mail = true)
-                TabKind.LINE -> NoticeDrawer(mail = false)
+                TabKind.MAIL -> NoticeDrawer(model, mail = true)
+                TabKind.LINE -> NoticeDrawer(model, mail = false)
                 TabKind.PEOPLE -> PeopleDrawer(model)
                 TabKind.APPS -> AppsDrawer(model)
                 TabKind.CATEGORY -> AppsDrawer(model, only = t.folderUri.orEmpty())
@@ -180,25 +185,129 @@ fun FlowRow2(content: @Composable () -> Unit) {
 
 // ---- メール・LINE（届いた通知から） ----
 
-/** 通知 1 件。押すと通知を押したのと同じ画面（開けなければそのアプリ）。app を渡すと頭にアプリのアイコン。 */
+/** 左スワイプの動きの名前。 */
+internal val NOTICE_LEFT = listOf("reply" to "返信", "snooze" to "1 時間後にまた", "dismiss" to "消す", "open" to "アプリで開く")
+
+/**
+ * 通知 1 件。押すと通知を押したのと同じ画面（開けなければそのアプリ）。app を渡すと頭にアプリのアイコン。
+ * 右へスワイプ＝既読（「既読」のボタンがあれば押す。無ければ消す）、左へスワイプ＝設定の動き（返信・あとで・消す・開く）。
+ * 長押しで、その通知のボタン（アーカイブ・返信など）も選べる。
+ */
 @Composable
-private fun NoticeRow(n: Notice, zebra: Int, app: jp.yaegaki.theta.home.data.AppEntry? = null) {
+private fun NoticeRow(model: HomeModel, n: Notice, zebra: Int, app: jp.yaegaki.theta.home.data.AppEntry? = null) {
     val p = LocalPalette.current
     val actions = LocalActions.current
     val ctx = actions.activity
-    RowButton(zebra = zebra, onClick = {
-        if (!HatchNotificationListener.open(ctx, n)) {
-            ctx.packageManager.getLaunchIntentForPackage(n.packageName)?.let(actions.start)
+    var menu by remember(n.key) { mutableStateOf(false) }
+    var replying by remember(n.key) { mutableStateOf(false) }
+    fun open() {
+        if (!HatchNotificationListener.open(ctx, n)) ctx.packageManager.getLaunchIntentForPackage(n.packageName)?.let(actions.start)
+    }
+    fun read() {
+        actions.toast(if (HatchNotificationListener.markRead(ctx, n)) "既読にしました" else "消しました")
+    }
+    fun left(kind: String) {
+        when (kind) {
+            "reply" -> if (n.replyAction != null) replying = true else open()
+            "snooze" -> { HatchNotificationListener.snooze(n, 3600_000L); actions.toast("1 時間後にもう一度出します") }
+            "dismiss" -> HatchNotificationListener.dismiss(n)
+            else -> open()
         }
-    }) {
-        if (app != null) AppIcon(app, 32.dp) else Initial(n.initial)
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Row {
-                Text(n.title, color = p.fg, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                Text(shortTime(n.time), color = p.muted, fontSize = 11.sp)
+    }
+    val leftKind = model.noticeLeft
+    val leftLabel = if (leftKind == "reply" && n.replyAction == null) "開く" else NOTICE_LEFT.firstOrNull { it.first == leftKind }?.second ?: "開く"
+    Box {
+        SwipeRow(rightLabel = if (n.readAction != null) "既読" else "消す", leftLabel = leftLabel, onRight = ::read, onLeft = { left(leftKind) }) {
+            RowButton(zebra = zebra, onClick = ::open, onLongClick = { menu = true }) {
+                if (app != null) AppIcon(app, 32.dp) else Initial(n.initial)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Row {
+                        Text(n.title, color = p.fg, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Text(shortTime(n.time), color = p.muted, fontSize = 11.sp)
+                    }
+                    Text(n.text, color = p.muted, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
             }
-            Text(n.text, color = p.muted, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(text = { Text(if (n.readAction != null) "既読にする" else "消す（既読のボタンが無い通知）") }, onClick = { menu = false; read() })
+            if (n.replyAction != null) DropdownMenuItem(text = { Text("返信") }, onClick = { menu = false; replying = true })
+            DropdownMenuItem(text = { Text("1 時間後にまた") }, onClick = { menu = false; left("snooze") })
+            DropdownMenuItem(text = { Text("消す") }, onClick = { menu = false; HatchNotificationListener.dismiss(n) })
+            // 通知に付いているボタン（返信・既読は上にあるので除く）
+            n.actions.filter { it != n.replyAction && it != n.readAction }.forEach { a ->
+                DropdownMenuItem(text = { Text(a.title?.toString() ?: "ボタン") }, onClick = {
+                    menu = false
+                    if (!HatchNotificationListener.fire(ctx, a)) actions.toast("押せませんでした")
+                })
+            }
+        }
+    }
+    if (replying) {
+        var text by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { replying = false },
+            title = { Text("${n.title} に返信", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(n.text, color = p.muted, fontSize = 12.sp, maxLines = 4, overflow = TextOverflow.Ellipsis)
+                    Field(text, { text = it }, "メッセージ", singleLine = false)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    actions.toast(if (HatchNotificationListener.reply(ctx, n, text)) "送りました" else "送れませんでした")
+                    replying = false
+                }, enabled = text.isNotBlank()) { Text("送る") }
+            },
+            dismissButton = { TextButton(onClick = { replying = false }) { Text("やめる") } },
+        )
+    }
+}
+
+/**
+ * 横にスワイプできる行。右へ 35% 以上で onRight、左へで onLeft。動かしている間は、下に何が起きるかを出す。
+ */
+@Composable
+private fun SwipeRow(rightLabel: String, leftLabel: String, onRight: () -> Unit, onLeft: () -> Unit, content: @Composable () -> Unit) {
+    val p = LocalPalette.current
+    val offset = remember { androidx.compose.animation.core.Animatable(0f) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val right by androidx.compose.runtime.rememberUpdatedState(onRight)
+    val left by androidx.compose.runtime.rememberUpdatedState(onLeft)
+    var width by remember { mutableStateOf(1) }
+    Box(Modifier.fillMaxWidth().onSizeChanged { width = it.width }.clipToBounds()) {
+        val o = offset.value
+        if (o != 0f) Row(
+            Modifier.matchParentSize().background(if (o > 0) p.accent else p.raised).padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = if (o > 0) Arrangement.Start else Arrangement.End,
+        ) {
+            Text(if (o > 0) "✓ $rightLabel" else "$leftLabel ‹", color = if (o > 0) p.onAccent else p.fg, fontSize = 13.sp, fontFamily = Hud.mono)
+        }
+        Box(
+            Modifier
+                .offset { androidx.compose.ui.unit.IntOffset(offset.value.toInt(), 0) }
+                .background(if (o != 0f) p.panel else Color.Transparent)
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            scope.launch {
+                                val v = offset.value
+                                when {
+                                    v > width * 0.35f -> { offset.animateTo(width.toFloat()); right(); offset.snapTo(0f) }
+                                    v < -width * 0.35f -> { offset.animateTo(0f); left() }
+                                    else -> offset.animateTo(0f)
+                                }
+                            }
+                        },
+                        onDragCancel = { scope.launch { offset.animateTo(0f) } },
+                    ) { change, d ->
+                        change.consume()
+                        scope.launch { offset.snapTo(offset.value + d) }
+                    }
+                },
+        ) { content() }
     }
 }
 
@@ -270,7 +379,7 @@ private fun CountBadge(n: Int, modifier: Modifier) {
 }
 
 @Composable
-private fun NoticeDrawer(mail: Boolean) {
+private fun NoticeDrawer(model: HomeModel, mail: Boolean) {
     val p = LocalPalette.current
     val actions = LocalActions.current
     val ctx = actions.activity
@@ -291,7 +400,7 @@ private fun NoticeDrawer(mail: Boolean) {
         } else if (list.isEmpty()) {
             item { Note(if (mail) "新しいメールの通知はありません" else "新しいトークの通知はありません") }
         }
-        itemsIndexed(list, key = { _, it -> it.key }) { zi, n -> NoticeRow(n, zi) }
+        itemsIndexed(list, key = { _, it -> it.key }) { zi, n -> NoticeRow(model, n, zi) }
         item {
             FlowRow2 {
                 if (mail) {
@@ -674,10 +783,10 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
                             Text("%02d".format(list.size), color = p.accent, fontSize = 11.sp, fontFamily = Hud.mono)
                         }
                     }
-                    itemsIndexed(list, key = { _, it -> "n:" + it.key }) { zi, n -> NoticeRow(n, zi) }
+                    itemsIndexed(list, key = { _, it -> "n:" + it.key }) { zi, n -> NoticeRow(model, n, zi) }
                 }
             } else {
-                itemsIndexed(mine, key = { _, it -> "n:" + it.key }) { zi, n -> NoticeRow(n, zi, pkgs[n.packageName]) }
+                itemsIndexed(mine, key = { _, it -> "n:" + it.key }) { zi, n -> NoticeRow(model, n, zi, pkgs[n.packageName]) }
             }
         }
         item { Note("長押しして動かすと並べ替え、動かさずに離すと「カテゴリーを変える」「アンインストール」など。") }

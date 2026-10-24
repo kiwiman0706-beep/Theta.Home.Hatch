@@ -44,6 +44,7 @@ object Backup {
             .put("iconColors", store.iconColors)
             .put("voiceApps", store.voiceApps)
             .put("noticeOrder", store.noticeOrder)
+            .put("noticeLeft", store.noticeLeft)
             .put("geminiModel", store.geminiModel)
             .put("favoriteApps", JSONArray(store.favoriteApps))
             .put("location", store.location)
@@ -82,6 +83,7 @@ object Backup {
         if (o.has("iconColors")) e.putString("iconColors", o.optString("iconColors"))
         if (o.has("voiceApps")) e.putString("voiceApps", o.optString("voiceApps"))
         if (o.has("noticeOrder")) e.putString("noticeOrder", o.optString("noticeOrder"))
+        if (o.has("noticeLeft")) e.putString("noticeLeft", o.optString("noticeLeft"))
         if (o.has("geminiModel")) e.putString("geminiModel", o.optString("geminiModel"))
         o.optJSONArray("favoriteApps")?.let { e.putString("favApps", it.toString()) }
         o.optJSONArray("categories")?.let { e.putString("categories", it.toString()) }

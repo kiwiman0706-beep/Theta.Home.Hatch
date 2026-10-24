@@ -19,12 +19,26 @@ data class Notice(
     val text: String,
     val time: Long,
     val intent: PendingIntent?,
+    /** 通知に付いているボタン（既読・返信・アーカイブなど）。 */
+    val actions: List<Notification.Action> = emptyList(),
 ) {
+    /** 「既読にする」のボタン（アプリによって名前が違うので、よくある言い方で探す）。 */
+    val readAction: Notification.Action?
+        get() = actions.firstOrNull { a ->
+            Notification.Action.SEMANTIC_ACTION_MARK_AS_READ == a.semanticAction ||
+                READ_WORDS.containsMatchIn(a.title?.toString().orEmpty())
+        }
+
+    /** 文字を入れて返せるボタン（返信）。 */
+    val replyAction: Notification.Action?
+        get() = actions.firstOrNull { a -> a.remoteInputs?.any { it.allowFreeFormInput } == true }
+
     val isLine get() = packageName == LINE
     val initial get() = title.trim().take(1).ifEmpty { "?" }
 
     companion object {
         const val LINE = "jp.naver.line.android"
+        private val READ_WORDS = Regex("既読|開封|mark as read|mark read|^read$", RegexOption.IGNORE_CASE)
         val MAIL = setOf(
             "com.google.android.gm",
             "com.samsung.android.email.provider",
@@ -42,10 +56,12 @@ data class Notice(
  */
 class HatchNotificationListener : NotificationListenerService() {
     override fun onListenerConnected() {
+        instance = this
         refresh()
     }
 
     override fun onListenerDisconnected() {
+        instance = null
         state.value = emptyList()
     }
 
@@ -72,13 +88,50 @@ class HatchNotificationListener : NotificationListenerService() {
                 val title = ex.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)
                     ?: ex.getCharSequence(Notification.EXTRA_TITLE) ?: return@mapNotNull null
                 val text = ex.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: ex.getCharSequence(Notification.EXTRA_TEXT) ?: ""
-                Notice(sbn.key, sbn.packageName, title.toString(), text.toString(), sbn.postTime, sbn.notification.contentIntent)
+                Notice(sbn.key, sbn.packageName, title.toString(), text.toString(), sbn.postTime, sbn.notification.contentIntent, sbn.notification.actions?.toList().orEmpty())
             }
             .sortedByDescending { it.time }
     }
 
     companion object {
         private val state = MutableStateFlow<List<Notice>>(emptyList())
+        @Volatile private var instance: HatchNotificationListener? = null
+
+        /** 通知を消す（端末の通知からも）。 */
+        fun dismiss(n: Notice) {
+            runCatching { instance?.cancelNotification(n.key) }
+            state.value = state.value.filter { it.key != n.key }
+        }
+
+        /** しばらく隠して、あとでもう一度出す。 */
+        fun snooze(n: Notice, millis: Long) {
+            runCatching { instance?.snoozeNotification(n.key, millis) }
+            state.value = state.value.filter { it.key != n.key }
+        }
+
+        /** 既読にする：「既読」のボタンがあれば押して（相手にも既読が付く）、通知を消す。ボタンが無ければ消すだけ。true なら既読のボタンを押した。 */
+        fun markRead(context: Context, n: Notice): Boolean {
+            val a = n.readAction
+            val sent = a != null && runCatching { a.actionIntent.send(); true }.getOrDefault(false)
+            dismiss(n)
+            return sent
+        }
+
+        /** 通知のボタンを押す。 */
+        fun fire(context: Context, a: Notification.Action): Boolean = runCatching { a.actionIntent.send(); true }.getOrDefault(false)
+
+        /** その場で返信する（通知の「返信」と同じ）。 */
+        fun reply(context: Context, n: Notice, text: String): Boolean {
+            val a = n.replyAction ?: return false
+            return runCatching {
+                val intent = android.content.Intent()
+                val bundle = android.os.Bundle()
+                a.remoteInputs.filter { it.allowFreeFormInput }.forEach { bundle.putCharSequence(it.resultKey, text) }
+                android.app.RemoteInput.addResultsToIntent(a.remoteInputs, intent, bundle)
+                a.actionIntent.send(context, 0, intent)
+                true
+            }.getOrDefault(false)
+        }
         val notices: StateFlow<List<Notice>> = state
 
         fun isEnabled(context: Context): Boolean =

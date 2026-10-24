@@ -296,6 +296,11 @@ class Store(context: Context) {
         set(v) = prefs.edit().putString("voiceApps", v).apply()
 
     /** カテゴリーのタブの通知の並び："time"（時系列）・"app"（アプリ別）。 */
+    /** 通知を左にスワイプしたとき："reply"（返信）・"snooze"（1 時間後にまた）・"dismiss"（消す）・"open"（アプリで開く）。 */
+    var noticeLeft: String
+        get() = prefs.getString("noticeLeft", "reply") ?: "reply"
+        set(v) = prefs.edit().putString("noticeLeft", v).apply()
+
     var noticeOrder: String
         get() = prefs.getString("noticeOrder", "time") ?: "time"
         set(v) = prefs.edit().putString("noticeOrder", v).apply()

@@ -176,6 +176,12 @@ fun SettingsPanel(model: HomeModel) {
                 }
                 Note("START（または検索の横のアプリのボタン）でアプリの一覧を開くと同時に聞き取り、「LINE」「カメラ開いて」のように言うとそのアプリを開きます。決まらないときは、聞き取った言葉で一覧を絞り込みます。一覧の中のマイクのボタンからも使えます。")
                 Gap(18.dp)
+                SectionTitle("NOTICE / 通知のスワイプ", Modifier.padding(horizontal = 10.dp))
+                Note("タブの中の通知（MAIL・LINE・カテゴリーのタブ）は、右へスワイプで既読（「既読」のボタンがある通知はそれを押す。無ければ消す）。左へスワイプは次から選べます。長押しで、その通知のボタン（アーカイブなど）も選べます。")
+                FlowRow2 {
+                    NOTICE_LEFT.forEach { (k, label) -> PillButton("左：$label", { model.changeNoticeLeft(k) }, primary = model.noticeLeft == k) }
+                }
+                Gap(18.dp)
                 SectionTitle("ICON / アプリのアイコン", Modifier.padding(horizontal = 10.dp))
                 Note("世界観をそろえるため、アイコンを 3 色（地・基本・アクセント）に塗れます。色は下の配色で変えられ、型を作り直す必要はありません。Gemini はアイコンの形を整理して 3 色で描き直します（1 アプリ 1 回、自分の API キーで課金。アイコンの画像を Google に送ります）。まだ加工していないアプリは端末内の簡易加工で表示します。")
                 FlowRow2 {
