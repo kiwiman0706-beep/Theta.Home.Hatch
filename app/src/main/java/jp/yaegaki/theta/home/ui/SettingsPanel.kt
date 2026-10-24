@@ -176,6 +176,17 @@ fun SettingsPanel(model: HomeModel) {
                 }
                 Note("START（または検索の横のアプリのボタン）でアプリの一覧を開くと同時に聞き取り、「LINE」「カメラ開いて」のように言うとそのアプリを開きます。決まらないときは、聞き取った言葉で一覧を絞り込みます。一覧の中のマイクのボタンからも使えます。")
                 Gap(18.dp)
+                SectionTitle("ONE UI / Galaxy の見た目を合わせる", Modifier.padding(horizontal = 10.dp))
+                Note("One UI のテーマは自分では配れないので、材料を作ります。壁紙を HUD にすると、One UI が壁紙から色を取って、クイックパネル・設定・キーボードなども黒とオレンジ寄りになります。アイコンは今の 3 色・配色で PNG に書き出し、Good Lock の Theme Park でアプリごとに選べます（手順は README）。")
+                FlowRow2 {
+                    val wm = actions.activity.windowManager.currentWindowMetrics.bounds
+                    PillButton("壁紙を HUD に（ダーク）", { model.applyHudWallpaper(wm.width(), wm.height(), dark = true) }, primary = true)
+                    PillButton("壁紙を HUD に（ライト）", { model.applyHudWallpaper(wm.width(), wm.height(), dark = false) })
+                    val job = model.artJob
+                    if (job != null) PillButton("書き出し中 %d / %d".format(job.first, job.second), {}, enabled = false)
+                    else PillButton("アイコンを PNG で書き出す（${model.apps.size} 個）", { model.exportIcons() })
+                }
+                Gap(18.dp)
                 SectionTitle("NOTICE / 通知のスワイプ", Modifier.padding(horizontal = 10.dp))
                 Note("タブの中の通知（MAIL・LINE・カテゴリーのタブ）は、右へスワイプで既読（「既読」のボタンがある通知はそれを押す。無ければ消す）。左へスワイプは次から選べます。長押しで、その通知のボタン（アーカイブなど）も選べます。")
                 FlowRow2 {

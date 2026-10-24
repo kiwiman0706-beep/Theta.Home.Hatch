@@ -4,7 +4,7 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**0.16.1-alpha（versionCode 20）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.17.0-alpha（versionCode 21）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
@@ -119,6 +119,10 @@ DSBooks と同じく、Synology の DSM File Station API でつなぐ（設定 �
 | Hatch | シリーズの起動、GitHub Releases から取得 → SHA-256 照合 → インストール確認画面へ |
 
 物理キーボード：Alt＋1〜9 でフォルダのタブ、Alt＋C 予定・M メール・L LINE・P 人・A アプリ・B 栞・X Clip・R 記録・H Hatch。ホームで文字を打つとすぐ検索、Esc で閉じる。
+
+## One UI（Galaxy）の見た目も合わせる
+
+設定 → ONE UI で、HUD の壁紙を作って設定し（One UI が壁紙から色を取るので、システムも黒とオレンジ寄りに）、アイコンを 3 色の PNG で書き出せる（Good Lock の Theme Park でアプリごとに選ぶ）。手順は [docs/oneui](docs/oneui/README.md)。
 
 ## もしものとき（レスキュー）
 

@@ -965,6 +965,70 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         hasGeminiKey = store.geminiKey.isNotEmpty()
     }
 
+    // ---- One UI（ホームの外）へ持ち出す：壁紙とアイコン ----
+
+    /** 書き出しの進み具合（done / total）。null なら何もしていない。 */
+    var artJob by mutableStateOf<Pair<Int, Int>?>(null); private set
+
+    private fun isDark(): Boolean = when (themeMode) {
+        "light" -> false
+        "dark" -> true
+        else -> (ctx.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+    }
+
+    /** HUD の壁紙を作って、ホームとロック画面に設定する（写真にも保存）。One UI はこの壁紙から色を取る。 */
+    fun applyHudWallpaper(width: Int, height: Int, dark: Boolean = isDark()) {
+        viewModelScope.launch {
+            val r = runCatching {
+                withContext(Dispatchers.IO) {
+                    val bmp = jp.yaegaki.theta.home.data.HudArt.wallpaper(ctx, width, height, dark)
+                    // 開いた画面とカバー画面で縦横が違うので、今の画面の大きさで作る
+                    jp.yaegaki.theta.home.data.HudArt.savePng(ctx, bmp, "Wallpaper", "hud-wallpaper-" + (if (dark) "dark" else "light") + "-${width}x$height")
+                    android.app.WallpaperManager.getInstance(ctx).setBitmap(bmp, null, true, android.app.WallpaperManager.FLAG_SYSTEM or android.app.WallpaperManager.FLAG_LOCK)
+                }
+            }
+            (ctx as HomeApp).toast(if (r.isSuccess) "壁紙を HUD にしました（写真の ThetaHomeHatch にも保存）" else "壁紙を設定できませんでした：${r.exceptionOrNull()?.message}")
+        }
+    }
+
+    /** すべてのアプリのアイコンを、今の見た目（3 色・配色）で PNG にして写真へ保存する。Theme Park でアプリごとに選べる。 */
+    fun exportIcons(size: Int = 512) {
+        if (artJob != null) return
+        val list = apps
+        val dark = isDark()
+        val palette = if (dark) jp.yaegaki.theta.home.ui.DarkPalette else jp.yaegaki.theta.home.ui.LightPalette
+        val (plate, base, accent) = jp.yaegaki.theta.home.ui.iconTriple(palette, iconColors).let { (a, b, c) ->
+            Triple(a.toArgbInt(), b.toArgbInt(), c.toArgbInt())
+        }
+        val folder = "Icons-" + java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.US).format(java.util.Date())
+        val mode = iconMode
+        artJob = 0 to list.size
+        viewModelScope.launch {
+            var saved = 0
+            withContext(Dispatchers.IO) {
+                list.forEachIndexed { i, app ->
+                    runCatching {
+                        val original = Apps.icon(ctx, app, size) ?: return@runCatching
+                        val out = when (mode) {
+                            jp.yaegaki.theta.home.data.IconStyle.LOCAL, jp.yaegaki.theta.home.data.IconStyle.GEMINI -> {
+                                val mask = (if (mode == jp.yaegaki.theta.home.data.IconStyle.GEMINI) jp.yaegaki.theta.home.data.IconStyle.cached(ctx, app.key) else null)
+                                    ?: jp.yaegaki.theta.home.data.IconStyle.localMask(original)
+                                jp.yaegaki.theta.home.data.HudArt.paintMask(mask, size, plate, base, accent)
+                            }
+                            else -> original
+                        }
+                        if (jp.yaegaki.theta.home.data.HudArt.savePng(ctx, out, folder, app.label) != null) saved++
+                    }
+                    artJob = (i + 1) to list.size
+                }
+            }
+            artJob = null
+            (ctx as HomeApp).toast("$saved 個のアイコンを 写真 › Pictures › ThetaHomeHatch › $folder に保存しました")
+        }
+    }
+
+    private fun androidx.compose.ui.graphics.Color.toArgbInt(): Int = android.graphics.Color.argb((alpha * 255).toInt(), (red * 255).toInt(), (green * 255).toInt(), (blue * 255).toInt())
+
     /** Gemini で加工済みのアプリの数。 */
     fun geminiDone(): Int = apps.count { jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, it.key).exists() }
 
