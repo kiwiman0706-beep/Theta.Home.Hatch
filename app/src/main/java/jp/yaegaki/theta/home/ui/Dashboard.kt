@@ -41,6 +41,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -90,10 +91,32 @@ fun Dashboard(model: HomeModel, openNasSettings: () -> Unit) {
     }
 }
 
-/** 計器の区画：見出し（英字＋日本語）と、四隅のかぎ括弧。 */
+/** 計器の区画：見出し（英字＋日本語）と、四隅のかぎ括弧。POP では角丸の枠に、色の付いた見出しの帯。 */
 @Composable
 private fun Panel(code: String, title: String, content: @Composable () -> Unit) {
     val p = LocalPalette.current
+    if (p.pop) {
+        val shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
+        val band = when (code) {
+            "TODAY" -> p.accent
+            "WEATHER" -> p.accent3
+            "FILES" -> p.accent2
+            else -> p.raised
+        }
+        Column(Modifier.fillMaxWidth().popShadow(p, shape).clip(shape).background(p.panel).border(lineWidth, p.line, shape)) {
+            Row(
+                Modifier.fillMaxWidth().background(band).padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(code, color = if (band == p.accent) p.onAccent else p.fg, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(title, color = if (band == p.accent) p.onAccent else p.fg, fontSize = 12.sp)
+            }
+            Box(Modifier.fillMaxWidth().height(lineWidth).background(p.line))
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
+        }
+        return
+    }
     Column(Modifier.fillMaxWidth().border(1.dp, p.line).corners(p.accent, 8.dp).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("[ $code ]", color = p.accent, fontSize = 11.sp, fontFamily = Hud.mono, letterSpacing = 2.sp)

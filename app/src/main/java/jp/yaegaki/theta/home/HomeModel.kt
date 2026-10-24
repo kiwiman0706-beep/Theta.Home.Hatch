@@ -971,7 +971,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     var artJob by mutableStateOf<Pair<Int, Int>?>(null); private set
 
     private fun isDark(): Boolean = when (themeMode) {
-        "light" -> false
+        "light", "pop" -> false
         "dark" -> true
         else -> (ctx.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
     }
@@ -996,7 +996,11 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         if (artJob != null) return
         val list = apps
         val dark = isDark()
-        val palette = if (dark) jp.yaegaki.theta.home.ui.DarkPalette else jp.yaegaki.theta.home.ui.LightPalette
+        val palette = when {
+            themeMode == "pop" -> jp.yaegaki.theta.home.ui.PopPalette
+            dark -> jp.yaegaki.theta.home.ui.DarkPalette
+            else -> jp.yaegaki.theta.home.ui.LightPalette
+        }
         val (plate, base, accent) = jp.yaegaki.theta.home.ui.iconTriple(palette, iconColors).let { (a, b, c) ->
             Triple(a.toArgbInt(), b.toArgbInt(), c.toArgbInt())
         }

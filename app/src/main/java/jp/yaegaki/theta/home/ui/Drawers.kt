@@ -621,13 +621,19 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
             }
         }
         item {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 8.dp)) {
-                Field(q, { q = it }, "名前で絞り込み", Modifier.weight(1f))
-                GlyphButton(Glyph.MIC, "声でアプリを開く", { if (voice.listening) voice.stop() else voice.start() }, filled = voice.listening)
-                if (only == null) PillButton(if (unsorted > 0) "仕分け %d".format(unsorted) else "仕分け", { sorting = true }, primary = unsorted > 0)
-                GlyphButton(if (spec.grid) Glyph.LIST else Glyph.GRID, if (spec.grid) "一覧で見る" else "グリッドで見る", { model.setView(viewKey, spec.copy(grid = !spec.grid)) })
-                Box(Modifier.size(44.dp).clickable(onClickLabel = "大きさを変える") { model.setView(viewKey, spec.copy(size = (spec.size + 1) % ViewSpec.SIZES)) }, contentAlignment = Alignment.Center) {
-                    Text(ViewSpec.NAMES[spec.size], color = p.muted, fontSize = 12.sp, fontFamily = Hud.mono, modifier = Modifier.border(1.dp, p.line).padding(horizontal = 5.dp, vertical = 2.dp))
+            // 1 段目：絞り込みとマイク。2 段目：仕分け・一覧／グリッド・大きさ（狭い画面でも欄がつぶれないよう 2 段に）
+            Column(Modifier.padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Field(q, { q = it }, "名前で絞り込み", Modifier.weight(1f))
+                    GlyphButton(Glyph.MIC, "声でアプリを開く", { if (voice.listening) voice.stop() else voice.start() }, filled = voice.listening)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (only == null) PillButton(if (unsorted > 0) "仕分け %d".format(unsorted) else "仕分け", { sorting = true }, primary = unsorted > 0)
+                    Spacer(Modifier.weight(1f))
+                    GlyphButton(if (spec.grid) Glyph.LIST else Glyph.GRID, if (spec.grid) "一覧で見る" else "グリッドで見る", { model.setView(viewKey, spec.copy(grid = !spec.grid)) })
+                    Box(Modifier.size(44.dp).clickable(onClickLabel = "大きさを変える") { model.setView(viewKey, spec.copy(size = (spec.size + 1) % ViewSpec.SIZES)) }, contentAlignment = Alignment.Center) {
+                        Text(ViewSpec.NAMES[spec.size], color = p.muted, fontSize = 12.sp, fontFamily = Hud.mono, modifier = Modifier.border(1.dp, p.line).padding(horizontal = 5.dp, vertical = 2.dp))
+                    }
                 }
             }
         }

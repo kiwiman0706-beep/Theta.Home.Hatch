@@ -347,6 +347,12 @@ private fun shortcut(model: HomeModel, t: TabSpec) = t.kind.key?.let { "Alt+$it"
 private fun RailTab(model: HomeModel, reorder: ReorderState, id: String, label: String, group: Int, active: Boolean, shortcut: String?, left: Boolean) {
     val p = LocalPalette.current
     val groupColor = p.group(group)
+    // POP では選んだタブを群の色（フォルダ＝コーラル・ウィジェット＝ミント・起動＝イエロー）で塗り、画面の内側の角を丸める
+    val activeBg = if (p.pop) groupColor else p.accent
+    val onActive = if (p.pop && group != 0) p.fg else p.onAccent
+    val tabShape = if (p.pop) {
+        if (left) RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp) else RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp)
+    } else RoundedCornerShape(0.dp)
     val code = model.tabs.indexOfFirst { it.id == id }.let { if (it >= 0) "%02d".format(it + 1) else "W" + (model.widgetTabs.indexOfFirst { w -> "w:${w.id}" == id } + 1) }
     var menu by remember(id) { mutableStateOf(false) }
     var renaming by remember(id) { mutableStateOf(false) }
@@ -358,8 +364,8 @@ private fun RailTab(model: HomeModel, reorder: ReorderState, id: String, label: 
                 if (from.startsWith("w:")) model.moveWidgetTabTo(from.removePrefix("w:").toInt(), to.removePrefix("w:").toInt())
                 else model.moveTabTo(from, to)
             }
-            .background(if (active) p.accent else p.bg)
-            .border(1.dp, if (active) p.accent else p.line)
+            .background(if (active) activeBg else if (p.pop) p.panel else p.bg, tabShape)
+            .border(lineWidth, if (active && !p.pop) p.accent else p.line, tabShape)
             .combinedClickable(role = Role.Tab, onClick = { model.toggle(id) }, onLongClick = {}, onLongClickLabel = "ドラッグで並べ替え・離すとメニュー")
             .semantics {
                 contentDescription = label + (shortcut?.let { "（$it）" } ?: "")
@@ -371,12 +377,12 @@ private fun RailTab(model: HomeModel, reorder: ReorderState, id: String, label: 
                 .align(if (left) Alignment.CenterEnd else Alignment.CenterStart)
                 .width(3.dp)
                 .height(20.dp)
-                .background(if (active) p.onAccent else groupColor),
+                .background(if (active) onActive else groupColor),
         )
         Column(Modifier.padding(top = 4.dp, bottom = 10.dp).align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(code, color = if (active) p.onAccent else p.faint, fontSize = 9.sp, fontFamily = Hud.mono)
+            Text(code, color = if (active) onActive else p.faint, fontSize = 9.sp, fontFamily = Hud.mono)
             Gap(4.dp)
-            VerticalLabel(label, if (active) p.onAccent else p.fg)
+            VerticalLabel(label, if (active) onActive else p.fg)
         }
         TabMenu(model, id, menu, { menu = false }) { renaming = true }
     }

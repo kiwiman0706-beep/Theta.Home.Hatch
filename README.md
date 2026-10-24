@@ -8,7 +8,7 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**0.17.0-alpha（versionCode 21）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.18.0-alpha（versionCode 22）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
@@ -26,7 +26,7 @@
 
 ## 見た目
 
-計器盤（HUD）風：黒地にオレンジ 1 色、細い線、四角い角。見出し・時計は Oswald、ラベル・数字は等幅の Share Tech Mono（同梱、SIL Open Font License、[docs/licenses](docs/licenses)）。日本語は端末の書体。テーマはダーク・ライト・端末に合わせるから選べる（設定 → THEME）。
+計器盤（HUD）風：黒地にオレンジ 1 色、細い線、四角い角。見出し・時計は Oswald、ラベル・数字は等幅の Share Tech Mono（同梱、SIL Open Font License、[docs/licenses](docs/licenses)）。日本語は端末の書体。テーマはダーク・ライト・**POP（カラフル）**・端末に合わせるから選べる（設定 → THEME）。POP はクリームの地にコーラル・イエロー・ミント、角丸と影、ゴシック体。
 
 ## 画面の構成
 

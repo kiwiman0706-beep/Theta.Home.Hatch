@@ -85,9 +85,10 @@ fun PillButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier,
     Box(
         modifier
             .defaultMinSize(minHeight = 40.dp)
-            .clip(Chamfer)
-            .background(bg)
-            .border(1.dp, if (primary) p.accent else p.line, Chamfer)
+            .popShadow(p, hudShape)
+            .clip(hudShape)
+            .background(if (p.pop && !primary) p.panel else bg)
+            .border(lineWidth, if (primary && !p.pop) p.accent else p.line, hudShape)
             .combinedClickableCompat(enabled, onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center,
@@ -177,9 +178,9 @@ fun Field(
                 Modifier
                     .fillMaxWidth()
                     .defaultMinSize(minHeight = 48.dp)
-                    .clip(Chamfer)
-                    .background(p.raised)
-                    .border(1.dp, p.line, Chamfer)
+                    .clip(hudShape)
+                    .background(if (p.pop) p.panel else p.raised)
+                    .border(lineWidth, p.line, hudShape)
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = if (singleLine) Alignment.CenterVertically else Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),

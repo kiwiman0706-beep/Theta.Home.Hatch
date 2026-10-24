@@ -8,6 +8,9 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.draw.drawBehind
 import jp.yaegaki.theta.home.R
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -36,6 +39,11 @@ data class Palette(
     val launch: Color,
     /** リストの縞模様。地の色に薄く重ねる。 */
     val zebra: Color,
+    /** POP（カラフル）：角を少し丸め、線を太く、ボタンに影、書体はゴシック。色を 3 つ使い分ける。 */
+    val pop: Boolean = false,
+    /** POP の 2 色目（イエロー）・3 色目（ミント）。 */
+    val accent2: Color = accent,
+    val accent3: Color = accent,
 ) {
     fun group(g: Int) = when (g) {
         0 -> accent
@@ -75,22 +83,77 @@ val LightPalette = Palette(
     zebra = Color(0x0D000000),
 )
 
+/**
+ * POP：クリームの地に墨色の太い線、コーラル・イエロー・ミントの 3 色。
+ * フォルダはコーラル、ウィジェットはミント、起動はイエロー。
+ */
+val PopPalette = Palette(
+    bg = Color(0xFFFAF6EC),
+    panel = Color(0xFFFFFFFF),
+    raised = Color(0xFFF2EDE0),
+    fg = Color(0xFF2B2B2B),
+    muted = Color(0xFF4F4F4F),
+    faint = Color(0xFF6B6B6B),
+    line = Color(0xFF2B2B2B),
+    accent = Color(0xFFEF6F51),
+    onAccent = Color(0xFFFFFFFF),
+    widget = Color(0xFF7FCFB5),
+    launch = Color(0xFFF2BE2E),
+    zebra = Color(0x26F5C842),
+    pop = true,
+    accent2 = Color(0xFFF5C842),
+    accent3 = Color(0xFFA8E2CF),
+)
+
 val LocalPalette = staticCompositionLocalOf { DarkPalette }
+
+/** ボタン・入力欄の形：HUD は左上を落とした角、POP は少し丸めた角。 */
+val hudShape: androidx.compose.ui.graphics.Shape
+    @Composable @androidx.compose.runtime.ReadOnlyComposable get() =
+        if (LocalPalette.current.pop) RoundedCornerShape(8.dp) else Chamfer
+
+/** 線の太さ：POP は太め。 */
+val lineWidth: androidx.compose.ui.unit.Dp
+    @Composable @androidx.compose.runtime.ReadOnlyComposable get() = if (LocalPalette.current.pop) 1.5.dp else 1.dp
+
+/** POP のボタンの、右下にずらした影。HUD では何もしない。 */
+fun androidx.compose.ui.Modifier.popShadow(p: Palette, shape: androidx.compose.ui.graphics.Shape): androidx.compose.ui.Modifier =
+    if (!p.pop) this else this.drawBehind {
+        val o = 3.dp.toPx()
+        translate(o, o) {
+            drawOutline(shape.createOutline(size, layoutDirection, this), p.fg)
+        }
+    }
 
 /** 見出し・時計は細長い Oswald、ラベル・数字・ファイル名は等幅の Share Tech Mono。日本語は端末の書体になる。 */
 object Hud {
-    val display = FontFamily(
+    private val oswald = FontFamily(
         Font(R.font.oswald_light, FontWeight.Light),
         Font(R.font.oswald_regular, FontWeight.Normal),
         Font(R.font.oswald_semibold, FontWeight.SemiBold),
         Font(R.font.oswald_semibold, FontWeight.Bold),
     )
-    val mono = FontFamily(Font(R.font.share_tech_mono, FontWeight.Normal))
+    private val tech = FontFamily(Font(R.font.share_tech_mono, FontWeight.Normal))
+
+    /** POP では、見出しも小さなラベルも端末のゴシック（太め）にする。 */
+    val display: FontFamily
+        @Composable @androidx.compose.runtime.ReadOnlyComposable get() = if (LocalPalette.current.pop) FontFamily.SansSerif else oswald
+    val mono: FontFamily
+        @Composable @androidx.compose.runtime.ReadOnlyComposable get() = if (LocalPalette.current.pop) FontFamily.SansSerif else tech
 }
 
 @Composable
-fun HomeTheme(dark: Boolean, content: @Composable () -> Unit) {
-    val p = if (dark) DarkPalette else LightPalette
+fun HomeTheme(dark: Boolean, pop: Boolean = false, content: @Composable () -> Unit) {
+    val p = when {
+        pop -> PopPalette
+        dark -> DarkPalette
+        else -> LightPalette
+    }
+    CompositionLocalProvider(LocalPalette provides p) { HomeThemeInner(p, dark && !pop, content) }
+}
+
+@Composable
+private fun HomeThemeInner(p: Palette, dark: Boolean, content: @Composable () -> Unit) {
     val scheme = if (!dark) {
         lightColorScheme(
             primary = p.accent, onPrimary = p.onAccent, background = p.bg, surface = p.panel,
@@ -116,10 +179,9 @@ fun HomeTheme(dark: Boolean, content: @Composable () -> Unit) {
         titleMedium = base.titleMedium.copy(fontFamily = Hud.display),
         headlineSmall = base.headlineSmall.copy(fontFamily = Hud.display),
     )
-    CompositionLocalProvider(LocalPalette provides p) {
-        MaterialTheme(colorScheme = scheme, typography = type, shapes = Shapes(
-            extraSmall = RoundedCornerShape(0.dp), small = RoundedCornerShape(0.dp), medium = RoundedCornerShape(0.dp),
-            large = RoundedCornerShape(0.dp), extraLarge = RoundedCornerShape(0.dp),
-        ), content = content)
-    }
+    val corner = if (p.pop) 10.dp else 0.dp
+    MaterialTheme(colorScheme = scheme, typography = type, shapes = Shapes(
+        extraSmall = RoundedCornerShape(corner), small = RoundedCornerShape(corner), medium = RoundedCornerShape(corner),
+        large = RoundedCornerShape(corner), extraLarge = RoundedCornerShape(corner),
+    ), content = content)
 }

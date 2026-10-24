@@ -163,7 +163,7 @@ fun SettingsPanel(model: HomeModel) {
                 Toggle("タブを左端に置く", model.railLeft) { model.changeRailLeft(it) }
                 Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("THEME", color = p.faint, fontSize = 11.sp, letterSpacing = 1.5.sp, modifier = Modifier.width(56.dp))
-                    listOf("dark" to "ダーク", "light" to "ライト", "system" to "端末に合わせる").forEach { (mode, label) ->
+                    listOf("dark" to "ダーク", "light" to "ライト", "pop" to "POP（カラフル）", "system" to "端末に合わせる").forEach { (mode, label) ->
                         PillButton(label, { model.changeTheme(mode) }, primary = model.themeMode == mode)
                     }
                 }

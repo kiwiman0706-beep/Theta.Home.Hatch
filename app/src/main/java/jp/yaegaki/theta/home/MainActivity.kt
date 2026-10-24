@@ -63,8 +63,9 @@ class MainActivity : ComponentActivity() {
         ContextCompat.registerReceiver(this, packages, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         getSystemService(ConnectivityManager::class.java)?.registerDefaultNetworkCallback(network)
         setContent {
+            val pop = model.themeMode == "pop"
             val dark = when (model.themeMode) {
-                "light" -> false
+                "light", "pop" -> false
                 "dark" -> true
                 else -> isSystemInDarkTheme()
             }
@@ -76,7 +77,7 @@ class MainActivity : ComponentActivity() {
                     isAppearanceLightNavigationBars = !dark
                 }
             }
-            HomeTheme(dark = dark) {
+            HomeTheme(dark = dark, pop = pop) {
                 HomeRoot(model, this)
             }
         }

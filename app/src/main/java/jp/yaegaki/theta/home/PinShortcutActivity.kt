@@ -60,8 +60,8 @@ class PinShortcutActivity : ComponentActivity() {
             }
         }.getOrNull()
         setContent {
-            val dark = when (store.themeMode) { "light" -> false; "dark" -> true; else -> isSystemInDarkTheme() }
-            HomeTheme(dark) {
+            val dark = when (store.themeMode) { "light", "pop" -> false; "dark" -> true; else -> isSystemInDarkTheme() }
+            HomeTheme(dark, pop = store.themeMode == "pop") {
                 val p = LocalPalette.current
                 var cat by remember { mutableStateOf(appCat ?: cats.firstOrNull()?.id ?: "") }
                 AlertDialog(

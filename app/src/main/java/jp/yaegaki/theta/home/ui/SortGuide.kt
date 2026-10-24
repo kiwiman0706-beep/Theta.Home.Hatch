@@ -231,8 +231,9 @@ fun ChoiceButton(text: String, selected: Boolean, suggested: Boolean = false, on
         Modifier
             .defaultMinSize(minHeight = 48.dp)
             .widthIn(min = 72.dp)
-            .background(if (selected) p.accent else if (suggested) p.raised else Color.Transparent, Chamfer)
-            .border(if (suggested) 2.dp else 1.dp, if (selected || suggested) p.accent else p.line, Chamfer)
+            .popShadow(p, hudShape)
+            .background(if (selected) p.accent else if (suggested) p.raised else if (p.pop) p.panel else Color.Transparent, hudShape)
+            .border(if (suggested) 2.dp else lineWidth, if ((selected || suggested) && !p.pop) p.accent else p.line, hudShape)
             .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = text + if (suggested) "（おすすめ）" else "" }
             .padding(horizontal = 14.dp, vertical = 10.dp),

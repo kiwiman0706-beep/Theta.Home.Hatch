@@ -151,6 +151,27 @@ class ScreenshotTest {
         shot("filer-list-thumbs")
     }
 
+    /** POP（カラフル）：開いた画面・アプリのドロワー、閉じた画面のダッシュボード。 */
+    @Test
+    @Config(qualifiers = "w904dp-h1104dp-xhdpi")
+    fun popMain() {
+        launch("pop")
+        shot("pop-main-filer")
+        compose.onNodeWithContentDescription("HATCH（Alt+H）").performClick()
+        compose.mainClock.advanceTimeBy(600)
+        shot("pop-main-hatch")
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun popCover() {
+        launch("pop")
+        shot("pop-cover-dashboard")
+        compose.onNodeWithContentDescription("START すべてのアプリ（Alt+A）").performClick()
+        compose.mainClock.advanceTimeBy(600)
+        shot("pop-cover-apps")
+    }
+
     /** 端のタブを全部外しても、下の固定の START から全アプリを開ける。 */
     @Test
     @Config(qualifiers = "w360dp-h860dp-xxhdpi")
