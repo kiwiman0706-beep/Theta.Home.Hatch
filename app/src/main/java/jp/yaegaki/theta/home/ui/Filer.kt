@@ -72,6 +72,7 @@ import jp.yaegaki.theta.home.data.Apps
 import jp.yaegaki.theta.home.data.Contacts
 import jp.yaegaki.theta.home.data.Entry
 import jp.yaegaki.theta.home.data.Files
+import jp.yaegaki.theta.home.data.ViewItem
 import jp.yaegaki.theta.home.data.TabKind
 import jp.yaegaki.theta.home.data.TabSpec
 import jp.yaegaki.theta.home.hatch.HatchCatalog
@@ -164,7 +165,7 @@ fun Filer(model: HomeModel) {
 /** ドライブのファイルを開く。Google ドキュメントなどはリンクで（ドキュメントのアプリかブラウザが開く）、ほかは取得してから。 */
 private fun openDriveItem(model: HomeModel, actions: Actions, d: GDrive.Item) {
     if (d.isGoogleDoc) d.link?.let { actions.start(Intent(Intent.ACTION_VIEW, Uri.parse(it))) }
-    else model.fetchDrive(d) { f -> actions.start(Files.openIntent(Files.localUri(actions.activity, f), d.mime)) }
+    else model.fetchDrive(d) { f -> openFile(model, actions, ViewItem(Files.localUri(actions.activity, f), d.name, d.mime)) }
 }
 
 /** 下端の帯：今の場所・件数・画面の種類。 */
@@ -474,9 +475,11 @@ internal fun FolderView(
         when {
             e != null -> {
                 model.rememberOpened(where, e)
-                actions.start(Files.openIntent(e.uri, e.mime))
+                // 同じフォルダのファイルは、ポップアップの中で左右にめくって見られる
+                val siblings = tab?.let { t -> model.folders[t.id]?.entries }?.filter { !it.isDir }?.map { ViewItem(it.uri, it.name, it.mime) }
+                openFile(model, actions, ViewItem(e.uri, e.name, e.mime), siblings ?: listOf(ViewItem(e.uri, e.name, e.mime)))
             }
-            n != null -> model.fetchNas(n) { f -> actions.start(Files.openIntent(Files.localUri(actions.activity, f), r.mime)) }
+            n != null -> model.fetchNas(n) { f -> openFile(model, actions, ViewItem(Files.localUri(actions.activity, f), n.name, r.mime)) }
             r.drive != null -> openDriveItem(model, actions, r.drive)
         }
     }
@@ -512,8 +515,8 @@ internal fun FolderView(
                 onRetry = {},
                 preview = preview,
                 selected = selected,
-                onTap = { r -> if (preview) onSelect(r) else r.entry?.let { actions.start(Files.openIntent(it.uri, it.mime)) } },
-                onOpen = { r -> r.entry?.let { actions.start(Files.openIntent(it.uri, it.mime)) } },
+                onTap = { r -> if (preview) onSelect(r) else r.entry?.let { openFile(model, actions, ViewItem(it.uri, it.name, it.mime), rows.mapNotNull { x -> x.entry?.let { e -> ViewItem(e.uri, e.name, e.mime) } }) } },
+                onOpen = { r -> r.entry?.let { openFile(model, actions, ViewItem(it.uri, it.name, it.mime), rows.mapNotNull { x -> x.entry?.let { e -> ViewItem(e.uri, e.name, e.mime) } }) } },
                 onShare = ::share,
                 extraMenu = { _, _ -> },
                 empty = "フォルダから開いたファイルがここに並びます",
@@ -831,8 +834,8 @@ private fun Preview(model: HomeModel, r: Row?, modifier: Modifier) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PillButton("開く", {
                 if (e != null) {
-                    model.rememberOpened("", e); actions.start(Files.openIntent(e.uri, e.mime))
-                } else r.nas?.let { n -> model.fetchNas(n) { f -> actions.start(Files.openIntent(Files.localUri(ctx, f), r.mime)) } }
+                    model.rememberOpened("", e); openFile(model, actions, ViewItem(e.uri, e.name, e.mime))
+                } else r.nas?.let { n -> model.fetchNas(n) { f -> openFile(model, actions, ViewItem(Files.localUri(ctx, f), n.name, r.mime)) } }
             }, primary = true)
             PillButton("共有", {
                 if (e != null) actions.start(Files.shareIntent(e.uri, e.mime, e.name))
@@ -905,12 +908,12 @@ internal fun SearchResults(model: HomeModel) {
             model.tabs.filter { it.label.contains(q, true) }.forEach { t -> add(Hit("タブ", t.label, t.kind.defaultLabel) { model.query = ""; model.toggle(t.id) }) }
             model.apps.filter { it.label.contains(q, true) }.take(8).forEach { a -> add(Hit("アプリ", a.label, "") { model.query = ""; actions.start(Apps.launchIntent(a)) }) }
             model.recents.filter { it.name.contains(q, true) }.forEach { r ->
-                add(Hit("ファイル", r.name, r.where) { actions.start(Files.openIntent(Uri.parse(r.uri), r.mime)) })
+                add(Hit("ファイル", r.name, r.where) { openFile(model, actions, ViewItem(Uri.parse(r.uri), r.name, r.mime)) })
             }
             val here = model.location.removePrefix("tab:").let { model.folders[it]?.entries }.orEmpty()
-            here.filter { it.name.contains(q, true) }.forEach { e -> add(Hit("ここ", e.name, "今のフォルダ") { actions.start(Files.openIntent(e.uri, e.mime)) }) }
+            here.filter { it.name.contains(q, true) }.forEach { e -> add(Hit("ここ", e.name, "今のフォルダ") { openFile(model, actions, ViewItem(e.uri, e.name, e.mime)) }) }
             if (model.location == "nas") model.nasState.entries.filter { it.name.contains(q, true) }.forEach { n ->
-                add(Hit("NAS", n.name, "今のフォルダ") { if (n.dir) { model.query = ""; model.loadNas(n.path) } else model.fetchNas(n) { f -> actions.start(Files.openIntent(Files.localUri(actions.activity, f), Files.mimeOf(n.name))) } })
+                add(Hit("NAS", n.name, "今のフォルダ") { if (n.dir) { model.query = ""; model.loadNas(n.path) } else model.fetchNas(n) { f -> openFile(model, actions, ViewItem(Files.localUri(actions.activity, f), n.name, Files.mimeOf(n.name))) } })
             }
             model.people.filter { it.name.contains(q, true) }.take(6).forEach { person ->
                 val tab = model.tabWith("people")

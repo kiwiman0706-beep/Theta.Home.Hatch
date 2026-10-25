@@ -630,4 +630,33 @@ class ScreenshotTest {
     @Test
     @Config(qualifiers = "w360dp-h860dp-xxhdpi")
     fun weatherAlertsAlert() = alertShot("alert")
+
+    /** 中で開く：画像（左右にめくれる）・CSV。 */
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-xxhdpi")
+    fun viewer() {
+        launch()
+        compose.waitForIdle()
+        val app = ApplicationProvider.getApplicationContext<HomeApp>()
+        val img = java.io.File(app.filesDir, "sunset.png")
+        val bmp = android.graphics.Bitmap.createBitmap(800, 600, android.graphics.Bitmap.Config.ARGB_8888)
+        android.graphics.Canvas(bmp).apply {
+            drawColor(0xFF2A4A6A.toInt())
+            drawCircle(400f, 300f, 160f, android.graphics.Paint().apply { color = 0xFFFF8A3A.toInt() })
+        }
+        img.outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        val csv = java.io.File(app.filesDir, "家計簿.csv").apply { writeText("日付,項目,金額\n10/1,食費,1200\n10/2,\"交通, バス\",230\n10/3,本,1800\n") }
+        val items = listOf(
+            jp.yaegaki.theta.home.data.ViewItem(android.net.Uri.fromFile(img), img.name, "image/png"),
+            jp.yaegaki.theta.home.data.ViewItem(android.net.Uri.fromFile(csv), csv.name, "text/csv"),
+        )
+        scenario!!.onActivity { model().openViewer(items, 0) }
+        // 画像は別のスレッドで読むので、読み終わるまで待つ
+        compose.mainClock.autoAdvance = true
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("読み込み中…").fetchSemanticsNodes().isEmpty() }
+        shot("viewer-image")
+        scenario!!.onActivity { model().openViewer(items, 1) }
+        compose.mainClock.advanceTimeBy(1500)
+        shot("viewer-csv")
+    }
 }

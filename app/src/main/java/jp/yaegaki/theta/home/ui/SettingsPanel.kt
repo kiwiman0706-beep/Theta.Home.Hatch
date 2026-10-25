@@ -166,6 +166,10 @@ fun SettingsPanel(model: HomeModel) {
                     }
                 }
                 Gap(18.dp)
+                SectionTitle("VIEWER / ファイルを中で開く", Modifier.padding(horizontal = 10.dp))
+                Toggle("画像・動画・音声・PDF・文字・CSV・zip はホームの中で開く", model.inAppViewer) { model.changeInAppViewer(it) }
+                Note("左右にめくると同じフォルダのほかのファイルへ。ほかの形式や、上の「アプリで開く」はほかのアプリで開きます。")
+                Gap(18.dp)
                 SectionTitle("VOICE / 声でアプリを開く", Modifier.padding(horizontal = 10.dp))
                 FlowRow2 {
                     listOf("off" to "使わない", "tap" to "START を押したとき", "long" to "START を長押ししたとき").forEach { (k, label) ->

@@ -21,8 +21,8 @@ android {
         applicationId = "jp.yaegaki.theta.home"
         minSdk = 29
         targetSdk = 35
-        versionCode = 30
-        versionName = "0.25.0-alpha"
+        versionCode = 31
+        versionName = "0.26.0-alpha"
     }
 
     signingConfigs {
@@ -73,6 +73,9 @@ dependencies {
     implementation("androidx.exifinterface:exifinterface:1.4.1")
     // Google ドライブ：Google アカウントでの許可（Drive API の読み取り）
     implementation("com.google.android.gms:play-services-auth:21.4.0")
+    // 中で開く：動画・音声の再生（ExoPlayer）
+    implementation("androidx.media3:media3-exoplayer:1.8.0")
+    implementation("androidx.media3:media3-ui:1.8.0")
     testImplementation("junit:junit:4.13.2")
     // 画面の見本（スクリーンショット）を JVM 上で描く
     testImplementation("org.robolectric:robolectric:4.16.1")

@@ -524,6 +524,11 @@ class Store(context: Context) {
         set(v) = prefs.edit().putString("calMode", v).apply()
 
     /** エッジ：どのアプリの上でも、画面の端からタブを引き出す。side は "left"・"right"、pos は取っ手の上端（画面の高さの %）。 */
+    /** ファイルをホームの中（ポップアップ）で開く。オフなら今までどおりほかのアプリで。 */
+    var inAppViewer: Boolean
+        get() = prefs.getBoolean("inAppViewer", true)
+        set(v) = prefs.edit().putBoolean("inAppViewer", v).apply()
+
     var edgeOn: Boolean
         get() = prefs.getBoolean("edgeOn", false)
         set(v) = prefs.edit().putBoolean("edgeOn", v).apply()

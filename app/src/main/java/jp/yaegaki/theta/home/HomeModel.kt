@@ -127,6 +127,15 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         jp.yaegaki.theta.home.edge.EdgeService.sync(ctx)
     }
 
+    // ---- 中で開く（ポップアップのビューア） ----
+    var inAppViewer by mutableStateOf(store.inAppViewer); private set
+    fun changeInAppViewer(v: Boolean) { inAppViewer = v; store.inAppViewer = v }
+
+    /** 開いているファイルの並びと、初めに出すもの。null なら閉じている。 */
+    var viewer by mutableStateOf<Pair<List<jp.yaegaki.theta.home.data.ViewItem>, Int>?>(null); private set
+    fun openViewer(items: List<jp.yaegaki.theta.home.data.ViewItem>, index: Int) { viewer = items to index }
+    fun closeViewer() { viewer = null }
+
     var noticeLeft by mutableStateOf(store.noticeLeft); private set
     fun changeNoticeLeft(v: String) { noticeLeft = v; store.noticeLeft = v }
 
@@ -412,6 +421,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun onHome() {
+        viewer = null
         open = null
         settingsOpen = false
         query = ""

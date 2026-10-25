@@ -272,7 +272,7 @@ private fun decodeScaled(ctx: android.content.Context, uri: Uri, max: Int): Bitm
 
 /** PDF のページを、ドロワーの幅で縦に並べる。PdfRenderer は同時に 1 ページしか描けないので順番に。 */
 @Composable
-private fun PdfPages(uri: Uri) {
+internal fun PdfPages(uri: Uri) {
     val ctx = LocalActions.current.activity
     val p = LocalPalette.current
     val lock = remember { Mutex() }

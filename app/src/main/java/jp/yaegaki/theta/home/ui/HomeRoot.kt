@@ -201,6 +201,8 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity, edgeExit: (() -> Uni
                 if (!railLeft) Rail(model, railW)
             }
             model.importReport?.let { r -> ImportReportDialog(model, r) { model.importReport = null } }
+            // 中で開いたファイル（いちばん上に重ねる）
+            ViewerOverlay(model)
         }
     }
 }

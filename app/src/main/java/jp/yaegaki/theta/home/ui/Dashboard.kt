@@ -319,7 +319,7 @@ private fun FilesPanel(model: HomeModel) {
     if (recent.isEmpty()) Text("フォルダのタブか、上の場所を押すとファイラーが開きます", color = p.muted, fontSize = 12.sp)
     recent.forEach { r ->
         Row(
-            Modifier.fillMaxWidth().clickable { actions.start(Files.openIntent(Uri.parse(r.uri), r.mime)) }.padding(vertical = 4.dp),
+            Modifier.fillMaxWidth().clickable { openFile(model, actions, jp.yaegaki.theta.home.data.ViewItem(Uri.parse(r.uri), r.name, r.mime)) }.padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {

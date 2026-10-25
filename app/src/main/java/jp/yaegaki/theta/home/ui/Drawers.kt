@@ -965,7 +965,7 @@ private fun ClipDrawer(model: HomeModel) {
                             c.isFile -> {
                                 val f = File(HomeModel.clipDir(ctx), c.fileName!!)
                                 val uri = Files.localUri(ctx, f)
-                                PillButton("開く", { actions.start(Files.openIntent(uri, c.mime)) })
+                                PillButton("開く", { openFile(model, actions, jp.yaegaki.theta.home.data.ViewItem(uri, c.fileName ?: "", c.mime)) })
                                 PillButton("共有", { actions.start(Files.shareIntent(uri, c.mime, f.name)) })
                                 PillButton("書き出す", { actions.export(uri, c.fileName.substringAfter('_'), c.mime) })
                             }

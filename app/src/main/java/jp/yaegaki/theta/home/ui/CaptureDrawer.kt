@@ -112,7 +112,7 @@ fun CaptureDrawer(model: HomeModel) {
                     val uri = Files.localUri(ctx, f)
                     val mime = Files.mimeOf(f.name)
                     FlowRow2 {
-                        PillButton("開く", { actions.start(Files.openIntent(uri, mime)) })
+                        PillButton("開く", { openFile(model, actions, jp.yaegaki.theta.home.data.ViewItem(uri, f.name, mime)) })
                         PillButton("共有", { actions.start(Files.shareIntent(uri, mime, f.name)) })
                         PillButton("書き出す", { actions.export(uri, f.name, mime) })
                         PillButton("削除", { f.delete(); model.refreshCaptures() })
