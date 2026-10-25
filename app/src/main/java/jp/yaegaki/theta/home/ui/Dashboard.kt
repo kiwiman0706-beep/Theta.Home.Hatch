@@ -10,6 +10,8 @@ import android.os.StatFs
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -176,6 +178,7 @@ private fun WeatherPanel(model: HomeModel) {
             )
         }
         model.weatherError?.let { Text(it, color = p.accent, fontSize = 12.sp) }
+        AlertChips(model)
         if (f != null) {
             // 24 時間：時刻・絵・気温・降水確率
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -367,5 +370,43 @@ private fun Meter(value: Float, color: Color) {
     val p = LocalPalette.current
     Box(Modifier.fillMaxWidth().height(6.dp).border(1.dp, p.line)) {
         Box(Modifier.fillMaxWidth(value.coerceIn(0f, 1f)).height(6.dp).background(color))
+    }
+}
+
+/**
+ * 気象庁の警報・注意報。特別警報・警報は警告の色の地、注意報は枠だけ。何も出ていなければ「なし」と小さく。
+ * 日本の外・取れないときは何も出さない。
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AlertChips(model: HomeModel) {
+    val p = LocalPalette.current
+    val actions = LocalActions.current
+    val a = model.alerts ?: return
+    // 色はテーマに依らず、気象庁の色分けに近く：特別警報＝紫、警報＝赤、注意報＝黄（明るい地では濃いめ）
+    val dark = p.isDark
+    fun colorOf(level: Int) = when (level) {
+        3 -> if (dark) Color(0xFFC060F0) else Color(0xFF7B1FA2)
+        2 -> if (dark) Color(0xFFFF3B3B) else Color(0xFFC62828)
+        else -> if (dark) Color(0xFFF2C200) else Color(0xFF8A6D00)
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("JMA", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, letterSpacing = 1.sp)
+        Text(a.area, color = p.muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (a.list.isEmpty()) Text("警報・注意報なし", color = p.faint, fontSize = 11.sp)
+    }
+    if (a.list.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        a.list.forEach { al ->
+            val strong = al.level >= 2
+            val warn = colorOf(al.level)
+            Text(
+                (if (al.level >= 3) "▲ " else "") + al.name,
+                color = if (strong) Color.White else warn, fontSize = 12.sp, fontWeight = if (strong) FontWeight.Bold else FontWeight.Normal,
+                modifier = Modifier.background(if (strong) warn else Color.Transparent).border(1.dp, warn)
+                    // 押すと気象庁の警報・注意報のページ
+                    .clickable(onClickLabel = "気象庁のページを開く") { actions.start(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://www.jma.go.jp/bosai/warning/"))) }
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            )
+        }
     }
 }

@@ -288,7 +288,12 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         if (safeMode) return
         val place = weatherPlace ?: return
         val f = forecast
-        if (weatherLoading || !force && f != null && System.currentTimeMillis() - f.fetchedAt < 30 * 60_000) return
+        if (weatherLoading || !force && f != null && System.currentTimeMillis() - f.fetchedAt < 30 * 60_000) {
+            // 天気は取り直さなくても、警報・注意報は 10 分ごとに
+            if (!weatherLoading) refreshAlerts()
+            return
+        }
+        if (force) alerts = null
         weatherLoading = true
         viewModelScope.launch {
             val r = runCatching {
@@ -301,10 +306,26 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             r.onSuccess { (fc, text) -> forecast = fc; weatherError = null; store.weatherCache = text }
                 .onFailure { weatherError = "天気を取れませんでした（${it.message ?: it.javaClass.simpleName}）" }
             weatherLoading = false
+            refreshAlerts()
+        }
+    }
+
+    /** 気象庁の警報・注意報（日本の中だけ）。取れなければ null のまま（天気の欄には出さない）。 */
+    var alerts by mutableStateOf<jp.yaegaki.theta.home.data.AlertState?>(null); internal set
+
+    /** 天気と一緒に取る。10 分以内に取ったものがあれば取り直さない。 */
+    private fun refreshAlerts() {
+        val place = weatherPlace ?: return
+        val a = alerts
+        if (a != null && System.currentTimeMillis() - a.fetchedAt < 10 * 60_000) return
+        viewModelScope.launch {
+            runCatching { withContext(Dispatchers.IO) { jp.yaegaki.theta.home.data.Alerts.fetch(ctx, place.lat, place.lon) } }
+                .onSuccess { alerts = it }
         }
     }
 
     fun chooseWeatherPlace(p: WeatherPlace) {
+        alerts = null
         weatherPlace = p
         store.weatherPlace = p
         forecast = null

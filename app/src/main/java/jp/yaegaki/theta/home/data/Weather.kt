@@ -113,7 +113,7 @@ object Weather {
         else -> "—"
     }
 
-    private fun get(url: String): String {
+    internal fun get(url: String): String {
         val c = URL(url).openConnection() as HttpURLConnection
         c.connectTimeout = 10_000
         c.readTimeout = 10_000

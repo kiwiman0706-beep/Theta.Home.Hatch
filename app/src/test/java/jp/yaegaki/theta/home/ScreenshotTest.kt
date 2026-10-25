@@ -604,4 +604,30 @@ class ScreenshotTest {
         launch("scifi")
         shot("scifi-cover")
     }
+
+    /** 天気の欄の警報・注意報（気象庁）。 */
+    private fun alertShot(theme: String) {
+        launch(theme) { it.store.weatherPlace = jp.yaegaki.theta.home.data.WeatherPlace("新宿区", 35.69, 139.70) }
+        compose.waitForIdle()
+        scenario!!.onActivity {
+            model().alerts = jp.yaegaki.theta.home.data.AlertState(
+                "新宿区",
+                listOf(
+                    jp.yaegaki.theta.home.data.Alert("大雨警報", 2), jp.yaegaki.theta.home.data.Alert("洪水警報", 2),
+                    jp.yaegaki.theta.home.data.Alert("雷注意報", 1), jp.yaegaki.theta.home.data.Alert("強風注意報", 1),
+                ),
+                0L,
+            )
+        }
+        compose.mainClock.advanceTimeBy(600)
+        shot("weather-alerts-$theme")
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun weatherAlerts() = alertShot("dark")
+
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun weatherAlertsAlert() = alertShot("alert")
 }
