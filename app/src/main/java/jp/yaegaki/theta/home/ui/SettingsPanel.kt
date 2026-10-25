@@ -263,36 +263,41 @@ fun SettingsPanel(model: HomeModel) {
             }
             itemsIndexed(model.tabs, key = { _, t -> t.id }) { i, t ->
                 var menu by remember { mutableStateOf(false) }
+                // 中身の一覧（フォルダは場所も）
+                val folder = model.boardItems(t.id).firstOrNull { it.type == jp.yaegaki.theta.home.data.BoardItem.FOLDER }?.let(model::specOf)
+                val key = model.keyOf(t)?.let { " · Alt+$it" }.orEmpty()
                 Box {
                     RowButton(zebra = i, onClick = { menu = true }) {
-                        Dot(p.group(t.kind.group))
+                        Dot(p.group(model.groupOf(t)))
                         TwoLines(
                             t.label,
                             when {
-                                t.kind == TabKind.FOLDER && t.folderUri == null -> "フォルダ · 未割り当て"
-                                t.kind == TabKind.FOLDER && t.nasPath != null -> "フォルダ · NAS " + t.nasPath!!.ifEmpty { "/" }
-                                t.kind == TabKind.FOLDER && t.driveFolder != null -> "フォルダ · DRIVE " + t.driveFolder!!.second
-                                t.kind == TabKind.FOLDER -> "フォルダ · " + android.net.Uri.decode(t.folderUri!!.substringAfterLast('/')).substringAfter(':')
-                                else -> t.kind.defaultLabel + (t.kind.key?.let { " · Alt+$it" } ?: "")
+                                t.kind == TabKind.CATEGORY -> "アプリのカテゴリー"
+                                folder != null && folder.folderUri == null -> "フォルダ · 未割り当て"
+                                folder?.nasPath != null -> "フォルダ · NAS " + folder.nasPath!!.ifEmpty { "/" }
+                                folder?.driveFolder != null -> "フォルダ · DRIVE " + folder.driveFolder!!.second
+                                folder != null -> "フォルダ · " + android.net.Uri.decode(folder.folderUri!!.substringAfterLast('/')).substringAfter(':')
+                                else -> model.boardItems(t.id).joinToString(" · ") { it.kind?.defaultLabel ?: it.type.uppercase() }.ifEmpty { "空のタブ" } + key
                             },
                             Modifier.weight(1f),
                         )
                     }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                         DropdownMenuItem(text = { Text("名前を変える") }, onClick = { menu = false; renaming = t })
-                        if (t.kind == TabKind.FOLDER) DropdownMenuItem(text = { Text("端末のフォルダを選ぶ") }, onClick = { menu = false; actions.pickFolder(t.id) })
-                        if (t.kind == TabKind.FOLDER && model.nas.configured()) DropdownMenuItem(
+                        // フォルダを置いたタブは、そのフォルダの場所をここでも変えられる
+                        if (folder != null) DropdownMenuItem(text = { Text("端末のフォルダを選ぶ") }, onClick = { menu = false; actions.pickFolder(folder.id) })
+                        if (folder != null && model.nas.configured()) DropdownMenuItem(
                             text = { Text("NAS の今のフォルダ（${model.nasState.path.ifEmpty { "/" }}）にする") },
-                            onClick = { menu = false; model.assignNasFolder(t.id, model.nasState.path) },
+                            onClick = { menu = false; model.assignNasFolder(folder.id, model.nasState.path) },
                         )
                         val dTop = model.driveState.stack.lastOrNull()
-                        if (t.kind == TabKind.FOLDER && model.driveOn && dTop != null && !dTop.first.startsWith("~") && dTop.first.isNotEmpty()) DropdownMenuItem(
+                        if (folder != null && model.driveOn && dTop != null && !dTop.first.startsWith("~") && dTop.first.isNotEmpty()) DropdownMenuItem(
                             text = { Text("ドライブの今のフォルダ（${dTop.second}）にする") },
-                            onClick = { menu = false; model.assignDriveFolder(t.id, dTop.first, dTop.second) },
+                            onClick = { menu = false; model.assignDriveFolder(folder.id, dTop.first, dTop.second) },
                         )
                         if (i > 0) DropdownMenuItem(text = { Text("上へ") }, onClick = { menu = false; model.updateTabs(model.tabs.move(i, i - 1)) })
                         if (i < model.tabs.lastIndex) DropdownMenuItem(text = { Text("下へ") }, onClick = { menu = false; model.updateTabs(model.tabs.move(i, i + 1)) })
-                        DropdownMenuItem(text = { Text("このタブを外す") }, onClick = { menu = false; model.updateTabs(model.tabs - t) })
+                        DropdownMenuItem(text = { Text("このタブを外す") }, onClick = { menu = false; model.removeTab(t.id) })
                     }
                 }
             }
@@ -301,8 +306,8 @@ fun SettingsPanel(model: HomeModel) {
                 if (adding) AddTabDialog(model, onWidget = { adding = false; addingWidget = true }) { adding = false }
                 if (addingWidget) AddWidgetDialog(model) { addingWidget = false }
                 Gap(18.dp)
-                Note("物理キーボード：Alt＋1〜9 でフォルダのタブ、Alt＋C 予定・M メール・L LINE・P 人・A アプリ・B 栞・X Clip・R 記録・H Hatch。ホームで文字を打つとすぐ検索、Esc で閉じる。")
-                Note("タブは端のタブの下の「＋」でも足せます（ウィジェット・アプリのカテゴリー・フォルダ・ドロワー）。長押しで並べ替え・名前・外す。ウィジェットの並びと大きさは閉じた画面と開いた画面で別々です。")
+                Note("物理キーボード：Alt＋1〜9 でフォルダを置いたタブ、Alt＋C 予定・M メール・L LINE・P 人・A アプリ・B 栞・X Clip・R 記録・H Hatch。ホームで文字を打つとすぐ検索、Esc で閉じる。")
+                Note("タブは端のタブの下の「＋」でも足せます（ふつうのタブ・アプリのカテゴリー）。ふつうのタブには、歯車からウィジェット・フォルダ・ページ・予定などを好きな数だけ足せます。長押しで並べ替え・名前・外す。")
                 Note("アプリの一覧は、画面上部の検索の横のボタン（Alt＋A）で開きます。")
                 Note("Theta Home Hatch ${BuildConfigInfo.versionName(actions.activity)}")
             }

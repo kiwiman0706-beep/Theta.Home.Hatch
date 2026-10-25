@@ -73,7 +73,7 @@ fun ImportReportDialog(model: HomeModel, report: ImportReport, onDismiss: () -> 
                         itemsIndexed(missing, key = { _, it -> it.packageName }) { i, m ->
                             RowButton(zebra = i, onClick = {
                                 if (m.hatch) {
-                                    onDismiss(); model.tabs.firstOrNull { it.kind == TabKind.HATCH }?.let { model.toggle(it.id) }
+                                    onDismiss(); model.tabWith("hatch")?.let { model.toggle(it.id) }
                                 } else openStore(m.packageName)
                             }) {
                                 TwoLines(m.label, m.packageName, Modifier.weight(1f))

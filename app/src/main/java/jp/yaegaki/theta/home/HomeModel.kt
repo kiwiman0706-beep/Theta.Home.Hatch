@@ -87,6 +87,9 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     private val store: Store = (app as HomeApp).store
 
     var tabs by mutableStateOf(store.tabs()); private set
+    /** ふつうのタブの中身（タブを読んだあと：古いタブを移すときに書き換わるので）。 */
+    var boards by mutableStateOf(store.boards()); private set
+    var tabOpts by mutableStateOf(store.tabOpts()); private set
     var railLeft by mutableStateOf(store.railLeft); private set
     /** "dark"・"light"・"system"。 */
     var themeMode by mutableStateOf(store.themeMode); private set
@@ -167,7 +170,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     var captures by mutableStateOf<List<Pair<CaptureKind, File>>>(emptyList()); private set
 
     /** 背景のファイラーで見ている場所："tab:<id>"（端末のフォルダ）・"nas"・"recent"。 */
-    var location by mutableStateOf(store.location.ifEmpty { tabs.firstOrNull { it.kind == TabKind.FOLDER }?.let { "tab:${it.id}" } ?: "recent" }); private set
+    var location by mutableStateOf(store.location.ifEmpty { "recent" }); private set
     /** NAS を開いたフォルダのタブ（タブから開いたときだけ）。 */
     var nasTab by mutableStateOf<String?>(null); private set
     /** NAS の場所ごとの中身。キーは DESK（背景のファイラー）か、フォルダのタブの id（ドロワー）。 */
@@ -208,8 +211,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         refreshCaptures()
         refreshHatchInstalled()
         refreshStatus(force = true)
-        val t = tab(location.removePrefix("tab:"))
-        if (t != null && t.kind == TabKind.FOLDER) showFolder(t, closeDrawer = false)
+        place(location.removePrefix("tab:"))?.let { showFolder(it, closeDrawer = false) }
     }
 
     fun refreshApps() = io { Apps.load(ctx) }.then { apps = it }
@@ -377,10 +379,11 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     fun openByKey(c: Char): Boolean {
         val upper = c.uppercaseChar()
+        // 数字は n 番目のフォルダがあるタブ、文字はその中身（予定・メールなど）があるタブ
         val t = if (upper in '1'..'9') {
-            tabs.filter { it.kind == TabKind.FOLDER }.getOrNull(upper - '1')
+            folderTabs().getOrNull(upper - '1')
         } else {
-            tabs.firstOrNull { it.kind.key == upper }
+            tabs.firstOrNull { keyOf(it) == upper }
         } ?: if (upper == 'A') tab(APPS_ID)!! else return false
         toggle(t.id)
         return true
@@ -397,15 +400,59 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         focusSearch++
     }
 
+    /** 開いたタブの中身を読み直す（予定・連絡先・記録・Hatch の版）。 */
     private fun onOpened(t: TabSpec?) {
-        when (t?.kind) {
-            TabKind.FOLDER -> openFolderDrawer(t)
-            TabKind.CALENDAR -> refreshEvents()
-            TabKind.PEOPLE -> refreshPeople()
-            TabKind.CAPTURE -> refreshCaptures()
-            TabKind.HATCH -> checkHatchUpdates()
-            else -> Unit
+        t ?: return
+        boardItems(t.id).forEach { item ->
+            when (item.kind) {
+                TabKind.FOLDER -> openFolderDrawer(specOf(item))
+                TabKind.CALENDAR -> refreshEvents()
+                TabKind.PEOPLE -> refreshPeople()
+                TabKind.CAPTURE -> refreshCaptures()
+                TabKind.HATCH -> checkHatchUpdates()
+                else -> Unit
+            }
         }
+    }
+
+    // ---- タブの中身から決まること（色・ショートカットキー・フォルダの場所） ----
+
+    /** タブの中身でいちばん上のものの種類（色分け・ショートカット・見出し）。 */
+    fun mainKind(t: TabSpec): TabKind = if (t.kind != TabKind.BOARD) t.kind else boardItems(t.id).firstNotNullOfOrNull { it.kind } ?: TabKind.BOARD
+
+    /** 端のタブの色分け：0＝フォルダ、1＝ウィジェット・予定など、2＝起動。 */
+    fun groupOf(t: TabSpec): Int = mainKind(t).group
+
+    /** Alt＋文字（予定は C など）。 */
+    fun keyOf(t: TabSpec): Char? = mainKind(t).key
+
+    /** フォルダを置いたタブ（Alt＋1〜9 の順）。 */
+    fun folderTabs(): List<TabSpec> = tabs.filter { t -> boardItems(t.id).any { it.type == BoardItem.FOLDER } }
+
+    /** 置いたフォルダすべて（背景のファイラーの「場所」）。名前は置いたものの名前か、タブの名前。 */
+    fun folderPlaces(): List<TabSpec> = tabs.flatMap { t ->
+        boardItems(t.id).filter { it.type == BoardItem.FOLDER }.map { specOf(it).let { s -> if (it.label.isEmpty()) s.copy(label = t.label) else s } }
+    }
+
+    /** 背景のファイラーの場所の id から、フォルダを引く。 */
+    fun place(id: String): TabSpec? = folderPlaces().firstOrNull { it.id == id }
+
+    /** その中身（"calendar" など）があるタブ。 */
+    fun tabWith(type: String): TabSpec? = tabs.firstOrNull { t -> boardItems(t.id).any { it.type == type } }
+
+    /** 中身を 1 つ置いたタブを作る。名前は中身の種類から。 */
+    fun addBoardTab(type: String, ref: String = "", fill: Boolean = true): Pair<TabSpec, BoardItem> {
+        val label = (BoardItem.PANELS[type] ?: when (type) {
+            BoardItem.FOLDER -> TabKind.FOLDER
+            BoardItem.FILE -> TabKind.FILE
+            BoardItem.WEB -> TabKind.WEB
+            else -> TabKind.BOARD
+        }).defaultLabel
+        val t = TabSpec(Store.newId(), TabKind.BOARD, label)
+        val item = BoardItem(Store.newId(), type, ref, fill = fill)
+        updateTabs(tabs + t)
+        addBoardItem(t.id, item)
+        return t to item
     }
 
     // ---- 背景のファイラー ----
@@ -507,7 +554,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun assignNasFolder(tabId: String, path: String) {
-        updateTabs(tabs.map { if (it.id == tabId) it.copy(folderUri = TabSpec.NAS_PREFIX + path) else it })
+        setRef(tabId, TabSpec.NAS_PREFIX + path)
+        nasStates.remove(tabId)
     }
 
     // ---- Google ドライブ ----
@@ -606,7 +654,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun assignDriveFolder(tabId: String, id: String, name: String) {
-        updateTabs(tabs.map { if (it.id == tabId) it.copy(folderUri = TabSpec.DRIVE_PREFIX + id + ":" + name) else it })
+        setRef(tabId, TabSpec.DRIVE_PREFIX + id + ":" + name)
+        driveStates.remove(tabId)
     }
 
     /** ネットワーク・Tailscale・NAS の状態。force でなければ 20 秒以内の結果を使い回す。 */
@@ -775,6 +824,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun removeTab(id: String) {
+        val wasHere = location == "tab:$id" || boardItems(id).any { location == "tab:" + it.id }
         updateTabs(tabs.filter { it.id != id })
         if (open == id) open = null
         docked = docked - id
@@ -784,12 +834,10 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         folders.remove(id)
         nasStates.remove(id)
         driveStates.remove(id)
-        if (location == "tab:$id") showRecent()
+        if (wasHere) showRecent()
     }
 
     // ---- タブごとの設定（出す画面・幅・置いたアプリ） ----
-
-    var tabOpts by mutableStateOf(store.tabOpts()); private set
 
     fun opts(id: String) = tabOpts[id] ?: jp.yaegaki.theta.home.data.TabOpts()
 
@@ -1252,8 +1300,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         folders.clear()
         open = null
         docked = emptyList()
-        location = store.location.ifEmpty { tabs.firstOrNull { it.kind == TabKind.FOLDER }?.let { "tab:${it.id}" } ?: "recent" }
-        tab(location.removePrefix("tab:"))?.let { if (it.kind == TabKind.FOLDER) showFolder(it, closeDrawer = false) }
+        location = store.location.ifEmpty { "recent" }
+        place(location.removePrefix("tab:"))?.let { showFolder(it, closeDrawer = false) }
         refreshApps()
         refreshStatus(force = true)
     }
@@ -1385,9 +1433,10 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     // ---- ふつうのタブ（BOARD）：ウィジェット・フォルダ・ファイル・ページを並べる ----
 
-    var boards by mutableStateOf(store.boards()); private set
-
     fun boardItems(tabId: String) = boards[tabId].orEmpty()
+
+    /** 縦いっぱいのものを置いたタブか（そのときはパネルを縦いっぱいにする）。 */
+    fun boardFills(tabId: String) = boardItems(tabId).any { it.fill }
 
     private fun saveBoards(map: Map<String, List<BoardItem>>) {
         boards = map

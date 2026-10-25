@@ -172,7 +172,7 @@ private fun openDriveItem(model: HomeModel, actions: Actions, d: GDrive.Item) {
 private fun FilerFooter(model: HomeModel) {
     val p = LocalPalette.current
     val loc = model.location
-    val tab = model.tab(loc.removePrefix("tab:"))
+    val tab = model.place(loc.removePrefix("tab:"))
     val (where, count) = when {
         loc == "nas" -> "NAS" + model.nasState.path.ifEmpty { "/" } to model.nasState.entries.size
         loc == "recent" -> "RECENT" to model.recents.size
@@ -261,7 +261,7 @@ internal fun EventLine(e: jp.yaegaki.theta.home.data.Event, onClick: () -> Unit)
 internal fun TodayEvents(model: HomeModel, max: Int, modifier: Modifier = Modifier) {
     val p = LocalPalette.current
     val actions = LocalActions.current
-    val calTab = model.tabs.firstOrNull { it.kind == TabKind.CALENDAR }
+    val calTab = model.tabWith("calendar")
     val list = model.todayEvents
     var picking by remember { mutableStateOf(false) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -395,7 +395,7 @@ private fun Places(model: HomeModel, modifier: Modifier, openNasSettings: () -> 
     Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         SectionTitle("LOCATION / 場所", Modifier.padding(start = 4.dp, bottom = 6.dp))
         var n = 0
-        model.tabs.filter { it.kind == TabKind.FOLDER }.forEach { t ->
+        model.folderPlaces().forEach { t ->
             PlaceButton(++n, t.label, when {
                 t.nasPath != null -> "NAS"
                 t.driveFolder != null -> "DRIVE"
@@ -447,7 +447,7 @@ internal fun PlaceChips(model: HomeModel) {
                     .padding(horizontal = 14.dp, vertical = 8.dp),
             )
         }
-        model.tabs.filter { it.kind == TabKind.FOLDER }.forEach { t -> chip(t.label, isActive(model, t)) { model.showFolder(t) } }
+        model.folderPlaces().forEach { t -> chip(t.label, isActive(model, t)) { model.showFolder(t) } }
         chip("NAS", model.location == "nas" && model.nasTab == null) { model.openNas("") }
         chip("DRIVE", model.location == "drive" && model.driveTab == null) { model.openDrive(listOf(GDrive.ROOT to "DRIVE")) }
         chip("最近", model.location == "recent") { model.showRecent() }
@@ -464,7 +464,7 @@ internal fun FolderView(
     spec: TabSpec? = null,
 ) {
     val actions = LocalActions.current
-    val tab = spec?.takeIf { it.nasPath == null && it.driveFolder == null } ?: model.tab(loc.removePrefix("tab:")).takeIf { loc.startsWith("tab:") }
+    val tab = spec?.takeIf { it.nasPath == null && it.driveFolder == null } ?: model.place(loc.removePrefix("tab:")).takeIf { loc.startsWith("tab:") }
     var editing by remember { mutableStateOf<SavedQuery?>(null) }
     editing?.let { q -> QueryDialog(model, q) { editing = null } }
 
@@ -551,7 +551,7 @@ internal fun FolderView(
                         val q = if (path.startsWith("?")) model.query(path.drop(1)) else null
                         if (q != null) DropdownMenuItem(text = { Text("条件を変える・消す") }, onClick = { close(); editing = q })
                         else DropdownMenuItem(text = { Text("この中の検索フォルダを作る") }, onClick = { close(); editing = newQuery("nas", path, r.name) })
-                        model.tabs.filter { it.kind == TabKind.FOLDER }.forEach { t ->
+                        model.folderPlaces().forEach { t ->
                             DropdownMenuItem(text = { Text("「${t.label}」のタブにする") }, onClick = { close(); model.assignNasFolder(t.id, path); actions.toast("「${t.label}」を NAS の ${r.name} にしました") })
                         }
                     }
@@ -588,7 +588,7 @@ internal fun FolderView(
                     if (q != null) DropdownMenuItem(text = { Text("条件を変える・消す") }, onClick = { close(); editing = q })
                     else if (r.isDir && d != null && !d.id.startsWith("~")) DropdownMenuItem(text = { Text("この中の検索フォルダを作る") }, onClick = { close(); editing = newQuery("drive", d.id, d.name) })
                     if (r.isDir && d != null && !d.id.startsWith("~")) {
-                        model.tabs.filter { it.kind == TabKind.FOLDER }.forEach { t ->
+                        model.folderPlaces().forEach { t ->
                             DropdownMenuItem(text = { Text("「${t.label}」のタブにする") }, onClick = { close(); model.assignDriveFolder(t.id, d.id, d.name); actions.toast("「${t.label}」をドライブの ${d.name} にしました") })
                         }
                     }
@@ -913,7 +913,7 @@ internal fun SearchResults(model: HomeModel) {
                 add(Hit("NAS", n.name, "今のフォルダ") { if (n.dir) { model.query = ""; model.loadNas(n.path) } else model.fetchNas(n) { f -> actions.start(Files.openIntent(Files.localUri(actions.activity, f), Files.mimeOf(n.name))) } })
             }
             model.people.filter { it.name.contains(q, true) }.take(6).forEach { person ->
-                val tab = model.tabs.firstOrNull { it.kind == TabKind.PEOPLE }
+                val tab = model.tabWith("people")
                 add(Hit("人", person.name, person.phone ?: person.email ?: "") {
                     model.query = ""
                     if (tab != null) model.toggle(tab.id) else actions.start(Contacts.viewIntent(person))
@@ -923,7 +923,7 @@ internal fun SearchResults(model: HomeModel) {
                 add(Hit("栞", b.name, Uri.parse(b.url).host ?: "") { actions.start(Intent(Intent.ACTION_VIEW, Uri.parse(b.url))) })
             }
             HatchCatalog.apps.filter { it.name.contains(q, true) }.forEach { a ->
-                val tab = model.tabs.firstOrNull { it.kind == TabKind.HATCH }
+                val tab = model.tabWith("hatch")
                 add(Hit("Hatch", a.name, a.summary) {
                     model.query = ""
                     val launch = a.packageName?.let { actions.activity.packageManager.getLaunchIntentForPackage(it) }

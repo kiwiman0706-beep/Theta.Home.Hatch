@@ -83,11 +83,21 @@ data class BoardItem(
     val label: String = "",
     val half: Boolean = false,
     val h: Map<String, Int> = emptyMap(),
+    /** 縦いっぱい（残りの高さ）。カレンダー・フォルダなど 1 つだけ置くタブ向け。 */
+    val fill: Boolean = false,
 ) {
     fun height(profile: String) = h[profile] ?: h.values.firstOrNull() ?: defaultHeight(type)
 
+    /** ショートカットキー・初めの名前・色分けに使う、元のタブの種類。 */
+    val kind: TabKind? get() = PANELS[type] ?: when (type) {
+        FOLDER -> TabKind.FOLDER
+        FILE -> TabKind.FILE
+        WEB -> TabKind.WEB
+        else -> null
+    }
+
     fun toJson(): JSONObject = JSONObject().put("id", id).put("type", type).put("ref", ref).put("label", label)
-        .put("half", half).put("h", JSONObject(h.mapValues { it.value }))
+        .put("half", half).put("fill", fill).put("h", JSONObject(h.mapValues { it.value }))
 
     companion object {
         const val WIDGET = "widget"
@@ -95,8 +105,23 @@ data class BoardItem(
         const val FILE = "file"
         const val WEB = "web"
 
+        /** 今までの専用のタブの中身。置くとそのドロワーと同じものが出る。 */
+        val PANELS = mapOf(
+            "calendar" to TabKind.CALENDAR, "mail" to TabKind.MAIL, "line" to TabKind.LINE, "people" to TabKind.PEOPLE,
+            "links" to TabKind.BOOKMARKS, "clip" to TabKind.CLIP, "capture" to TabKind.CAPTURE, "hatch" to TabKind.HATCH,
+        )
+
+        /** 元のタブの種類から、置くものの種類へ。 */
+        fun typeOf(kind: TabKind): String? = when (kind) {
+            TabKind.FOLDER -> FOLDER
+            TabKind.FILE -> FILE
+            TabKind.WEB -> WEB
+            else -> PANELS.entries.firstOrNull { it.value == kind }?.key
+        }
+
         fun defaultHeight(type: String) = when (type) {
             WIDGET -> 200
+            "calendar" -> 480
             FILE -> 280
             WEB -> 420
             else -> 320
@@ -109,6 +134,7 @@ data class BoardItem(
             label = o.optString("label"),
             half = o.optBoolean("half", false),
             h = o.optJSONObject("h")?.let { m -> m.keys().asSequence().associateWith { m.getInt(it) } }.orEmpty(),
+            fill = o.optBoolean("fill", false),
         )
     }
 }
@@ -174,7 +200,7 @@ class Store(context: Context) {
     val prefs: SharedPreferences = context.getSharedPreferences("home", Context.MODE_PRIVATE)
 
     fun tabs(): List<TabSpec> {
-        val raw = prefs.getString("tabs", null) ?: return migrateBoards(defaultTabs())
+        val raw = prefs.getString("tabs", null) ?: return migratePanels(migrateBoards(defaultTabs()))
         val list = runCatching {
             val a = JSONArray(raw)
             // 0.2.0 の「Widget」タブ（複数を縦に並べる）のような、今は無い種類は読み飛ばす
@@ -193,9 +219,27 @@ class Store(context: Context) {
         // 0.10.0 から、アプリの一覧はタブではなく画面上部のボタンで開く（タブは「＋」で戻せる）
         if (!prefs.getBoolean("appsTabMoved", false)) {
             prefs.edit().putBoolean("appsTabMoved", true).apply()
-            if (list.any { it.kind == TabKind.APPS }) return migrateBoards(list.filter { it.kind != TabKind.APPS }.also(::saveTabs))
+            if (list.any { it.kind == TabKind.APPS }) return migratePanels(migrateBoards(list.filter { it.kind != TabKind.APPS }.also(::saveTabs)))
         }
-        return migrateBoards(list)
+        return migratePanels(migrateBoards(list))
+    }
+
+    /**
+     * 0.21.0 までの専用のタブ（フォルダ・予定・メール・LINE・人・栞・Clip・記録・Hatch・WEB・FILE）を、
+     * 中身が 1 つ（縦いっぱい）のふつうのタブに移す。タブの id はそのまま（置いたアプリ・ショートカット・設定が残る）。
+     * 置いたものの id は "m-<タブの id>"。背景のファイラーがそのフォルダを見ていたら、置いたものの id に付け替える。
+     */
+    private fun migratePanels(list: List<TabSpec>): List<TabSpec> {
+        val old = list.filter { BoardItem.typeOf(it.kind) != null }
+        if (old.isEmpty()) return list
+        val boards = boards().toMutableMap()
+        old.forEach { t ->
+            val item = BoardItem("m-" + t.id, BoardItem.typeOf(t.kind)!!, t.folderUri.orEmpty(), t.label, fill = true)
+            boards[t.id] = listOf(item) + boards[t.id].orEmpty().filter { it.id != item.id }
+        }
+        saveBoards(boards)
+        old.firstOrNull { "tab:" + it.id == location }?.let { location = "tab:m-" + it.id }
+        return list.map { t -> if (t in old) TabSpec(t.id, TabKind.BOARD, t.label) else t }.also(::saveTabs)
     }
 
     /**

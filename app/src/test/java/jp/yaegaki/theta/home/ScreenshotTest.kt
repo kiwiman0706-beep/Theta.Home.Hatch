@@ -112,7 +112,7 @@ class ScreenshotTest {
     fun foldCover() {
         launch()
         shot("fold5-cover-filer")
-        compose.onNodeWithContentDescription("CAPTURE（Alt+R）").performClick()
+        compose.onNodeWithContentDescription("CAPTURE（Alt+R）").performScrollTo().performClick()
         compose.mainClock.advanceTimeBy(600)
         shot("fold5-cover-capture")
     }
@@ -317,7 +317,7 @@ class ScreenshotTest {
         launch()
         compose.onNodeWithContentDescription("タブを追加").performScrollTo().performClick()
         compose.waitForIdle()
-        compose.onNodeWithText("＋ ウィジェットから").performClick()
+        compose.onNodeWithText("＋ ウィジェット").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("ウィジェットのタブを追加", substring = true).assertExists()
     }
@@ -502,8 +502,8 @@ class ScreenshotTest {
         f.outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
         scenario!!.onActivity {
             val m = model()
-            val t = m.addTab(jp.yaegaki.theta.home.data.TabKind.FILE)
-            m.setTabFile(t.id, android.net.Uri.fromFile(f))
+            val (t, item) = m.addBoardTab(jp.yaegaki.theta.home.data.BoardItem.FILE)
+            m.setTabFile(item.id, android.net.Uri.fromFile(f))
             m.renameTab(t.id, "MAP")
         }
         compose.waitForIdle()
@@ -541,11 +541,28 @@ class ScreenshotTest {
             m.setTabWidth(t.id, 560)
         }
         compose.waitForIdle()
-        compose.onNodeWithContentDescription("DESK").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("DESK", substring = true).performScrollTo().performClick()
         compose.mainClock.advanceTimeBy(1200)
         shot("board-tab")
         compose.onNodeWithContentDescription("高さ・並び・足す").performClick()
         compose.mainClock.advanceTimeBy(600)
         shot("board-tab-edit")
+    }
+
+    /** 今までの専用のタブ（予定）は、中身が予定 1 つのふつうのタブ。予定の下に Web ページを足したところ。 */
+    @Test
+    @Config(qualifiers = "w904dp-h1104dp-xhdpi")
+    fun panelBoard() {
+        launch()
+        compose.waitForIdle()
+        scenario!!.onActivity {
+            val m = model()
+            val cal = m.tabWith("calendar")!!
+            m.updateBoardItem(m.boardItems(cal.id).single().copy(fill = false, h = mapOf("wide" to 520)))
+            m.addBoardItem(cal.id, jp.yaegaki.theta.home.data.BoardItem("n1", "mail", h = mapOf("wide" to 220)))
+        }
+        compose.onNodeWithContentDescription("CALENDAR", substring = true).performScrollTo().performClick()
+        compose.mainClock.advanceTimeBy(800)
+        shot("panel-board")
     }
 }

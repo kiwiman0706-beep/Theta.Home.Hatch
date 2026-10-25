@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -51,12 +52,20 @@ import kotlin.math.roundToInt
 fun BoardDrawer(model: HomeModel, t: TabSpec, editing: Boolean) {
     val items = model.boardItems(t.id)
     var adding by remember { mutableStateOf(false) }
-    Column(Modifier.verticalScroll(rememberScrollState()).padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (items.isEmpty()) Note("ウィジェット・フォルダ・画像や PDF・Web ページを、このタブに好きな数だけ並べられます。")
+    // 縦いっぱいのものがあれば、それが残りの高さを分け合う（全体はスクロールしない）。無ければ中身の高さで、はみ出たらスクロール
+    val fills = items.any { it.fill }
+    Column(
+        (if (fills) Modifier.fillMaxSize() else Modifier.verticalScroll(rememberScrollState())).padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (items.isEmpty()) Note("ウィジェット・フォルダ・画像や PDF・Web ページ・予定・通知などを、このタブに好きな数だけ並べられます。")
         rows(items).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val fillRow = row.any { it.fill }
+            Row(if (fillRow) Modifier.weight(1f) else Modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { item ->
-                    Box(Modifier.weight(1f)) { ItemView(model, item, items.indexOf(item), items.size, editing) }
+                    Box(Modifier.weight(1f).then(if (fillRow) Modifier.fillMaxHeight() else Modifier)) {
+                        ItemView(model, t, item, items.indexOf(item), items.size, editing, fillRow)
+                    }
                 }
             }
         }
@@ -84,23 +93,26 @@ private fun rows(items: List<BoardItem>): List<List<BoardItem>> {
 }
 
 @Composable
-private fun ItemView(model: HomeModel, item: BoardItem, index: Int, count: Int, editing: Boolean) {
+private fun ItemView(model: HomeModel, t: TabSpec, item: BoardItem, index: Int, count: Int, editing: Boolean, fillRow: Boolean) {
     val p = LocalPalette.current
     val density = LocalDensity.current.density
     val maxH = LocalConfiguration.current.screenHeightDp - 120
     val saved = item.height(model.profile)
     var h by remember(item.id, saved) { mutableIntStateOf(saved) }
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Box(Modifier.fillMaxWidth().height(h.dp).then(if (item.type == BoardItem.WIDGET) Modifier else Modifier.border(lineWidth, p.line))) {
+    // 1 つだけ置いた縦いっぱいのものは枠を付けない（今までの専用のタブと同じ見た目）
+    val framed = item.type != BoardItem.WIDGET && !(fillRow && count == 1)
+    Column(if (fillRow) Modifier.fillMaxSize() else Modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Box(Modifier.fillMaxWidth().then(if (fillRow) Modifier.weight(1f) else Modifier.height(h.dp)).then(if (framed) Modifier.border(lineWidth, p.line) else Modifier)) {
             when (item.type) {
                 BoardItem.WIDGET -> WidgetView(model, item, h)
-                BoardItem.FOLDER -> FolderDrawer(model, model.specOf(item))
+                BoardItem.FOLDER -> FolderDrawer(model, model.specOf(item).let { if (item.label.isEmpty()) it.copy(label = t.label) else it })
                 BoardItem.FILE -> FileDrawer(model, model.specOf(item))
                 BoardItem.WEB -> WebDrawer(model, model.specOf(item))
+                in BoardItem.PANELS -> PanelView(model, item.type)
                 else -> Note("この版では表示できないものです")
             }
         }
-        if (editing) {
+        if (editing && !item.fill) {
             // 下の帯：なぞって高さを変える
             Box(
                 Modifier.fillMaxWidth().height(22.dp).background(p.raised)
@@ -119,9 +131,13 @@ private fun ItemView(model: HomeModel, item: BoardItem, index: Int, count: Int, 
                     },
                 contentAlignment = Alignment.Center,
             ) { Box(Modifier.width(40.dp).height(3.dp).background(p.accent)) }
+        }
+        if (editing) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // 半分の幅では詰めて出す
-                Text(if (item.half) "${h}dp" else "${kindName(item.type)}  ${h}dp", color = p.faint, fontSize = 11.sp, fontFamily = Hud.mono, maxLines = 1, modifier = Modifier.weight(1f))
+                Text(if (item.half) (if (item.fill) "FILL" else "${h}dp") else "${kindName(item.type)}  ${if (item.fill) "FILL" else "${h}dp"}",
+                    color = p.faint, fontSize = 11.sp, fontFamily = Hud.mono, maxLines = 1, modifier = Modifier.weight(1f))
+                TextButton(onClick = { model.updateBoardItem(item.copy(fill = !item.fill)) }) { Text(if (item.fill) "高さを決める" else "縦いっぱい", color = p.fg, fontSize = 12.sp) }
                 TextButton(onClick = { model.updateBoardItem(item.copy(half = !item.half)) }) { Text(if (item.half) "全幅" else "半分", color = p.fg, fontSize = 12.sp) }
                 if (index > 0) TextButton(onClick = { model.moveBoardItem(item.id, -1) }) { Text("▲", color = p.fg) }
                 if (index < count - 1) TextButton(onClick = { model.moveBoardItem(item.id, 1) }) { Text("▼", color = p.fg) }
@@ -132,6 +148,7 @@ private fun ItemView(model: HomeModel, item: BoardItem, index: Int, count: Int, 
 }
 
 private fun kindName(type: String) = when (type) {
+    in BoardItem.PANELS -> BoardItem.PANELS[type]!!.defaultLabel
     BoardItem.WIDGET -> "WIDGET"
     BoardItem.FOLDER -> "FOLDER"
     BoardItem.FILE -> "FILE"
@@ -159,7 +176,7 @@ private fun WidgetView(model: HomeModel, item: BoardItem, h: Int) {
     }
 }
 
-/** 足すものを選ぶ：ウィジェット・端末のフォルダ・フォルダのタブと同じ場所・画像や PDF・Web ページ。 */
+/** 足すものを選ぶ：ウィジェット・端末のフォルダ・ほかのタブと同じフォルダ・画像や PDF・Web ページ・予定や通知など。 */
 @Composable
 private fun AddItemDialog(model: HomeModel, tabId: String, onDismiss: () -> Unit) {
     val actions = LocalActions.current
@@ -168,7 +185,8 @@ private fun AddItemDialog(model: HomeModel, tabId: String, onDismiss: () -> Unit
         AddWidgetDialog(model, intoBoard = tabId) { widget = false; onDismiss() }
         return
     }
-    val folderTabs = model.tabs.filter { it.kind == TabKind.FOLDER && it.folderUri != null }
+    val folderTabs = model.folderPlaces().filter { it.folderUri != null }.distinctBy { it.folderUri }
+    val tabLabel = model.tab(tabId)?.label.orEmpty()
     fun add(type: String, ref: String = "", label: String = ""): BoardItem =
         BoardItem(Store.newId(), type, ref, label).also { model.addBoardItem(tabId, it) }
     AlertDialog(
@@ -180,12 +198,12 @@ private fun AddItemDialog(model: HomeModel, tabId: String, onDismiss: () -> Unit
                 PillButton("＋ ウィジェット", { widget = true }, primary = true)
                 SectionTitle("FOLDER")
                 PillButton("＋ 端末のフォルダを選ぶ", {
-                    val item = add(BoardItem.FOLDER)
+                    val item = add(BoardItem.FOLDER, label = tabLabel)
                     onDismiss()
                     actions.pickFolder(item.id)
                 })
                 if (folderTabs.isNotEmpty()) {
-                    Note("フォルダのタブと同じ場所（NAS・ドライブのフォルダもここから）")
+                    Note("ほかのタブに置いたフォルダと同じ場所（NAS・ドライブのフォルダもここから）")
                     FlowRow2 {
                         folderTabs.forEach { f -> PillButton(f.label, { add(BoardItem.FOLDER, f.folderUri!!, f.label); onDismiss() }) }
                     }
@@ -201,6 +219,10 @@ private fun AddItemDialog(model: HomeModel, tabId: String, onDismiss: () -> Unit
                     })
                     // URL は置いた枠の中で入れる
                     PillButton("＋ Web ページ", { add(BoardItem.WEB); onDismiss() })
+                }
+                SectionTitle("PANEL・予定や通知など")
+                FlowRow2 {
+                    BoardItem.PANELS.forEach { (type, kind) -> PillButton("＋ " + kind.defaultLabel, { add(type); onDismiss() }) }
                 }
             }
         },

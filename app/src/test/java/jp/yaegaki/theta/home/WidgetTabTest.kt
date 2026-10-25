@@ -43,7 +43,7 @@ class WidgetTabTest {
             .putString("tabOpts", """{"w:2":{"show":"wide","apps":["a/b"]}}""")
             .commit()
         store.saveShortcuts(listOf(PinnedShortcut("s", "p", "x", "トーク", "tab:w:2")))
-        val boards = store.tabs().filter { it.kind == TabKind.BOARD }
+        val boards = store.tabs().filter { it.kind == TabKind.BOARD && it.label.matches(Regex("W[0-9]")) }
         assertEquals(listOf("W1", "W2", "W3"), boards.map { it.label })
         val items = store.boards()
         assertEquals(listOf("1", "4"), items[boards[0].id]!!.map { it.ref })
@@ -58,7 +58,7 @@ class WidgetTabTest {
         assertEquals(716, o.width["wide"])
         assertEquals("tab:${boards[1].id}", store.shortcuts().single().catId)
         // 2 回目は何もしない
-        assertEquals(3, store.tabs().count { it.kind == TabKind.BOARD })
+        assertEquals(3, store.tabs().count { it.kind == TabKind.BOARD && it.label.matches(Regex("W[0-9]")) })
     }
 
     @Test
@@ -78,5 +78,29 @@ class WidgetTabTest {
         app.store.saveTabOpts(mapOf("t1" to o, "t2" to TabOpts()))
         assertEquals(mapOf("t1" to o), app.store.tabOpts())
         assertEquals(false, o.shownOn("narrow"))
+    }
+
+    /** 0.21.0 までの専用のタブは、中身が 1 つ（縦いっぱい）のふつうのタブに。id・名前・フォルダはそのまま。 */
+    @Test
+    fun migratePanels() {
+        val app = ApplicationProvider.getApplicationContext<HomeApp>()
+        val store = app.store
+        store.prefs.edit().clear().commit()
+        store.prefs.edit()
+            .putString("tabs", """[{"id":"work","kind":"FOLDER","label":"WORK","folder":"nas:/home"},{"id":"cal","kind":"CALENDAR","label":"予定","folder":""},{"id":"c","kind":"CATEGORY","label":"COM","folder":"cat1"}]""")
+            .putString("location", "tab:work")
+            .commit()
+        val tabs = store.tabs()
+        assertEquals(listOf(TabKind.BOARD, TabKind.BOARD, TabKind.CATEGORY), tabs.map { it.kind })
+        assertEquals(listOf("work", "cal", "c"), tabs.map { it.id })
+        val work = store.boards()["work"]!!.single()
+        assertEquals(BoardItem.FOLDER, work.type)
+        assertEquals("nas:/home", work.ref)
+        assertEquals(true, work.fill)
+        assertEquals("calendar", store.boards()["cal"]!!.single().type)
+        assertEquals("tab:m-work", store.location)
+        // 2 回目は何もしない
+        assertEquals(tabs, store.tabs())
+        assertEquals(1, store.boards()["work"]!!.size)
     }
 }

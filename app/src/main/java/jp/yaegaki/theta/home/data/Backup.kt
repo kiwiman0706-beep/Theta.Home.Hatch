@@ -122,9 +122,11 @@ object Backup {
         val widgets = o.optJSONObject("widgets")?.let { w ->
             listOf("narrow", "wide", "boards").flatMap { p -> w.optJSONArray(p)?.let { a -> (0 until a.length()).map { a.getJSONObject(it).optString("label") } }.orEmpty() }
         }.orEmpty().distinct()
-        val folders = store.tabs().filter { t ->
-            t.kind == TabKind.FOLDER && t.isLocal && !Files.hasGrant(context, Uri.parse(t.folderUri))
-        }.map { it.label }
+        // 端末のフォルダの許可は移せないので、置いたフォルダのうち選び直しが要るもの
+        val labels = store.tabs().associate { it.id to it.label }
+        val folders = store.boards().flatMap { (tabId, items) ->
+            items.filter { it.type == BoardItem.FOLDER }.map { TabSpec(it.id, TabKind.FOLDER, it.label.ifEmpty { labels[tabId].orEmpty() }, it.ref.ifEmpty { null }) }
+        }.filter { t -> t.isLocal && !Files.hasGrant(context, Uri.parse(t.folderUri)) }.map { it.label }
         return ImportReport(missing, widgets, folders, nasUrl.isNotEmpty() && store.prefs.getString("nasPassword", "").isNullOrEmpty())
     }
 

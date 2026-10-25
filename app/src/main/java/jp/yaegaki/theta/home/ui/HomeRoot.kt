@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import jp.yaegaki.theta.home.HomeModel
 import jp.yaegaki.theta.home.data.TabKind
+import jp.yaegaki.theta.home.data.BoardItem
 import jp.yaegaki.theta.home.data.TabSpec
 
 /** 端末の画面幅から決める並べ方。機種名ではなく使える幅で決める。 */
@@ -117,7 +118,7 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity) {
     }
     val p = LocalPalette.current
 
-    val here = model.tab(model.location.removePrefix("tab:"))
+    val here = model.place(model.location.removePrefix("tab:"))
     val canGoUp = model.location == "nas" && model.nasState.path.isNotEmpty() ||
         model.location == "drive" && model.driveState.stack.size > 1 ||
         here != null && (model.folders[here.id]?.stack?.size ?: 0) > 1
@@ -255,7 +256,7 @@ private fun Overlay(model: HomeModel, layout: Layout, available: Dp) {
         )
     }
     // ふつうのタブは中身の高さだけの小さなパネル（上寄せ）。ほかは縦いっぱい
-    val small = shown != SETTINGS && model.tab(shown)?.kind == TabKind.BOARD
+    val small = shown != SETTINGS && model.tab(shown)?.kind == TabKind.BOARD && !model.boardFills(shown!!)
     Box(Modifier.fillMaxSize(), contentAlignment = when {
         small && fromRight -> Alignment.TopEnd
         small -> Alignment.TopStart
@@ -323,9 +324,10 @@ private fun Rail(model: HomeModel, width: Dp) {
         val reorder = rememberReorderState()
         // この画面（閉じた／開いた）では出さないタブは飛ばす
         model.tabs.filter { model.shownHere(it.id) }.forEach { t ->
-            if (lastGroup != -1 && t.kind.group != lastGroup) Spacer(Modifier.height(12.dp))
-            lastGroup = t.kind.group
-            RailTab(model, reorder, t.id, t.label, t.kind.group, active = railActive(model, t), shortcut = shortcut(model, t), left = left)
+            val group = model.groupOf(t)
+            if (lastGroup != -1 && group != lastGroup) Spacer(Modifier.height(12.dp))
+            lastGroup = group
+            RailTab(model, reorder, t.id, t.label, group, active = railActive(model, t), shortcut = shortcut(model, t), left = left)
         }
         var adding by remember { mutableStateOf(false) }
         var addingWidget by remember { mutableStateOf(false) }
@@ -372,8 +374,8 @@ private fun StartButton(model: HomeModel) {
 
 private fun railActive(model: HomeModel, t: TabSpec) = model.open == t.id || t.id in model.docked
 
-private fun shortcut(model: HomeModel, t: TabSpec) = t.kind.key?.let { "Alt+$it" }
-    ?: model.tabs.filter { it.kind == TabKind.FOLDER }.indexOf(t).takeIf { it in 0..8 }?.let { "Alt+${it + 1}" }
+private fun shortcut(model: HomeModel, t: TabSpec) = model.keyOf(t)?.let { "Alt+$it" }
+    ?: model.folderTabs().indexOf(t).takeIf { it in 0..8 }?.let { "Alt+${it + 1}" }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -433,9 +435,11 @@ private fun TabMenu(model: HomeModel, id: String, expanded: Boolean, close: () -
             DropdownMenuItem(text = { Text("⤒ いちばん上へ") }, onClick = { close(); model.moveTab(id, -model.tabs.indexOf(t)) })
         }
         DropdownMenuItem(text = { Text("名前を変える") }, onClick = { close(); rename() })
-        if (t?.kind == TabKind.FOLDER) DropdownMenuItem(text = { Text("端末のフォルダを選び直す") }, onClick = { close(); actions.pickFolder(id) })
-        if (t?.kind == TabKind.FILE) DropdownMenuItem(text = { Text("ファイルを選び直す") }, onClick = {
-            close(); actions.openDocument(arrayOf("image/*", "application/pdf")) { model.setTabFile(id, it) }
+        // 中身がフォルダ 1 つ・ファイル 1 つのタブは、ここからも選び直せる
+        val only = model.boardItems(id).singleOrNull()
+        if (only?.type == BoardItem.FOLDER) DropdownMenuItem(text = { Text("端末のフォルダを選び直す") }, onClick = { close(); actions.pickFolder(only.id) })
+        if (only?.type == BoardItem.FILE) DropdownMenuItem(text = { Text("ファイルを選び直す") }, onClick = {
+            close(); actions.openDocument(arrayOf("image/*", "application/pdf")) { model.setTabFile(only.id, it) }
         })
         if (t?.kind != TabKind.CATEGORY && t?.kind != TabKind.APPS) DropdownMenuItem(text = { Text("アプリ・ショートカットを置く") }, onClick = { close(); placeApps() })
         if (t?.kind == TabKind.CATEGORY) {
@@ -479,24 +483,46 @@ private fun RenameTabDialog(model: HomeModel, id: String, onDismiss: () -> Unit)
 }
 
 /**
- * 端のタブの「＋」：ウィジェット・アプリのカテゴリー・フォルダ・ドロワーを足す。
- * 置いてあるものは出さない（フォルダは何個でも足せる）。
+ * 端のタブの「＋」：ふつうのタブ（空・ウィジェット・フォルダ・ページ・ファイル・予定や通知など、中身を 1 つ入れて作る）と、
+ * アプリのカテゴリーのタブ。ふつうのタブはあとから中身を足せる。
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AddTabDialog(model: HomeModel, onWidget: () -> Unit, onDismiss: () -> Unit) {
     val actions = LocalActions.current
     val usedCats = model.tabs.filter { it.kind == TabKind.CATEGORY }.mapNotNull { it.folderUri }.toSet()
-    val drawers = TabKind.entries.filter { it !in listOf(TabKind.FOLDER, TabKind.CATEGORY, TabKind.WEB, TabKind.FILE, TabKind.BOARD) && model.tabs.none { t -> t.kind == it } }
+    // 中身を 1 つ入れて作り、すぐ開く
+    fun create(type: String, ref: String = "") {
+        val (t, _) = model.addBoardTab(type, ref)
+        onDismiss()
+        model.toggle(t.id)
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("タブを追加") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionTitle("BOARD / ふつうのタブ")
-                Note("ウィジェット・フォルダ・画像や PDF・Web ページを、好きな数だけ並べるタブ。")
+                SectionTitle("TAB / ふつうのタブ")
+                Note("中身を 1 つ入れて作ります。あとで歯車から、ウィジェット・フォルダ・ページ・予定などを好きな数だけ足せます。")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    PillButton("＋ ウィジェットから", onWidget, primary = true)
+                    PillButton("＋ ウィジェット", onWidget, primary = true)
+                    PillButton("＋ フォルダ", {
+                        val (t, item) = model.addBoardTab(BoardItem.FOLDER)
+                        onDismiss()
+                        actions.pickFolder(item.id)
+                        model.toggle(t.id)
+                    })
+                    // URL は開いたタブの中で入れる
+                    PillButton("＋ Web ページ", { create(BoardItem.WEB) })
+                    PillButton("＋ 画像・PDF", {
+                        onDismiss()
+                        actions.openDocument(arrayOf("image/*", "application/pdf")) { uri ->
+                            val (t, item) = model.addBoardTab(BoardItem.FILE)
+                            model.setTabFile(item.id, uri)
+                            model.toggle(t.id)
+                        }
+                    })
+                    BoardItem.PANELS.forEach { (type, kind) -> PillButton("＋ " + kind.defaultLabel, { create(type) }) }
                     PillButton("＋ 空のタブ", { val t = model.addTab(TabKind.BOARD); onDismiss(); model.toggle(t.id) })
                 }
                 SectionTitle("CATEGORY / アプリのカテゴリー")
@@ -506,25 +532,6 @@ fun AddTabDialog(model: HomeModel, onWidget: () -> Unit, onDismiss: () -> Unit) 
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     cats.forEach { c -> PillButton(c.name, { model.addCategoryTab(c); onDismiss() }) }
                 }
-                SectionTitle("FOLDER / フォルダ")
-                PillButton("＋ フォルダのタブ", {
-                    val t = model.addTab(TabKind.FOLDER)
-                    onDismiss()
-                    actions.pickFolder(t.id)
-                })
-                SectionTitle("PAGE・FILE / ページ・ファイル")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    // URL は開いたタブの中で入れる
-                    PillButton("＋ WEB（決めたページ）", { val t = model.addTab(TabKind.WEB); onDismiss(); model.toggle(t.id) })
-                    PillButton("＋ FILE（画像・PDF）", {
-                        onDismiss()
-                        actions.openDocument(arrayOf("image/*", "application/pdf")) { uri ->
-                            val t = model.addTab(TabKind.FILE)
-                            model.setTabFile(t.id, uri)
-                            model.toggle(t.id)
-                        }
-                    })
-                }
                 // ほかの画面だけに出しているタブを、この画面にも出す
                 val hidden = model.tabs.filter { !model.shownHere(it.id) }.map { it.id to it.label }
                 if (hidden.isNotEmpty()) {
@@ -533,13 +540,7 @@ fun AddTabDialog(model: HomeModel, onWidget: () -> Unit, onDismiss: () -> Unit) 
                         hidden.forEach { (id, label) -> PillButton(label, { model.setTabShow(id, "both"); onDismiss() }) }
                     }
                 }
-                if (drawers.isNotEmpty()) {
-                    SectionTitle("DRAWER / ドロワー")
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        drawers.forEach { k -> PillButton(k.defaultLabel, { model.addTab(k); onDismiss() }) }
-                    }
-                }
-                Note("タブは長押しで、並べ替え・名前・アプリを置く・出す画面（閉じた／開いた）・外す。タブは両方の画面で共通で、幅と大きさだけ画面ごとに覚えます。")
+                Note("タブは長押しで、並べ替え・名前・アプリを置く・出す画面（閉じた／開いた）・外す。タブは両方の画面で共通で、幅と高さだけ画面ごとに覚えます。")
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("閉じる") } },

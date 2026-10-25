@@ -78,6 +78,7 @@ import jp.yaegaki.theta.home.data.Contacts
 import jp.yaegaki.theta.home.data.Files
 import jp.yaegaki.theta.home.data.TabKind
 import jp.yaegaki.theta.home.data.TabSpec
+import jp.yaegaki.theta.home.data.BoardItem
 import jp.yaegaki.theta.home.notify.HatchNotificationListener
 import jp.yaegaki.theta.home.notify.Notice
 import java.io.File
@@ -91,20 +92,17 @@ fun DrawerFrame(model: HomeModel, id: String, docked: Boolean) {
     val p = LocalPalette.current
     val layout = LocalLayout.current
     val t = model.tab(id) ?: return
-    val group = t.kind.group
+    val group = model.groupOf(t)
     val title = t.label
-    val kicker = when {
-        t.kind == TabKind.WEB -> "WEB"
-        t.kind == TabKind.FILE -> "FILE"
-        t.kind == TabKind.BOARD -> "BOARD"
-        group == 0 -> "FOLDER"
-        group == 1 -> "WIDGET"
-        else -> "LAUNCH"
+    // 見出しの種類は、いちばん上に置いたもの（フォルダ・予定など）。ウィジェットだけなら BOARD
+    val kicker = when (val k = model.mainKind(t)) {
+        TabKind.CATEGORY, TabKind.APPS -> "LAUNCH"
+        else -> k.defaultLabel
     }
     val code = "%02d".format(model.tabs.indexOf(t) + 1)
-    // ふつうのタブは中身の高さだけ（ピン留めしたときは縦いっぱい）
+    // ふつうのタブは中身の高さだけ（縦いっぱいのものを置いたとき・ピン留めしたときは縦いっぱい）
     val board = t.kind == TabKind.BOARD
-    val wrap = board && !docked
+    val wrap = board && !docked && !model.boardFills(t.id)
     var editing by remember(id) { mutableStateOf(false) }
     Column(if (wrap) Modifier.fillMaxWidth() else Modifier.fillMaxSize()) {
         Stripes(Modifier.fillMaxWidth().height(4.dp), color = p.group(group))
@@ -129,22 +127,28 @@ fun DrawerFrame(model: HomeModel, id: String, docked: Boolean) {
         if (t.kind != TabKind.CATEGORY && t.kind != TabKind.APPS) TabAppsStrip(model, id)
         Box(if (wrap) Modifier.fillMaxWidth() else Modifier.weight(1f).fillMaxWidth()) {
             when (t.kind) {
-                TabKind.BOARD -> BoardDrawer(model, t, editing)
-                TabKind.FOLDER -> FolderDrawer(model, t)
-                TabKind.WEB -> WebDrawer(model, t)
-                TabKind.FILE -> FileDrawer(model, t)
-                TabKind.CALENDAR -> CalendarDrawer(model)
-                TabKind.MAIL -> NoticeDrawer(model, mail = true)
-                TabKind.LINE -> NoticeDrawer(model, mail = false)
-                TabKind.PEOPLE -> PeopleDrawer(model)
                 TabKind.APPS -> AppsDrawer(model)
                 TabKind.CATEGORY -> AppsDrawer(model, only = t.folderUri.orEmpty(), split = model.opts(t.id).split)
-                TabKind.BOOKMARKS -> BookmarkDrawer(model)
-                TabKind.CLIP -> ClipDrawer(model)
-                TabKind.CAPTURE -> CaptureDrawer(model)
-                TabKind.HATCH -> HatchDrawer(model)
+                // 0.22.0 から、ほかのタブはすべてふつうのタブ（古い種類は読み込むときに移す）
+                else -> BoardDrawer(model, t, editing)
             }
         }
+    }
+}
+
+/** ふつうのタブに置いた、予定・メール・LINE・人・栞・Clip・記録・Hatch。中身は今までのドロワーと同じ。 */
+@Composable
+fun PanelView(model: HomeModel, type: String) {
+    when (BoardItem.PANELS[type]) {
+        TabKind.CALENDAR -> CalendarDrawer(model)
+        TabKind.MAIL -> NoticeDrawer(model, mail = true)
+        TabKind.LINE -> NoticeDrawer(model, mail = false)
+        TabKind.PEOPLE -> PeopleDrawer(model)
+        TabKind.BOOKMARKS -> BookmarkDrawer(model)
+        TabKind.CLIP -> ClipDrawer(model)
+        TabKind.CAPTURE -> CaptureDrawer(model)
+        TabKind.HATCH -> HatchDrawer(model)
+        else -> Note("この版では表示できないものです")
     }
 }
 
