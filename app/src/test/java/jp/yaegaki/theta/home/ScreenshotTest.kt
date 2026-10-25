@@ -573,4 +573,35 @@ class ScreenshotTest {
         compose.mainClock.advanceTimeBy(800)
         shot("panel-board")
     }
+
+    /** テーマ ALERT（警報画面）・SCI-FI（操作卓）：開いた画面で予定のタブを開いたところと、閉じた画面のダッシュボード。 */
+    private fun themeShots(theme: String) {
+        launch(theme)
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("CALENDAR", substring = true).performScrollTo().performClick()
+        compose.mainClock.advanceTimeBy(800)
+        shot("$theme-main")
+    }
+
+    @Test
+    @Config(qualifiers = "w904dp-h1104dp-xhdpi")
+    fun alertMain() = themeShots("alert")
+
+    @Test
+    @Config(qualifiers = "w904dp-h1104dp-xhdpi")
+    fun scifiMain() = themeShots("scifi")
+
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun alertCover() {
+        launch("alert")
+        shot("alert-cover")
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun scifiCover() {
+        launch("scifi")
+        shot("scifi-cover")
+    }
 }

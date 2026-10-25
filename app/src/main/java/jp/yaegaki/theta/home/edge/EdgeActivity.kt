@@ -5,7 +5,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.isSystemInDarkTheme
 import jp.yaegaki.theta.home.HomeApp
 import jp.yaegaki.theta.home.HomeModel
 import jp.yaegaki.theta.home.MainActivity
@@ -25,13 +24,7 @@ class EdgeActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
-            val pop = model.themeMode == "pop"
-            val dark = when (model.themeMode) {
-                "light", "pop" -> false
-                "dark" -> true
-                else -> isSystemInDarkTheme()
-            }
-            HomeTheme(dark = dark, pop = pop) {
+            HomeTheme(model.themeMode) {
                 HomeRoot(model, this, edgeExit = ::exit)
             }
         }

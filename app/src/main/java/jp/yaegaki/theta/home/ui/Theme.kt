@@ -19,6 +19,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 
 /**
  * 計器盤（HUD）風：黒地にオレンジ 1 色、細い線、四角い角。文字は白と灰の 3 段階。
@@ -44,6 +45,10 @@ data class Palette(
     /** POP の 2 色目（イエロー）・3 色目（ミント）。 */
     val accent2: Color = accent,
     val accent3: Color = accent,
+    /** 背景の模様："" なし・"scan"（走査線、ALERT）・"grid"（方眼、SCI-FI）。 */
+    val backdrop: String = "",
+    /** ドロワーの見出しの上の縞（警告の帯）の太さ。 */
+    val hazard: androidx.compose.ui.unit.Dp = 4.dp,
 ) {
     fun group(g: Int) = when (g) {
         0 -> accent
@@ -105,6 +110,88 @@ val PopPalette = Palette(
     accent3 = Color(0xFFA8E2CF),
 )
 
+/**
+ * ALERT：特務機関の警報画面ふう。黒地に橙の文字、警告の赤と、正常の緑。見出しの上に太い警告の帯、背景に走査線。
+ * フォルダは橙、ウィジェット・予定などは赤、起動は緑。
+ */
+val AlertPalette = Palette(
+    bg = Color(0xFF050404),
+    panel = Color(0xFF0D0908),
+    raised = Color(0xFF1A110C),
+    fg = Color(0xFFFFD9B0),
+    muted = Color(0xFFD6955C),
+    faint = Color(0xFF9C6A42),
+    line = Color(0xFF5C3418),
+    accent = Color(0xFFFF7A00),
+    onAccent = Color(0xFF050404),
+    widget = Color(0xFFFF2A2A),
+    launch = Color(0xFF39E07A),
+    zebra = Color(0x14FF7A00),
+    accent2 = Color(0xFFFF2A2A),
+    accent3 = Color(0xFF39E07A),
+    backdrop = "scan",
+    hazard = 10.dp,
+)
+
+/**
+ * SCI-FI：宇宙船の操作卓ふう。黒に近い青緑の地に方眼、黄・水色・緑の 3 色。
+ * フォルダは黄、ウィジェット・予定などは水色、起動は緑。
+ */
+val SciFiPalette = Palette(
+    bg = Color(0xFF060C0E),
+    panel = Color(0xFF0B1519),
+    raised = Color(0xFF112128),
+    fg = Color(0xFFDDF6FF),
+    muted = Color(0xFF8FB8C4),
+    faint = Color(0xFF5F8794),
+    line = Color(0xFF1F3C46),
+    accent = Color(0xFFF2E21B),
+    onAccent = Color(0xFF060C0E),
+    widget = Color(0xFF3FD0E8),
+    launch = Color(0xFF7BE38B),
+    zebra = Color(0x123FD0E8),
+    accent2 = Color(0xFF3FD0E8),
+    accent3 = Color(0xFF7BE38B),
+    backdrop = "grid",
+    hazard = 6.dp,
+)
+
+/** テーマの名前から配色を決める。"system" は端末のダーク・ライトに合わせる。 */
+fun paletteFor(mode: String, systemDark: Boolean): Palette = when (mode) {
+    "pop" -> PopPalette
+    "alert" -> AlertPalette
+    "scifi" -> SciFiPalette
+    "light" -> LightPalette
+    "dark" -> DarkPalette
+    else -> if (systemDark) DarkPalette else LightPalette
+}
+
+/** 背景の模様（ALERT の走査線・SCI-FI の方眼）。ほかのテーマでは何もしない。 */
+fun androidx.compose.ui.Modifier.backdrop(p: Palette): androidx.compose.ui.Modifier = when (p.backdrop) {
+    "scan" -> drawBehind {
+        val step = 4.dp.toPx()
+        var y = 0f
+        while (y < size.height) {
+            drawLine(p.accent.copy(alpha = 0.05f), androidx.compose.ui.geometry.Offset(0f, y), androidx.compose.ui.geometry.Offset(size.width, y), 1f)
+            y += step
+        }
+    }
+    "grid" -> drawBehind {
+        val step = 28.dp.toPx()
+        var x = 0f
+        while (x < size.width) {
+            drawLine(p.widget.copy(alpha = 0.07f), androidx.compose.ui.geometry.Offset(x, 0f), androidx.compose.ui.geometry.Offset(x, size.height), 1f)
+            x += step
+        }
+        var y = 0f
+        while (y < size.height) {
+            drawLine(p.widget.copy(alpha = 0.07f), androidx.compose.ui.geometry.Offset(0f, y), androidx.compose.ui.geometry.Offset(size.width, y), 1f)
+            y += step
+        }
+    }
+    else -> this
+}
+
 val LocalPalette = staticCompositionLocalOf { DarkPalette }
 
 /** ボタン・入力欄の形：HUD は左上を落とした角、POP は少し丸めた角。 */
@@ -151,6 +238,16 @@ fun HomeTheme(dark: Boolean, pop: Boolean = false, content: @Composable () -> Un
     }
     CompositionLocalProvider(LocalPalette provides p) { HomeThemeInner(p, dark && !pop, content) }
 }
+
+/** 設定のテーマ名（dark・light・pop・alert・scifi・system）で包む。 */
+@Composable
+fun HomeTheme(mode: String, content: @Composable () -> Unit) {
+    val p = paletteFor(mode, androidx.compose.foundation.isSystemInDarkTheme())
+    CompositionLocalProvider(LocalPalette provides p) { HomeThemeInner(p, p.isDark, content) }
+}
+
+/** 地が暗い配色か（ステータスバーの文字色・Material の配色に使う）。 */
+val Palette.isDark: Boolean get() = bg.luminance() < 0.5f
 
 @Composable
 private fun HomeThemeInner(p: Palette, dark: Boolean, content: @Composable () -> Unit) {

@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.luminance
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import jp.yaegaki.theta.home.capture.Capture
@@ -425,6 +426,37 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     /** Alt＋文字（予定は C など）。 */
     fun keyOf(t: TabSpec): Char? = mainKind(t).key
+
+    /** 端のタブの印を変える（"" で中身から自動に戻す）。 */
+    fun setTabIcon(id: String, icon: String) = editOpts(id) { it.copy(icon = icon) }
+
+    /**
+     * 端のタブの印。決めていなければ中身から：フォルダ・予定・メールなどは記号、カテゴリーはいちばん前のアプリ、
+     * ウィジェットだけのタブはグリッド。戻り値は記号の名前（"g:"）かアプリ（"app:"）、出さないときは null。
+     */
+    fun tabIcon(t: TabSpec): String? {
+        val set = opts(t.id).icon
+        if (set == "none") return null
+        if (set.isNotEmpty()) return set
+        if (t.kind == TabKind.CATEGORY) {
+            val catId = t.folderUri ?: return "g:GRID"
+            return ordered(catId, apps.filter { appCategories[it.key] == catId }).firstOrNull()?.let { "app:" + it.key } ?: "g:GRID"
+        }
+        return "g:" + when (mainKind(t)) {
+            TabKind.FOLDER -> "FOLDER"
+            TabKind.CALENDAR -> "CALENDAR"
+            TabKind.MAIL -> "MAIL"
+            TabKind.LINE -> "CHAT"
+            TabKind.PEOPLE -> "PERSON"
+            TabKind.BOOKMARKS -> "LINK"
+            TabKind.CLIP -> "CLIP"
+            TabKind.CAPTURE -> "CAMERA"
+            TabKind.HATCH -> "HATCH"
+            TabKind.WEB -> "GLOBE"
+            TabKind.FILE -> "FILE"
+            else -> "GRID"
+        }
+    }
 
     /** フォルダを置いたタブ（Alt＋1〜9 の順）。 */
     fun folderTabs(): List<TabSpec> = tabs.filter { t -> boardItems(t.id).any { it.type == BoardItem.FOLDER } }
@@ -1120,11 +1152,12 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     /** 書き出しの進み具合（done / total）。null なら何もしていない。 */
     var artJob by mutableStateOf<Pair<Int, Int>?>(null); private set
 
-    private fun isDark(): Boolean = when (themeMode) {
-        "light", "pop" -> false
-        "dark" -> true
-        else -> (ctx.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
-    }
+    private fun palette() = jp.yaegaki.theta.home.ui.paletteFor(
+        themeMode,
+        (ctx.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES,
+    )
+
+    private fun isDark(): Boolean = palette().bg.luminance() < 0.5f
 
     /** HUD の壁紙を作って、ホームとロック画面に設定する（写真にも保存）。One UI はこの壁紙から色を取る。 */
     fun applyHudWallpaper(width: Int, height: Int, dark: Boolean = isDark()) {
@@ -1145,12 +1178,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     fun exportIcons(size: Int = 512) {
         if (artJob != null) return
         val list = apps
-        val dark = isDark()
-        val palette = when {
-            themeMode == "pop" -> jp.yaegaki.theta.home.ui.PopPalette
-            dark -> jp.yaegaki.theta.home.ui.DarkPalette
-            else -> jp.yaegaki.theta.home.ui.LightPalette
-        }
+        val palette = palette()
         val (plate, base, accent) = jp.yaegaki.theta.home.ui.iconTriple(palette, iconColors).let { (a, b, c) ->
             Triple(a.toArgbInt(), b.toArgbInt(), c.toArgbInt())
         }

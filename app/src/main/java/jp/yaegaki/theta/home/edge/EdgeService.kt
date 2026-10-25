@@ -27,9 +27,7 @@ import androidx.core.content.ContextCompat
 import jp.yaegaki.theta.home.MainActivity
 import jp.yaegaki.theta.home.R
 import jp.yaegaki.theta.home.data.Store
-import jp.yaegaki.theta.home.ui.DarkPalette
-import jp.yaegaki.theta.home.ui.LightPalette
-import jp.yaegaki.theta.home.ui.PopPalette
+import jp.yaegaki.theta.home.ui.paletteFor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -140,12 +138,7 @@ class EdgeService : Service() {
         handle = null
     }
 
-    private fun palette() = when (store.themeMode) {
-        "pop" -> PopPalette
-        "light" -> LightPalette
-        "dark" -> DarkPalette
-        else -> if (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES) DarkPalette else LightPalette
-    }
+    private fun palette() = paletteFor(store.themeMode, resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES)
 
     private fun handleColor() = palette().accent.toArgb()
 

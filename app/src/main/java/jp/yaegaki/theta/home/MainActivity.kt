@@ -18,6 +18,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import jp.yaegaki.theta.home.ui.HomeRoot
 import jp.yaegaki.theta.home.ui.HomeTheme
+import jp.yaegaki.theta.home.ui.isDark
 
 class MainActivity : ComponentActivity() {
     private val model: HomeModel get() = (application as HomeApp).model
@@ -62,12 +63,7 @@ class MainActivity : ComponentActivity() {
         ContextCompat.registerReceiver(this, packages, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         getSystemService(ConnectivityManager::class.java)?.registerDefaultNetworkCallback(network)
         setContent {
-            val pop = model.themeMode == "pop"
-            val dark = when (model.themeMode) {
-                "light", "pop" -> false
-                "dark" -> true
-                else -> isSystemInDarkTheme()
-            }
+            val dark = jp.yaegaki.theta.home.ui.paletteFor(model.themeMode, isSystemInDarkTheme()).isDark
             // ステータスバー・ナビゲーションバーの文字色もテーマに合わせる
             val view = LocalView.current
             SideEffect {
@@ -76,7 +72,7 @@ class MainActivity : ComponentActivity() {
                     isAppearanceLightNavigationBars = !dark
                 }
             }
-            HomeTheme(dark = dark, pop = pop) {
+            HomeTheme(model.themeMode) {
                 HomeRoot(model, this)
             }
         }

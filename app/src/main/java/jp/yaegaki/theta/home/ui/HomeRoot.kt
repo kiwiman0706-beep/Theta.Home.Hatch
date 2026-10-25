@@ -153,6 +153,8 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity, edgeExit: (() -> Uni
         Modifier
             .fillMaxSize()
             .background(if (edge) Color.Black.copy(alpha = 0.3f) else p.bg)
+            // ALERT の走査線・SCI-FI の方眼
+            .then(if (edge) Modifier else Modifier.backdrop(p))
             .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
         val railLeft = if (edge) model.edgeSide != "right" else model.railLeft
@@ -418,6 +420,7 @@ private fun RailTab(model: HomeModel, reorder: ReorderState, id: String, label: 
     var menu by remember(id) { mutableStateOf(false) }
     var renaming by remember(id) { mutableStateOf(false) }
     var placing by remember(id) { mutableStateOf(false) }
+    var iconing by remember(id) { mutableStateOf(false) }
     Box(
         Modifier
             .width(40.dp)
@@ -441,17 +444,23 @@ private fun RailTab(model: HomeModel, reorder: ReorderState, id: String, label: 
         Column(Modifier.padding(top = 4.dp, bottom = 10.dp).align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(code, color = if (active) onActive else p.faint, fontSize = 9.sp, fontFamily = Hud.mono)
             Gap(4.dp)
+            // 印（中身から自動か、長押し →「印を変える」で選んだもの）。パッと見て分かるように名前の上に
+            model.tab(id)?.let(model::tabIcon)?.let { icon ->
+                TabIconView(model, icon, if (active) onActive else groupColor)
+                Gap(6.dp)
+            }
             VerticalLabel(label, if (active) onActive else p.fg)
         }
-        TabMenu(model, id, menu, { menu = false }, placeApps = { placing = true }) { renaming = true }
+        TabMenu(model, id, menu, { menu = false }, placeApps = { placing = true }, changeIcon = { iconing = true }) { renaming = true }
     }
     if (renaming) RenameTabDialog(model, id) { renaming = false }
+    if (iconing) TabIconDialog(model, id) { iconing = false }
     if (placing) TabAppsDialog(model, id) { placing = false }
 }
 
 /** タブの長押し：上へ・下へ・名前・置くアプリ・出す画面・幅・外す。ウィジェットのタブも同じ。 */
 @Composable
-private fun TabMenu(model: HomeModel, id: String, expanded: Boolean, close: () -> Unit, placeApps: () -> Unit, rename: () -> Unit) {
+private fun TabMenu(model: HomeModel, id: String, expanded: Boolean, close: () -> Unit, placeApps: () -> Unit, changeIcon: () -> Unit, rename: () -> Unit) {
     val actions = LocalActions.current
     val t = model.tabs.firstOrNull { it.id == id }
     DropdownMenu(expanded = expanded, onDismissRequest = close) {
@@ -461,6 +470,7 @@ private fun TabMenu(model: HomeModel, id: String, expanded: Boolean, close: () -
             DropdownMenuItem(text = { Text("⤒ いちばん上へ") }, onClick = { close(); model.moveTab(id, -model.tabs.indexOf(t)) })
         }
         DropdownMenuItem(text = { Text("名前を変える") }, onClick = { close(); rename() })
+        DropdownMenuItem(text = { Text("印（アイコン）を変える") }, onClick = { close(); changeIcon() })
         // 中身がフォルダ 1 つ・ファイル 1 つのタブは、ここからも選び直せる
         val only = model.boardItems(id).singleOrNull()
         if (only?.type == BoardItem.FOLDER) DropdownMenuItem(text = { Text("端末のフォルダを選び直す") }, onClick = { close(); actions.pickFolder(only.id) })

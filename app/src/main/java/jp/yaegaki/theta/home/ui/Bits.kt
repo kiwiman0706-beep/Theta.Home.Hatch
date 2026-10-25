@@ -213,8 +213,12 @@ fun VerticalLabel(text: String, color: Color, fontSize: Int = 13) {
     )
 }
 
-/** 線で描く小さな記号（虫めがね・ピン・×・‹・＋）。アイコン用ライブラリに頼らない。 */
-enum class Glyph { SEARCH, PIN, CLOSE, BACK, PLUS, GEAR, LIST, GRID, FOLDER, MIC }
+/** 線で描く小さな記号（虫めがね・ピン・×・‹・＋、タブの印）。アイコン用ライブラリに頼らない。 */
+enum class Glyph {
+    SEARCH, PIN, CLOSE, BACK, PLUS, GEAR, LIST, GRID, FOLDER, MIC,
+    CALENDAR, MAIL, CHAT, PERSON, LINK, CLIP, CAMERA, HATCH, GLOBE, FILE,
+    STAR, HOME, MUSIC, IMAGE, WORK, HEART, CLOCK, CART, GAME, BOOK, CAR, PENCIL,
+}
 
 @Composable
 fun GlyphIcon(g: Glyph, color: Color, size: Dp = 18.dp) {
@@ -269,6 +273,157 @@ private fun DrawScope.drawGlyph(g: Glyph, color: Color) {
             drawArc(color, 0f, 180f, false, Offset(w * 0.26f, w * 0.3f), androidx.compose.ui.geometry.Size(w * 0.48f, w * 0.4f), style = s)
             drawLine(color, Offset(w * 0.5f, w * 0.7f), Offset(w * 0.5f, w * 0.86f), s.width, StrokeCap.Square)
             drawLine(color, Offset(w * 0.36f, w * 0.88f), Offset(w * 0.64f, w * 0.88f), s.width, StrokeCap.Square)
+        }
+        Glyph.CALENDAR -> {
+            drawRect(color, Offset(w * 0.14f, w * 0.2f), androidx.compose.ui.geometry.Size(w * 0.72f, w * 0.66f), style = s)
+            drawLine(color, Offset(w * 0.14f, w * 0.38f), Offset(w * 0.86f, w * 0.38f), s.width, StrokeCap.Square)
+            drawLine(color, Offset(w * 0.34f, w * 0.1f), Offset(w * 0.34f, w * 0.26f), s.width, StrokeCap.Square)
+            drawLine(color, Offset(w * 0.66f, w * 0.1f), Offset(w * 0.66f, w * 0.26f), s.width, StrokeCap.Square)
+            drawRect(color, Offset(w * 0.3f, w * 0.52f), androidx.compose.ui.geometry.Size(w * 0.14f, w * 0.14f))
+        }
+        Glyph.MAIL -> {
+            drawRect(color, Offset(w * 0.12f, w * 0.24f), androidx.compose.ui.geometry.Size(w * 0.76f, w * 0.54f), style = s)
+            drawLine(color, Offset(w * 0.12f, w * 0.24f), Offset(w * 0.5f, w * 0.54f), s.width, StrokeCap.Square)
+            drawLine(color, Offset(w * 0.5f, w * 0.54f), Offset(w * 0.88f, w * 0.24f), s.width, StrokeCap.Square)
+        }
+        Glyph.CHAT -> {
+            val path = Path().apply {
+                moveTo(w * 0.12f, w * 0.18f); lineTo(w * 0.88f, w * 0.18f); lineTo(w * 0.88f, w * 0.66f)
+                lineTo(w * 0.42f, w * 0.66f); lineTo(w * 0.24f, w * 0.84f); lineTo(w * 0.24f, w * 0.66f); lineTo(w * 0.12f, w * 0.66f); close()
+            }
+            drawPath(path, color, style = s)
+        }
+        Glyph.PERSON -> {
+            drawCircle(color, radius = w * 0.16f, center = Offset(w * 0.5f, w * 0.32f), style = s)
+            drawArc(color, 180f, 180f, false, Offset(w * 0.18f, w * 0.56f), androidx.compose.ui.geometry.Size(w * 0.64f, w * 0.56f), style = s)
+        }
+        Glyph.LINK -> {
+            drawRoundRect(color, Offset(w * 0.08f, w * 0.36f), androidx.compose.ui.geometry.Size(w * 0.48f, w * 0.28f), androidx.compose.ui.geometry.CornerRadius(w * 0.14f), style = s)
+            drawRoundRect(color, Offset(w * 0.44f, w * 0.36f), androidx.compose.ui.geometry.Size(w * 0.48f, w * 0.28f), androidx.compose.ui.geometry.CornerRadius(w * 0.14f), style = s)
+        }
+        Glyph.CLIP -> {
+            drawRect(color, Offset(w * 0.2f, w * 0.18f), androidx.compose.ui.geometry.Size(w * 0.6f, w * 0.7f), style = s)
+            drawRect(color, Offset(w * 0.36f, w * 0.1f), androidx.compose.ui.geometry.Size(w * 0.28f, w * 0.16f))
+            drawLine(color, Offset(w * 0.32f, w * 0.48f), Offset(w * 0.68f, w * 0.48f), s.width, StrokeCap.Square)
+            drawLine(color, Offset(w * 0.32f, w * 0.66f), Offset(w * 0.6f, w * 0.66f), s.width, StrokeCap.Square)
+        }
+        Glyph.CAMERA -> {
+            drawRect(color, Offset(w * 0.1f, w * 0.3f), androidx.compose.ui.geometry.Size(w * 0.8f, w * 0.52f), style = s)
+            drawLine(color, Offset(w * 0.34f, w * 0.18f), Offset(w * 0.6f, w * 0.18f), s.width, StrokeCap.Square)
+            drawCircle(color, radius = w * 0.14f, center = Offset(w * 0.5f, w * 0.56f), style = s)
+        }
+        Glyph.HATCH -> {
+            val path = Path().apply {
+                for (i in 0 until 6) {
+                    val a = Math.toRadians(-90.0 + i * 60)
+                    val x = w * 0.5f + (w * 0.38f * Math.cos(a)).toFloat()
+                    val y = w * 0.5f + (w * 0.38f * Math.sin(a)).toFloat()
+                    if (i == 0) moveTo(x, y) else lineTo(x, y)
+                }
+                close()
+            }
+            drawPath(path, color, style = s)
+            drawLine(color, Offset(w * 0.5f, w * 0.34f), Offset(w * 0.5f, w * 0.66f), s.width, StrokeCap.Square)
+            drawLine(color, Offset(w * 0.36f, w * 0.5f), Offset(w * 0.64f, w * 0.5f), s.width, StrokeCap.Square)
+        }
+        Glyph.GLOBE -> {
+            drawCircle(color, radius = w * 0.38f, center = Offset(w / 2, w / 2), style = s)
+            drawOval(color, Offset(w * 0.32f, w * 0.12f), androidx.compose.ui.geometry.Size(w * 0.36f, w * 0.76f), style = s)
+            drawLine(color, Offset(w * 0.12f, w * 0.5f), Offset(w * 0.88f, w * 0.5f), s.width, StrokeCap.Square)
+        }
+        Glyph.FILE -> {
+            val path = Path().apply {
+                moveTo(w * 0.2f, w * 0.1f); lineTo(w * 0.6f, w * 0.1f); lineTo(w * 0.8f, w * 0.3f); lineTo(w * 0.8f, w * 0.9f); lineTo(w * 0.2f, w * 0.9f); close()
+            }
+            drawPath(path, color, style = s)
+            drawLine(color, Offset(w * 0.6f, w * 0.1f), Offset(w * 0.6f, w * 0.3f), s.width, StrokeCap.Square)
+            drawLine(color, Offset(w * 0.6f, w * 0.3f), Offset(w * 0.8f, w * 0.3f), s.width, StrokeCap.Square)
+        }
+        Glyph.STAR -> {
+            val path = Path().apply {
+                for (i in 0 until 10) {
+                    val r = if (i % 2 == 0) 0.4f else 0.17f
+                    val a = Math.toRadians(-90.0 + i * 36)
+                    val x = w * 0.5f + (w * r * Math.cos(a)).toFloat()
+                    val y = w * 0.54f + (w * r * Math.sin(a)).toFloat()
+                    if (i == 0) moveTo(x, y) else lineTo(x, y)
+                }
+                close()
+            }
+            drawPath(path, color, style = s)
+        }
+        Glyph.HOME -> {
+            val path = Path().apply {
+                moveTo(w * 0.12f, w * 0.48f); lineTo(w * 0.5f, w * 0.14f); lineTo(w * 0.88f, w * 0.48f)
+                moveTo(w * 0.22f, w * 0.4f); lineTo(w * 0.22f, w * 0.86f); lineTo(w * 0.78f, w * 0.86f); lineTo(w * 0.78f, w * 0.4f)
+            }
+            drawPath(path, color, style = s)
+            drawRect(color, Offset(w * 0.42f, w * 0.6f), androidx.compose.ui.geometry.Size(w * 0.16f, w * 0.26f), style = s)
+        }
+        Glyph.MUSIC -> {
+            drawCircle(color, radius = w * 0.12f, center = Offset(w * 0.3f, w * 0.74f))
+            drawCircle(color, radius = w * 0.12f, center = Offset(w * 0.72f, w * 0.64f))
+            drawLine(color, Offset(w * 0.4f, w * 0.74f), Offset(w * 0.4f, w * 0.18f), s.width, StrokeCap.Square)
+            drawLine(color, Offset(w * 0.82f, w * 0.64f), Offset(w * 0.82f, w * 0.1f), s.width, StrokeCap.Square)
+            drawLine(color, Offset(w * 0.4f, w * 0.18f), Offset(w * 0.82f, w * 0.1f), s.width, StrokeCap.Square)
+        }
+        Glyph.IMAGE -> {
+            drawRect(color, Offset(w * 0.1f, w * 0.18f), androidx.compose.ui.geometry.Size(w * 0.8f, w * 0.64f), style = s)
+            drawCircle(color, radius = w * 0.08f, center = Offset(w * 0.34f, w * 0.38f))
+            val path = Path().apply { moveTo(w * 0.14f, w * 0.78f); lineTo(w * 0.42f, w * 0.52f); lineTo(w * 0.6f, w * 0.68f); lineTo(w * 0.72f, w * 0.56f); lineTo(w * 0.88f, w * 0.72f) }
+            drawPath(path, color, style = s)
+        }
+        Glyph.WORK -> {
+            drawRect(color, Offset(w * 0.1f, w * 0.3f), androidx.compose.ui.geometry.Size(w * 0.8f, w * 0.54f), style = s)
+            drawRect(color, Offset(w * 0.36f, w * 0.16f), androidx.compose.ui.geometry.Size(w * 0.28f, w * 0.14f), style = s)
+            drawLine(color, Offset(w * 0.1f, w * 0.52f), Offset(w * 0.9f, w * 0.52f), s.width, StrokeCap.Square)
+        }
+        Glyph.HEART -> {
+            val path = Path().apply {
+                moveTo(w * 0.5f, w * 0.84f)
+                cubicTo(w * 0.1f, w * 0.56f, w * 0.06f, w * 0.2f, w * 0.32f, w * 0.18f)
+                cubicTo(w * 0.42f, w * 0.17f, w * 0.48f, w * 0.24f, w * 0.5f, w * 0.32f)
+                cubicTo(w * 0.52f, w * 0.24f, w * 0.58f, w * 0.17f, w * 0.68f, w * 0.18f)
+                cubicTo(w * 0.94f, w * 0.2f, w * 0.9f, w * 0.56f, w * 0.5f, w * 0.84f)
+            }
+            drawPath(path, color, style = s)
+        }
+        Glyph.CLOCK -> {
+            drawCircle(color, radius = w * 0.38f, center = Offset(w / 2, w / 2), style = s)
+            drawLine(color, Offset(w * 0.5f, w * 0.5f), Offset(w * 0.5f, w * 0.26f), s.width, StrokeCap.Square)
+            drawLine(color, Offset(w * 0.5f, w * 0.5f), Offset(w * 0.68f, w * 0.6f), s.width, StrokeCap.Square)
+        }
+        Glyph.CART -> {
+            val path = Path().apply { moveTo(w * 0.08f, w * 0.18f); lineTo(w * 0.24f, w * 0.18f); lineTo(w * 0.34f, w * 0.64f); lineTo(w * 0.82f, w * 0.64f); lineTo(w * 0.9f, w * 0.32f); lineTo(w * 0.28f, w * 0.32f) }
+            drawPath(path, color, style = s)
+            drawCircle(color, radius = w * 0.07f, center = Offset(w * 0.38f, w * 0.82f))
+            drawCircle(color, radius = w * 0.07f, center = Offset(w * 0.76f, w * 0.82f))
+        }
+        Glyph.GAME -> {
+            drawRoundRect(color, Offset(w * 0.08f, w * 0.3f), androidx.compose.ui.geometry.Size(w * 0.84f, w * 0.44f), androidx.compose.ui.geometry.CornerRadius(w * 0.2f), style = s)
+            drawLine(color, Offset(w * 0.24f, w * 0.52f), Offset(w * 0.42f, w * 0.52f), s.width, StrokeCap.Square)
+            drawLine(color, Offset(w * 0.33f, w * 0.43f), Offset(w * 0.33f, w * 0.61f), s.width, StrokeCap.Square)
+            drawCircle(color, radius = w * 0.05f, center = Offset(w * 0.64f, w * 0.48f))
+            drawCircle(color, radius = w * 0.05f, center = Offset(w * 0.74f, w * 0.58f))
+        }
+        Glyph.BOOK -> {
+            val path = Path().apply {
+                moveTo(w * 0.5f, w * 0.24f); lineTo(w * 0.1f, w * 0.18f); lineTo(w * 0.1f, w * 0.8f); lineTo(w * 0.5f, w * 0.86f)
+                lineTo(w * 0.9f, w * 0.8f); lineTo(w * 0.9f, w * 0.18f); lineTo(w * 0.5f, w * 0.24f); lineTo(w * 0.5f, w * 0.86f)
+            }
+            drawPath(path, color, style = s)
+        }
+        Glyph.CAR -> {
+            val path = Path().apply { moveTo(w * 0.1f, w * 0.66f); lineTo(w * 0.1f, w * 0.48f); lineTo(w * 0.26f, w * 0.26f); lineTo(w * 0.74f, w * 0.26f); lineTo(w * 0.9f, w * 0.48f); lineTo(w * 0.9f, w * 0.66f); close() }
+            drawPath(path, color, style = s)
+            drawLine(color, Offset(w * 0.1f, w * 0.48f), Offset(w * 0.9f, w * 0.48f), s.width, StrokeCap.Square)
+            drawCircle(color, radius = w * 0.08f, center = Offset(w * 0.28f, w * 0.74f))
+            drawCircle(color, radius = w * 0.08f, center = Offset(w * 0.72f, w * 0.74f))
+        }
+        Glyph.PENCIL -> {
+            val path = Path().apply { moveTo(w * 0.66f, w * 0.12f); lineTo(w * 0.88f, w * 0.34f); lineTo(w * 0.34f, w * 0.88f); lineTo(w * 0.12f, w * 0.88f); lineTo(w * 0.12f, w * 0.66f); close() }
+            drawPath(path, color, style = s)
+            drawLine(color, Offset(w * 0.56f, w * 0.22f), Offset(w * 0.78f, w * 0.44f), s.width, StrokeCap.Square)
         }
         Glyph.GEAR -> {
             drawCircle(color, radius = w * 0.16f, center = Offset(w / 2, w / 2), style = s)

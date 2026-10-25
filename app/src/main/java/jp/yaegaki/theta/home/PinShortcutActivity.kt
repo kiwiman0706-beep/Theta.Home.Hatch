@@ -8,7 +8,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -62,8 +61,7 @@ class PinShortcutActivity : ComponentActivity() {
             }
         }.getOrNull()
         setContent {
-            val dark = when (store.themeMode) { "light", "pop" -> false; "dark" -> true; else -> isSystemInDarkTheme() }
-            HomeTheme(dark, pop = store.themeMode == "pop") {
+            HomeTheme(store.themeMode) {
                 val p = LocalPalette.current
                 var cat by remember { mutableStateOf(appCat ?: cats.firstOrNull()?.first ?: "") }
                 AlertDialog(

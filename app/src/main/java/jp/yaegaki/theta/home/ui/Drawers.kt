@@ -105,13 +105,15 @@ fun DrawerFrame(model: HomeModel, id: String, docked: Boolean) {
     val wrap = board && !docked && !model.boardFills(t.id)
     var editing by remember(id) { mutableStateOf(false) }
     Column(if (wrap) Modifier.fillMaxWidth() else Modifier.fillMaxSize()) {
-        Stripes(Modifier.fillMaxWidth().height(4.dp), color = p.group(group))
+        // 見出しの上の警告の帯（ALERT は太く）
+        Stripes(Modifier.fillMaxWidth().height(p.hazard), color = p.group(group))
         // 見出しは 1 行：[ 種類 ] // 番号  名前  （編集）（ピン）（閉じる）
         Row(
             Modifier.fillMaxWidth().padding(start = 14.dp, end = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            model.tabIcon(t)?.let { TabIconView(model, it, p.group(group), 16.dp) }
             Text("[$kicker]·$code", color = p.group(group), fontSize = 10.sp, letterSpacing = 1.sp, fontFamily = Hud.mono)
             Text(title, color = p.fg, fontSize = 18.sp, fontFamily = Hud.display, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             if (board) GlyphButton(Glyph.GEAR, if (editing) "編集を終える" else "高さ・並び・足す", { editing = !editing }, filled = editing)

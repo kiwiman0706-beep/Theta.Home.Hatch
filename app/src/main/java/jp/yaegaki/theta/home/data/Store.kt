@@ -144,16 +144,18 @@ data class BoardItem(
  * show："both"（両方の画面）・"narrow"（閉じた画面だけ）・"wide"（開いた画面だけ）。
  * width：画面ごとのドロワーの幅（dp。無ければ決まった幅）。apps：タブに置いたアプリ（AppEntry.key）。
  * split：カテゴリーのタブで、ショートカットをアプリと別の段にする。
+ * icon：端のタブの印。""（中身から自動）・"none"（出さない）・"g:<記号の名前>"・"app:<AppEntry.key>"。
  */
 data class TabOpts(
     val show: String = "both",
     val width: Map<String, Int> = emptyMap(),
     val apps: List<String> = emptyList(),
     val split: Boolean = false,
+    val icon: String = "",
 ) {
     fun shownOn(profile: String) = show == "both" || show == profile
 
-    fun toJson(): JSONObject = JSONObject().put("show", show).put("split", split)
+    fun toJson(): JSONObject = JSONObject().put("show", show).put("split", split).put("icon", icon)
         .put("apps", JSONArray(apps)).put("width", JSONObject(width.mapValues { it.value }))
 
     companion object {
@@ -162,6 +164,7 @@ data class TabOpts(
             width = o.optJSONObject("width")?.let { w -> w.keys().asSequence().associateWith { w.getInt(it) } }.orEmpty(),
             apps = o.optJSONArray("apps")?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty(),
             split = o.optBoolean("split", false),
+            icon = o.optString("icon", ""),
         )
     }
 }
