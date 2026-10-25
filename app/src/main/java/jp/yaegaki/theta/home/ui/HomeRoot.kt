@@ -180,20 +180,19 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity) {
     }
 }
 
-/** ウィジェットのタブはウィジェットの幅に合わせる。それ以外は、この画面で決めた幅（なければ決まった幅）。 */
+/** ドロワーの幅：この画面で決めた幅（なければ決まった幅）。 */
 private fun drawerWidth(model: HomeModel, id: String?, layout: Layout, available: Dp): Dp {
     val max = available.coerceAtLeast(240.dp)
-    val t = model.widgetTab(id) ?: return ((id?.let { model.liveDrawer[it] ?: model.tabWidth(it) })?.dp ?: layout.drawerWidth).coerceIn(240.dp, max)
-    return (model.widgetWidth(t) + 16).dp.coerceIn(200.dp, max)
+    return ((id?.let { model.liveDrawer[it] ?: model.tabWidth(it) })?.dp ?: layout.drawerWidth).coerceIn(240.dp, max)
 }
 
 @Composable
 private fun DockedDrawer(model: HomeModel, id: String, width: Dp, available: Dp) {
-    if (model.tab(id) == null && model.widgetTab(id) == null) return
+    if (model.tab(id) == null) return
     val p = LocalPalette.current
     Box(Modifier.width(width).fillMaxHeight().background(p.panel)) {
         DrawerFrame(model, id, docked = true)
-        if (model.widgetTab(id) == null) WidthHandle(model, id, width, available, Modifier.align(if (model.railLeft) Alignment.CenterEnd else Alignment.CenterStart))
+        WidthHandle(model, id, width, available, Modifier.align(if (model.railLeft) Alignment.CenterEnd else Alignment.CenterStart))
     }
 }
 
@@ -255,8 +254,8 @@ private fun Overlay(model: HomeModel, layout: Layout, available: Dp) {
                 },
         )
     }
-    // ウィジェットのタブは中身の高さだけの小さなパネル（上寄せ）。ほかは縦いっぱい
-    val small = shown != SETTINGS && model.widgetTab(shown) != null
+    // ふつうのタブは中身の高さだけの小さなパネル（上寄せ）。ほかは縦いっぱい
+    val small = shown != SETTINGS && model.tab(shown)?.kind == TabKind.BOARD
     Box(Modifier.fillMaxSize(), contentAlignment = when {
         small && fromRight -> Alignment.TopEnd
         small -> Alignment.TopStart
@@ -288,7 +287,7 @@ private fun Overlay(model: HomeModel, layout: Layout, available: Dp) {
                     SettingsPanel(model)
                 } else if (id != null) {
                     DrawerFrame(model, id, docked = false)
-                    if (!small) WidthHandle(model, id, drawerWidth(model, id, layout, available), available, Modifier.align(if (fromRight) Alignment.CenterStart else Alignment.CenterEnd))
+                    WidthHandle(model, id, drawerWidth(model, id, layout, available), available, Modifier.align(if (fromRight) Alignment.CenterStart else Alignment.CenterEnd))
                 }
             }
         }
@@ -327,12 +326,6 @@ private fun Rail(model: HomeModel, width: Dp) {
             if (lastGroup != -1 && t.kind.group != lastGroup) Spacer(Modifier.height(12.dp))
             lastGroup = t.kind.group
             RailTab(model, reorder, t.id, t.label, t.kind.group, active = railActive(model, t), shortcut = shortcut(model, t), left = left)
-        }
-        // ウィジェットのタブ。並びは両方の画面で共通、大きさは画面ごと
-        Spacer(Modifier.height(12.dp))
-        model.widgetTabs.filter { model.shownHere("w:${it.id}") }.forEach { w ->
-            val id = "w:${w.id}"
-            RailTab(model, reorder, id, w.label.take(10), 1, active = model.open == id || id in model.docked, shortcut = null, left = left)
         }
         var adding by remember { mutableStateOf(false) }
         var addingWidget by remember { mutableStateOf(false) }
@@ -393,18 +386,15 @@ private fun RailTab(model: HomeModel, reorder: ReorderState, id: String, label: 
     val tabShape = if (p.pop) {
         if (left) RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp) else RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp)
     } else RoundedCornerShape(0.dp)
-    val code = model.tabs.indexOfFirst { it.id == id }.let { if (it >= 0) "%02d".format(it + 1) else "W" + (model.widgetTabs.indexOfFirst { w -> "w:${w.id}" == id } + 1) }
+    val code = "%02d".format(model.tabs.indexOfFirst { it.id == id } + 1)
     var menu by remember(id) { mutableStateOf(false) }
     var renaming by remember(id) { mutableStateOf(false) }
     var placing by remember(id) { mutableStateOf(false) }
     Box(
         Modifier
             .width(40.dp)
-            // 長押し→ドラッグで並べ替え（タブはタブの間、ウィジェットのタブはウィジェットの間）。動かさずに離すとメニュー
-            .reorderable(reorder, id, if (id.startsWith("w:")) "widget" else "tab", p.accent, onMenu = { menu = true }) { from, to ->
-                if (from.startsWith("w:")) model.moveWidgetTabTo(from.removePrefix("w:").toInt(), to.removePrefix("w:").toInt())
-                else model.moveTabTo(from, to)
-            }
+            // 長押し→ドラッグで並べ替え。動かさずに離すとメニュー
+            .reorderable(reorder, id, "tab", p.accent, onMenu = { menu = true }) { from, to -> model.moveTabTo(from, to) }
             .background(if (active) activeBg else if (p.pop) p.panel else p.bg, tabShape)
             .border(lineWidth, if (active && !p.pop) p.accent else p.line, tabShape)
             .combinedClickable(role = Role.Tab, onClick = { model.toggle(id) }, onLongClick = {}, onLongClickLabel = "ドラッグで並べ替え・離すとメニュー")
@@ -436,10 +426,9 @@ private fun RailTab(model: HomeModel, reorder: ReorderState, id: String, label: 
 private fun TabMenu(model: HomeModel, id: String, expanded: Boolean, close: () -> Unit, placeApps: () -> Unit, rename: () -> Unit) {
     val actions = LocalActions.current
     val t = model.tabs.firstOrNull { it.id == id }
-    val w = model.widgetTab(id)
     DropdownMenu(expanded = expanded, onDismissRequest = close) {
-        DropdownMenuItem(text = { Text("▲ 上へ") }, onClick = { if (t != null) model.moveTab(id, -1) else if (w != null) model.moveWidgetTab(w.id, -1) })
-        DropdownMenuItem(text = { Text("▼ 下へ") }, onClick = { if (t != null) model.moveTab(id, 1) else if (w != null) model.moveWidgetTab(w.id, 1) })
+        DropdownMenuItem(text = { Text("▲ 上へ") }, onClick = { model.moveTab(id, -1) })
+        DropdownMenuItem(text = { Text("▼ 下へ") }, onClick = { model.moveTab(id, 1) })
         if (t != null) {
             DropdownMenuItem(text = { Text("⤒ いちばん上へ") }, onClick = { close(); model.moveTab(id, -model.tabs.indexOf(t)) })
         }
@@ -465,7 +454,7 @@ private fun TabMenu(model: HomeModel, id: String, expanded: Boolean, close: () -
         if (model.tabWidth(id) != null) DropdownMenuItem(text = { Text("幅を元に戻す（この画面）") }, onClick = { close(); model.setTabWidth(id, null) })
         DropdownMenuItem(text = { Text("このタブを外す") }, onClick = {
             close()
-            if (t != null) model.removeTab(id) else if (w != null) model.removeWidgetTab(w.id)
+            model.removeTab(id)
             actions.toast("外しました（下の「＋」で戻せます）")
         })
     }
@@ -474,15 +463,14 @@ private fun TabMenu(model: HomeModel, id: String, expanded: Boolean, close: () -
 @Composable
 private fun RenameTabDialog(model: HomeModel, id: String, onDismiss: () -> Unit) {
     val t = model.tabs.firstOrNull { it.id == id }
-    val w = model.widgetTab(id)
-    var name by remember { mutableStateOf(t?.label ?: w?.label.orEmpty()) }
+    var name by remember { mutableStateOf(t?.label.orEmpty()) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("タブの名前") },
         text = { Field(name, { name = it.take(14) }, "名前") },
         confirmButton = {
             TextButton(onClick = {
-                if (t != null) model.renameTab(id, name) else if (w != null) model.renameWidgetTab(w.id, name)
+                model.renameTab(id, name)
                 onDismiss()
             }, enabled = name.isNotBlank()) { Text("保存") }
         },
@@ -499,14 +487,18 @@ private fun RenameTabDialog(model: HomeModel, id: String, onDismiss: () -> Unit)
 fun AddTabDialog(model: HomeModel, onWidget: () -> Unit, onDismiss: () -> Unit) {
     val actions = LocalActions.current
     val usedCats = model.tabs.filter { it.kind == TabKind.CATEGORY }.mapNotNull { it.folderUri }.toSet()
-    val drawers = TabKind.entries.filter { it !in listOf(TabKind.FOLDER, TabKind.CATEGORY, TabKind.WEB, TabKind.FILE) && model.tabs.none { t -> t.kind == it } }
+    val drawers = TabKind.entries.filter { it !in listOf(TabKind.FOLDER, TabKind.CATEGORY, TabKind.WEB, TabKind.FILE, TabKind.BOARD) && model.tabs.none { t -> t.kind == it } }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("タブを追加") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionTitle("WIDGET / ウィジェット")
-                PillButton("＋ ウィジェットを選ぶ", onWidget, primary = true)
+                SectionTitle("BOARD / ふつうのタブ")
+                Note("ウィジェット・フォルダ・画像や PDF・Web ページを、好きな数だけ並べるタブ。")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    PillButton("＋ ウィジェットから", onWidget, primary = true)
+                    PillButton("＋ 空のタブ", { val t = model.addTab(TabKind.BOARD); onDismiss(); model.toggle(t.id) })
+                }
                 SectionTitle("CATEGORY / アプリのカテゴリー")
                 val cats = model.categories.filter { it.id !in usedCats }
                 if (model.categories.isEmpty()) Note("アプリのドロワーの「仕分け」でカテゴリーを作ると、ここでタブにできます。")
@@ -534,8 +526,7 @@ fun AddTabDialog(model: HomeModel, onWidget: () -> Unit, onDismiss: () -> Unit) 
                     })
                 }
                 // ほかの画面だけに出しているタブを、この画面にも出す
-                val hidden = model.tabs.filter { !model.shownHere(it.id) }.map { it.id to it.label } +
-                    model.widgetTabs.filter { !model.shownHere("w:${it.id}") }.map { "w:${it.id}" to it.label }
+                val hidden = model.tabs.filter { !model.shownHere(it.id) }.map { it.id to it.label }
                 if (hidden.isNotEmpty()) {
                     SectionTitle("HIDDEN / この画面で隠しているタブ")
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

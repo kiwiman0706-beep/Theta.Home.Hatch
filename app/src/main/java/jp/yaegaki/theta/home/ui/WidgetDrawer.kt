@@ -48,99 +48,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import jp.yaegaki.theta.home.HomeApp
 import jp.yaegaki.theta.home.HomeModel
 import jp.yaegaki.theta.home.MainActivity
-import jp.yaegaki.theta.home.data.WidgetTab
-import jp.yaegaki.theta.home.data.WidgetCell
 import androidx.compose.foundation.layout.Row
 
 
-/**
- * ウィジェットのタブ。ウィジェットを縦に何個でも並べられる。
- * ふだんはウィジェットだけ。編集（見出しの歯車）にすると、角をなぞって大きさ・上へ下へ・外す・足す。
- * タブと中身は両方の画面で共通。大きさはこの画面（閉じた／開いた）だけに効く。
- */
-@Composable
-fun WidgetTabDrawer(model: HomeModel, t: WidgetTab, editing: Boolean) {
-    var adding by remember { mutableStateOf(false) }
-    Column(Modifier.verticalScroll(rememberScrollState()).padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        t.cells.forEachIndexed { i, c -> WidgetCellView(model, t, c, i, editing) }
-        if (editing) FlowRow2 {
-            PillButton("＋ ウィジェットを足す", { adding = true }, primary = true)
-        }
-    }
-    if (adding) AddWidgetDialog(model, intoTab = t.id) { adding = false }
-}
-
-@Composable
-private fun WidgetCellView(model: HomeModel, t: WidgetTab, c: WidgetCell, index: Int, editing: Boolean) {
-    val p = LocalPalette.current
-    val activity = LocalActions.current.activity
-    val host = (activity.application as HomeApp).widgets
-    val density = LocalDensity.current.density
-    val config = LocalConfiguration.current
-    val maxW = config.screenWidthDp - 46 - 16
-    val maxH = config.screenHeightDp - 160
-    var w by remember(c.id, c.w) { mutableIntStateOf(c.w) }
-    var h by remember(c.id, c.h) { mutableIntStateOf(c.h) }
-    var handle by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
-    val info = host.info(c.id)
-    // ドロワーは端に付いているので、角を内側（画面の中央側）へなぞると広がる
-    val grow = if (model.railLeft) 1 else -1
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        if (model.safeMode) {
-            Note("セーフモードなので、ウィジェットは止めています。")
-        } else if (info == null) {
-            Note("このウィジェットは使えなくなりました（アプリが消えたなど）。")
-        } else {
-            Box(Modifier.size(w.dp, h.dp)) {
-                AndroidView(
-                    factory = { host.view(activity, c.id)!! },
-                    update = { v -> resize(v, w, h) },
-                    modifier = Modifier.fillMaxSize(),
-                )
-                if (editing) Box(
-                    Modifier
-                        .align(if (model.railLeft) Alignment.BottomEnd else Alignment.BottomStart)
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(0.dp))
-                        .background(p.accent.copy(alpha = 0.85f))
-                        .semantics { contentDescription = "なぞって大きさを変える" }
-                        .onGloballyPositioned { handle = it }
-                        .pointerInput(c.id, grow) {
-                            // 角はパネルの端と一緒に動くので、角から見た動きではなく、画面全体から見た「なぞり始めからの移動」で決める。
-                            // 端数も捨てずに、始めの大きさ＋移動で毎回計算し直す
-                            var startRoot = androidx.compose.ui.geometry.Offset.Zero
-                            var startW = 0
-                            var startH = 0
-                            detectDragGestures(
-                                onDragStart = { pos ->
-                                    startRoot = handle?.localToRoot(pos) ?: pos
-                                    startW = w
-                                    startH = h
-                                },
-                                onDragEnd = { model.updateWidgetCell(t.id, c.copy(w = w, h = h)) },
-                            ) { change, _ ->
-                                change.consume()
-                                val root = handle?.localToRoot(change.position) ?: return@detectDragGestures
-                                val d = root - startRoot
-                                w = (startW + grow * d.x / density).roundToInt().coerceIn(120, maxW.coerceAtLeast(120))
-                                h = (startH + d.y / density).roundToInt().coerceIn(80, maxH.coerceAtLeast(80))
-                                model.resizeLive(c.id, w)
-                            }
-                        },
-                    contentAlignment = Alignment.Center,
-                ) { Text("⤡", color = p.onAccent, fontSize = 18.sp) }
-            }
-        }
-        if (editing) Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("${info?.let { host.label(it) } ?: "?"}  ${w}×${h}", color = p.faint, fontSize = 11.sp, fontFamily = Hud.mono, modifier = Modifier.weight(1f))
-            if (index > 0) TextButton(onClick = { model.moveWidgetCell(t.id, c.id, -1) }) { Text("▲", color = p.fg) }
-            if (index < t.cells.lastIndex) TextButton(onClick = { model.moveWidgetCell(t.id, c.id, 1) }) { Text("▼", color = p.fg) }
-            TextButton(onClick = { model.removeWidgetCell(t.id, c.id) }) { Text("外す", color = p.accent) }
-        }
-    }
-}
-
-private fun resize(v: AppWidgetHostView, w: Int, h: Int) {
+internal fun resize(v: AppWidgetHostView, w: Int, h: Int) {
     if (Build.VERSION.SDK_INT >= 31) {
         v.updateAppWidgetSize(Bundle(), listOf(SizeF(w.toFloat(), h.toFloat())))
     } else {
@@ -149,9 +60,9 @@ private fun resize(v: AppWidgetHostView, w: Int, h: Int) {
     }
 }
 
-/** ウィジェットを選んで、この画面のタブに足す。割り当ての許可と、必要ならウィジェットの設定画面を通る。 */
+/** ウィジェットを選んで、タブに足す（intoBoard が "" なら新しいタブ）。割り当ての許可と、必要ならウィジェットの設定画面を通る。 */
 @Composable
-fun AddWidgetDialog(model: HomeModel, intoTab: Int = -1, onDismiss: () -> Unit) {
+fun AddWidgetDialog(model: HomeModel, intoBoard: String = "", onDismiss: () -> Unit) {
     val actions = LocalActions.current
     val activity = actions.activity
     val app = activity.application as HomeApp
@@ -175,7 +86,7 @@ fun AddWidgetDialog(model: HomeModel, intoTab: Int = -1, onDismiss: () -> Unit) 
     }
 
     fun add(info: AppWidgetProviderInfo) {
-        app.store.pendingWidgetTab = intoTab
+        app.store.pendingBoard = intoBoard
         val id = runCatching { host.allocate() }.getOrElse {
             actions.toast("ウィジェットを用意できませんでした（${it.javaClass.simpleName}）")
             return
@@ -205,7 +116,7 @@ fun AddWidgetDialog(model: HomeModel, intoTab: Int = -1, onDismiss: () -> Unit) 
     val shown = groups.filter { (_, label, list) -> q.isBlank() || label.contains(q, true) || list.any { host.label(it).contains(q, true) } }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (intoTab == -1) "ウィジェットのタブを追加" else "このタブにウィジェットを足す") },
+        title = { Text(if (intoBoard.isEmpty()) "ウィジェットのタブを追加" else "このタブにウィジェットを足す") },
         text = {
             if (providers.isEmpty()) Text("置けるウィジェットが見つかりませんでした。", color = p.muted, fontSize = 14.sp)
             else Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

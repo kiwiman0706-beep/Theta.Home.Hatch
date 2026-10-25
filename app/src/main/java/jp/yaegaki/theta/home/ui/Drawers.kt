@@ -90,21 +90,21 @@ import java.util.Locale
 fun DrawerFrame(model: HomeModel, id: String, docked: Boolean) {
     val p = LocalPalette.current
     val layout = LocalLayout.current
-    val t = model.tab(id)
-    val w = model.widgetTab(id)
-    if (t == null && w == null) return
-    val group = t?.kind?.group ?: 1
-    val title = t?.label ?: w!!.label
+    val t = model.tab(id) ?: return
+    val group = t.kind.group
+    val title = t.label
     val kicker = when {
-        t?.kind == TabKind.WEB -> "WEB"
-        t?.kind == TabKind.FILE -> "FILE"
+        t.kind == TabKind.WEB -> "WEB"
+        t.kind == TabKind.FILE -> "FILE"
+        t.kind == TabKind.BOARD -> "BOARD"
         group == 0 -> "FOLDER"
         group == 1 -> "WIDGET"
         else -> "LAUNCH"
     }
-    val code = if (t != null) "%02d".format(model.tabs.indexOf(t) + 1) else "W%02d".format(model.widgetTabs.indexOf(w) + 1)
-    // ウィジェットのタブは中身の高さだけ（ピン留めしたときは縦いっぱい）
-    val wrap = w != null && !docked
+    val code = "%02d".format(model.tabs.indexOf(t) + 1)
+    // ふつうのタブは中身の高さだけ（ピン留めしたときは縦いっぱい）
+    val board = t.kind == TabKind.BOARD
+    val wrap = board && !docked
     var editing by remember(id) { mutableStateOf(false) }
     Column(if (wrap) Modifier.fillMaxWidth() else Modifier.fillMaxSize()) {
         Stripes(Modifier.fillMaxWidth().height(4.dp), color = p.group(group))
@@ -116,7 +116,7 @@ fun DrawerFrame(model: HomeModel, id: String, docked: Boolean) {
         ) {
             Text("[$kicker]·$code", color = p.group(group), fontSize = 10.sp, letterSpacing = 1.sp, fontFamily = Hud.mono)
             Text(title, color = p.fg, fontSize = 18.sp, fontFamily = Hud.display, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            if (w != null) GlyphButton(Glyph.GEAR, if (editing) "編集を終える" else "大きさ・並び・足す", { editing = !editing }, filled = editing)
+            if (board) GlyphButton(Glyph.GEAR, if (editing) "編集を終える" else "高さ・並び・足す", { editing = !editing }, filled = editing)
             if (docked) {
                 GlyphButton(Glyph.PIN, "ピン留めを外す", { model.unpin(id) }, filled = true)
             } else if (layout.maxDocked > 0) {
@@ -126,13 +126,10 @@ fun DrawerFrame(model: HomeModel, id: String, docked: Boolean) {
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         // カテゴリー以外のタブには、置いたアプリ・ショートカットを上に並べる
-        if (t?.kind != TabKind.CATEGORY && t?.kind != TabKind.APPS) TabAppsStrip(model, id)
+        if (t.kind != TabKind.CATEGORY && t.kind != TabKind.APPS) TabAppsStrip(model, id)
         Box(if (wrap) Modifier.fillMaxWidth() else Modifier.weight(1f).fillMaxWidth()) {
-            if (w != null) {
-                WidgetTabDrawer(model, w, editing)
-                return@Box
-            }
-            when (t!!.kind) {
+            when (t.kind) {
+                TabKind.BOARD -> BoardDrawer(model, t, editing)
                 TabKind.FOLDER -> FolderDrawer(model, t)
                 TabKind.WEB -> WebDrawer(model, t)
                 TabKind.FILE -> FileDrawer(model, t)
@@ -542,7 +539,7 @@ internal fun AppShortcutsDialog(model: HomeModel, app: jp.yaegaki.theta.home.dat
     val target = catId.ifEmpty { model.appCategories[app.key].orEmpty() }
     // "tab:<id>" はカテゴリー以外のタブ
     val targetName = model.categories.firstOrNull { it.id == target }?.name
-        ?: target.takeIf { it.startsWith("tab:") }?.removePrefix("tab:")?.let { id -> model.tab(id)?.label ?: model.widgetTab(id)?.label }
+        ?: target.takeIf { it.startsWith("tab:") }?.removePrefix("tab:")?.let { id -> model.tab(id)?.label }
         ?: "未分類"
     AlertDialog(
         onDismissRequest = onDismiss,

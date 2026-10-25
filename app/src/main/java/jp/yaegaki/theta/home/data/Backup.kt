@@ -60,14 +60,19 @@ object Backup {
             .put("tabOpts", JSONObject(store.prefs.getString("tabOpts", "{}") ?: "{}"))
             .put("nas", JSONObject().put("url", store.prefs.getString("nasUrl", "")).put("account", store.prefs.getString("nasAccount", "")))
             .put("apps", JSONArray(apps.map { JSONObject().put("package", it.packageName).put("component", it.key).put("label", it.label) }))
-        val widgets = JSONObject()
-        for (profile in listOf("narrow", "wide")) {
-            widgets.put(profile, JSONArray(store.widgetTabs(profile).map { t ->
-                JSONObject().put("label", t.label).put("w", t.w).put("h", t.h)
-                    .put("provider", awm.getAppWidgetInfo(t.id)?.provider?.flattenToString() ?: "")
-            }))
+        // ウィジェットは端末ごとに割り当て直すので、どのタブに何があったかだけ書いておく
+        val labels = store.tabs().associate { it.id to it.label }
+        val widgets = JSONArray()
+        store.boards().forEach { (tabId, items) ->
+            items.filter { it.type == BoardItem.WIDGET }.forEach { item ->
+                val info = item.ref.toIntOrNull()?.let { awm.getAppWidgetInfo(it) }
+                widgets.put(JSONObject().put("label", (labels[tabId] ?: "") + " / " + (info?.loadLabel(context.packageManager) ?: "?"))
+                    .put("provider", info?.provider?.flattenToString() ?: ""))
+            }
         }
-        o.put("widgets", widgets)
+        o.put("widgets", JSONObject().put("boards", widgets))
+        // フォルダ・ファイル・ページ（ウィジェットは移せないので除く）
+        o.put("boards", JSONObject(store.boards().mapValues { (_, v) -> JSONArray(v.filter { it.type != BoardItem.WIDGET }.map { it.toJson() }) }))
         return o.toString(2)
     }
 
@@ -96,6 +101,7 @@ object Backup {
         o.optJSONObject("folderViews")?.let { e.putString("views", it.toString()) }
         o.optJSONObject("appOrder")?.let { e.putString("appOrder", it.toString()) }
         o.optJSONObject("tabOpts")?.let { e.putString("tabOpts", it.toString()) }
+        o.optJSONObject("boards")?.let { e.putString("boards", it.toString()).putBoolean("boardsMigrated", true) }
         o.optJSONArray("queries")?.let { e.putString("queries", it.toString()).putBoolean("queriesSeeded", true) }
         e.putString("location", o.optString("location", ""))
         val nas = o.optJSONObject("nas")
@@ -114,7 +120,7 @@ object Backup {
                 .sortedWith(compareBy({ !it.hatch }, { it.label }))
         }
         val widgets = o.optJSONObject("widgets")?.let { w ->
-            listOf("narrow", "wide").flatMap { p -> w.optJSONArray(p)?.let { a -> (0 until a.length()).map { a.getJSONObject(it).optString("label") } }.orEmpty() }
+            listOf("narrow", "wide", "boards").flatMap { p -> w.optJSONArray(p)?.let { a -> (0 until a.length()).map { a.getJSONObject(it).optString("label") } }.orEmpty() }
         }.orEmpty().distinct()
         val folders = store.tabs().filter { t ->
             t.kind == TabKind.FOLDER && t.isLocal && !Files.hasGrant(context, Uri.parse(t.folderUri))

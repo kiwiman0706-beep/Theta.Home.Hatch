@@ -52,8 +52,7 @@ class PinShortcutActivity : ComponentActivity() {
         val store = (application as HomeApp).store
         // 置き場所：カテゴリーのタブ（カテゴリーの id）と、ほかのタブ（"tab:<id>"）
         val cats = store.categories().map { it.id to it.name } +
-            store.tabs().filter { it.kind != jp.yaegaki.theta.home.data.TabKind.CATEGORY && it.kind != jp.yaegaki.theta.home.data.TabKind.APPS }.map { "tab:${it.id}" to it.label } +
-            store.widgetTabs("narrow").map { "tab:w:${it.id}" to it.label }
+            store.tabs().filter { it.kind != jp.yaegaki.theta.home.data.TabKind.CATEGORY && it.kind != jp.yaegaki.theta.home.data.TabKind.APPS }.map { "tab:${it.id}" to it.label }
         val appCat = store.appCategories().entries.firstOrNull { it.key.startsWith(info.`package` + "/") }?.value
         val icon = runCatching {
             getSystemService(LauncherApps::class.java).getShortcutIconDrawable(info, resources.displayMetrics.densityDpi)?.let { d ->

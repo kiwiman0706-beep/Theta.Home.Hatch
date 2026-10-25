@@ -317,7 +317,7 @@ class ScreenshotTest {
         launch()
         compose.onNodeWithContentDescription("タブを追加").performScrollTo().performClick()
         compose.waitForIdle()
-        compose.onNodeWithText("＋ ウィジェットを選ぶ").performClick()
+        compose.onNodeWithText("＋ ウィジェットから").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("ウィジェットのタブを追加", substring = true).assertExists()
     }
@@ -510,5 +510,42 @@ class ScreenshotTest {
         compose.onNodeWithContentDescription("MAP").performScrollTo().performClick()
         compose.mainClock.advanceTimeBy(1200)
         shot("file-tab")
+    }
+
+    /** ふつうのタブ：画像 2 つを半分ずつ横に、その下にフォルダ。編集にすると高さ・半分・並び・外す。 */
+    @Test
+    @Config(qualifiers = "w904dp-h1104dp-xhdpi")
+    fun boardTab() {
+        launch()
+        compose.waitForIdle()
+        val app = ApplicationProvider.getApplicationContext<HomeApp>()
+        fun image(name: String, color: Int): android.net.Uri {
+            val f = java.io.File(app.filesDir, name)
+            val bmp = android.graphics.Bitmap.createBitmap(600, 400, android.graphics.Bitmap.Config.ARGB_8888)
+            val c = android.graphics.Canvas(bmp)
+            c.drawColor(color)
+            c.drawCircle(300f, 200f, 120f, android.graphics.Paint().apply { this.color = android.graphics.Color.WHITE })
+            f.outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            return android.net.Uri.fromFile(f)
+        }
+        val a = image("a.png", 0xFFB0452A.toInt())
+        val b = image("b.png", 0xFF2A6FB0.toInt())
+        scenario!!.onActivity {
+            val m = model()
+            val t = m.addTab(jp.yaegaki.theta.home.data.TabKind.BOARD)
+            m.renameTab(t.id, "DESK")
+            m.addBoardItem(t.id, jp.yaegaki.theta.home.data.BoardItem("i1", jp.yaegaki.theta.home.data.BoardItem.FILE, a.toString(), half = true, h = mapOf("wide" to 220)))
+            m.addBoardItem(t.id, jp.yaegaki.theta.home.data.BoardItem("i2", jp.yaegaki.theta.home.data.BoardItem.FILE, b.toString(), half = true, h = mapOf("wide" to 220)))
+            m.addBoardItem(t.id, jp.yaegaki.theta.home.data.BoardItem("i3", jp.yaegaki.theta.home.data.BoardItem.FOLDER, h = mapOf("wide" to 260)))
+            m.setTabApps(t.id, m.apps.map { it.key }.take(3))
+            m.setTabWidth(t.id, 560)
+        }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("DESK").performScrollTo().performClick()
+        compose.mainClock.advanceTimeBy(1200)
+        shot("board-tab")
+        compose.onNodeWithContentDescription("高さ・並び・足す").performClick()
+        compose.mainClock.advanceTimeBy(600)
+        shot("board-tab-edit")
     }
 }

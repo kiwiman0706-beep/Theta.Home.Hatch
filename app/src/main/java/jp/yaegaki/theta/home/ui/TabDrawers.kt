@@ -87,7 +87,7 @@ fun FolderDrawer(model: HomeModel, t: TabSpec) {
         t.driveFolder != null -> model.driveState(t.id).stack.size > 1
         else -> (model.folders[t.id]?.stack?.size ?: 0) > 1
     }
-    BackHandler(enabled = canUp) { model.drawerUp(t.id) }
+    BackHandler(enabled = canUp) { model.drawerUp(t) }
     val loc = when {
         t.nasPath != null -> "nas"
         t.driveFolder != null -> "drive"
@@ -97,7 +97,7 @@ fun FolderDrawer(model: HomeModel, t: TabSpec) {
         FolderView(
             model, preview = false, selected = null, onSelect = {},
             openNasSettings = { nasDialog = true }, openDriveSettings = { driveDialog = true },
-            loc = loc, key = t.id,
+            loc = loc, key = t.id, spec = t,
         )
     }
     if (nasDialog) NasDialog(model) { nasDialog = false }

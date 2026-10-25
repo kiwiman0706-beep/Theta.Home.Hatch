@@ -28,6 +28,8 @@ enum class TabKind(val group: Int, val defaultLabel: String, val key: Char?) {
     WEB(1, "WEB", null),
     /** 決めたファイル（画像・PDF）をタブの中に出す。TabSpec.folderUri に content:// の URI を入れる。 */
     FILE(1, "FILE", null),
+    /** ふつうのタブ：ウィジェット・フォルダ・ファイル・ページを好きな数だけ縦に並べる（[BoardItem]）。 */
+    BOARD(1, "BOARD", null),
 }
 
 /** folderUri は端末のフォルダ（SAF のツリー URI）か、NAS のフォルダ（"nas:" ＋ パス）。 */
@@ -69,6 +71,47 @@ data class WidgetTab(val id: Int, val label: String, val w: Int, val h: Int, val
 data class RecentFile(val uri: String, val name: String, val mime: String?, val where: String, val time: Long)
 
 data class Bookmark(val id: String, val name: String, val url: String)
+
+/**
+ * ふつうのタブ（BOARD）に置くもの 1 つ。type は WIDGET（ref＝ウィジェットの id）・FOLDER（ref＝フォルダのタブと同じ書き方）・
+ * FILE（ref＝content:// の URI）・WEB（ref＝URL）。half なら幅半分（となりの半分と横に並ぶ）。h は画面ごとの高さ（dp）。
+ */
+data class BoardItem(
+    val id: String,
+    val type: String,
+    val ref: String = "",
+    val label: String = "",
+    val half: Boolean = false,
+    val h: Map<String, Int> = emptyMap(),
+) {
+    fun height(profile: String) = h[profile] ?: h.values.firstOrNull() ?: defaultHeight(type)
+
+    fun toJson(): JSONObject = JSONObject().put("id", id).put("type", type).put("ref", ref).put("label", label)
+        .put("half", half).put("h", JSONObject(h.mapValues { it.value }))
+
+    companion object {
+        const val WIDGET = "widget"
+        const val FOLDER = "folder"
+        const val FILE = "file"
+        const val WEB = "web"
+
+        fun defaultHeight(type: String) = when (type) {
+            WIDGET -> 200
+            FILE -> 280
+            WEB -> 420
+            else -> 320
+        }
+
+        fun from(o: JSONObject) = BoardItem(
+            id = o.getString("id"),
+            type = o.getString("type"),
+            ref = o.optString("ref"),
+            label = o.optString("label"),
+            half = o.optBoolean("half", false),
+            h = o.optJSONObject("h")?.let { m -> m.keys().asSequence().associateWith { m.getInt(it) } }.orEmpty(),
+        )
+    }
+}
 
 /**
  * タブごとの設定。
@@ -131,7 +174,7 @@ class Store(context: Context) {
     val prefs: SharedPreferences = context.getSharedPreferences("home", Context.MODE_PRIVATE)
 
     fun tabs(): List<TabSpec> {
-        val raw = prefs.getString("tabs", null) ?: return defaultTabs()
+        val raw = prefs.getString("tabs", null) ?: return migrateBoards(defaultTabs())
         val list = runCatching {
             val a = JSONArray(raw)
             // 0.2.0 の「Widget」タブ（複数を縦に並べる）のような、今は無い種類は読み飛ばす
@@ -150,10 +193,58 @@ class Store(context: Context) {
         // 0.10.0 から、アプリの一覧はタブではなく画面上部のボタンで開く（タブは「＋」で戻せる）
         if (!prefs.getBoolean("appsTabMoved", false)) {
             prefs.edit().putBoolean("appsTabMoved", true).apply()
-            if (list.any { it.kind == TabKind.APPS }) return list.filter { it.kind != TabKind.APPS }.also(::saveTabs)
+            if (list.any { it.kind == TabKind.APPS }) return migrateBoards(list.filter { it.kind != TabKind.APPS }.also(::saveTabs))
         }
-        return list
+        return migrateBoards(list)
     }
+
+    /**
+     * 0.20.0 までのウィジェットのタブを、ふつうのタブ（BOARD）に移す。タブは今のタブの後ろに足し、
+     * ウィジェットの高さ・ドロワーの幅は画面ごとのものを、置いたショートカットとタブの設定も引き継ぐ。
+     */
+    private fun migrateBoards(list: List<TabSpec>): List<TabSpec> {
+        if (prefs.getBoolean("boardsMigrated", false)) return list
+        val narrow = widgetTabs("narrow")
+        val wide = widgetTabs("wide")
+        val boards = boards().toMutableMap()
+        val opts = tabOpts().toMutableMap()
+        var scs = shortcuts()
+        val added = narrow.map { t ->
+            val id = "b" + newId()
+            val wt = wide.firstOrNull { it.id == t.id } ?: t
+            boards[id] = t.cells.map { c ->
+                val cw = wt.cells.firstOrNull { it.id == c.id } ?: c
+                BoardItem(newId(), BoardItem.WIDGET, c.id.toString(), h = mapOf("narrow" to c.h, "wide" to cw.h))
+            }
+            val o = opts.remove("w:${t.id}") ?: TabOpts()
+            opts[id] = o.copy(width = mapOf("narrow" to t.cells.maxOf { it.w } + 16, "wide" to wt.cells.maxOf { it.w } + 16) + o.width)
+            scs = scs.map { if (it.catId == "tab:w:${t.id}") it.copy(catId = "tab:$id") else it }
+            TabSpec(id, TabKind.BOARD, t.label)
+        }
+        saveBoards(boards)
+        saveTabOpts(opts)
+        saveShortcuts(scs)
+        prefs.edit().putString("wtabs", "[]").putBoolean("boardsMigrated", true).apply()
+        if (added.isEmpty()) return list
+        return (list + added).also(::saveTabs)
+    }
+
+    /** ふつうのタブの中身。キーはタブの id。 */
+    fun boards(): Map<String, List<BoardItem>> = runCatching {
+        val o = JSONObject(prefs.getString("boards", "{}") ?: "{}")
+        o.keys().asSequence().associateWith { k -> o.getJSONArray(k).let { a -> (0 until a.length()).map { BoardItem.from(a.getJSONObject(it)) } } }
+    }.getOrDefault(emptyMap())
+
+    fun saveBoards(map: Map<String, List<BoardItem>>) {
+        val o = JSONObject()
+        map.forEach { (k, v) -> o.put(k, JSONArray(v.map { it.toJson() })) }
+        prefs.edit().putString("boards", o.toString()).apply()
+    }
+
+    /** ウィジェットを足している途中のタブ（設定画面から戻ったときに使う）。"" なら新しいタブ。 */
+    var pendingBoard: String
+        get() = prefs.getString("pendingBoard", "") ?: ""
+        set(v) = prefs.edit().putString("pendingBoard", v).apply()
 
     fun saveTabs(tabs: List<TabSpec>) {
         val a = JSONArray()
@@ -245,7 +336,7 @@ class Store(context: Context) {
         set(v) = prefs.edit().putString("location", v).apply()
 
     /**
-     * ウィジェットのタブ。0.20.0 から閉じた画面と開いた画面で共通（並び・中身）で、大きさだけ画面ごと（"wsize_<profile>"）。
+     * 0.20.0 までのウィジェットのタブ（ふつうのタブへ移すときに読む）。並び・中身は両方の画面で共通、大きさだけ画面ごと（"wsize_<profile>"）。
      * profile は "narrow"（Fold5 カバー・Titan など幅 600dp 未満）か "wide"。
      */
     fun widgetTabs(profile: String): List<WidgetTab> {
@@ -254,14 +345,6 @@ class Store(context: Context) {
         val sizes = widgetSizes(profile)
         fun sized(c: WidgetCell) = sizes[c.id]?.let { (w, h) -> c.copy(w = w, h = h) } ?: c
         return readWidgetTabs("wtabs").mapNotNull { t -> t.withCells(t.cells.map(::sized))?.copy(label = t.label) }
-    }
-
-    /** 並び・中身は両方の画面に、大きさはこの画面にだけ保存する。 */
-    fun saveWidgetTabs(profile: String, list: List<WidgetTab>) {
-        writeWidgetTabs("wtabs", list)
-        val sizes = widgetSizes(profile).toMutableMap()
-        list.flatMap { it.cells }.forEach { sizes[it.id] = it.w to it.h }
-        saveWidgetSizes(profile, sizes.filterKeys { id -> list.any { t -> t.cells.any { it.id == id } } })
     }
 
     private fun readWidgetTabs(key: String): List<WidgetTab> = objects(key) {
@@ -315,18 +398,13 @@ class Store(context: Context) {
         prefs.edit().putString("tabOpts", o.toString()).apply()
     }
 
-    /** ウィジェットを足している途中のタブ（設定画面から戻ったときに使う）。-1 なら新しいタブ。 */
-    var pendingWidgetTab: Int
-        get() = prefs.getInt("pendingWidgetTab", -1)
-        set(v) = prefs.edit().putInt("pendingWidgetTab", v).apply()
-
     /** 0.2.0 の「Widget」タブにあったウィジェットを、両方の画面のタブへ移す。 */
     private fun migrateWidgets() {
         val old = strings("widgets").mapNotNull { it.toIntOrNull() }
         if (old.isEmpty() || prefs.contains("wtabs_narrow")) return
         val list = old.map { WidgetTab(it, "Widget", 320, 200) }
-        saveWidgetTabs("narrow", list)
-        saveWidgetTabs("wide", list)
+        writeWidgetTabs("wtabs_narrow", list)
+        writeWidgetTabs("wtabs_wide", list)
         prefs.edit().remove("widgets").apply()
     }
 

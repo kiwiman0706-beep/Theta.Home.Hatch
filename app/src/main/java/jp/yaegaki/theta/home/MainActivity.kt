@@ -150,7 +150,7 @@ class MainActivity : ComponentActivity() {
             if (resultCode == RESULT_OK) model.addWidget(id)
             else {
                 widgets.release(id)
-                (application as HomeApp).store.pendingWidgetTab = -1
+                (application as HomeApp).store.pendingBoard = ""
                 (application as HomeApp).toast("ウィジェットの設定をやめたので、置きませんでした")
             }
             (application as HomeApp).store.pendingWidget = -1

@@ -460,9 +460,11 @@ internal fun FolderView(
     // 背景のファイラーは今の場所。フォルダのタブのドロワーは、そのタブの場所（NAS・ドライブはタブごとの key）
     loc: String = model.location,
     key: String = HomeModel.DESK,
+    // ふつうのタブに置いたフォルダは、タブの一覧に無いので直接渡す
+    spec: TabSpec? = null,
 ) {
     val actions = LocalActions.current
-    val tab = model.tab(loc.removePrefix("tab:")).takeIf { loc.startsWith("tab:") }
+    val tab = spec?.takeIf { it.nasPath == null && it.driveFolder == null } ?: model.tab(loc.removePrefix("tab:")).takeIf { loc.startsWith("tab:") }
     var editing by remember { mutableStateOf<SavedQuery?>(null) }
     editing?.let { q -> QueryDialog(model, q) { editing = null } }
 

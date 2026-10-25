@@ -41,8 +41,7 @@ import jp.yaegaki.theta.home.hatch.Release
 import jp.yaegaki.theta.home.nas.Nas
 import jp.yaegaki.theta.home.drive.GDrive
 import android.app.PendingIntent
-import jp.yaegaki.theta.home.data.WidgetTab
-import jp.yaegaki.theta.home.data.WidgetCell
+import jp.yaegaki.theta.home.data.BoardItem
 import jp.yaegaki.theta.home.data.Category
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -192,7 +191,6 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     /** ウィジェットの設定は画面ごと："narrow"（幅 600dp 未満）・"wide"。 */
     var profile by mutableStateOf("narrow"); private set
-    var widgetTabs by mutableStateOf(store.widgetTabs("narrow")); private set
 
     val folders = mutableStateMapOf<String, FolderState>()
     val hatch = mutableStateMapOf<String, HatchStatus>()
@@ -344,7 +342,6 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     /** アプリの一覧を開く ID（APPS のタブがあればそれ）。 */
     fun appsId(): String = tabs.firstOrNull { it.kind == TabKind.APPS }?.id ?: APPS_ID
 
-    fun widgetTab(id: String?) = widgetTabs.firstOrNull { "w:${it.id}" == id }
 
     fun toggle(id: String) {
         if (id in docked) {
@@ -692,9 +689,9 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
         runCatching { ctx.contentResolver.takePersistableUriPermission(tree, flags) }
             .recoverCatching { ctx.contentResolver.takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-        updateTabs(tabs.map { if (it.id == tabId) it.copy(folderUri = tree.toString()) else it })
+        setRef(tabId, tree.toString())
         folders.remove(tabId)
-        tab(tabId)?.let(::openRoot)
+        (tab(tabId) ?: boardItem(tabId)?.let(::specOf))?.let(::openRoot)
     }
 
     // ---- 保存した検索（仮想フォルダ） ----
@@ -782,6 +779,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         if (open == id) open = null
         docked = docked - id
         saveOpts(tabOpts - id)
+        boardItems(id).forEach(::releaseItem)
+        if (boards.containsKey(id)) saveBoards(boards - id)
         folders.remove(id)
         nasStates.remove(id)
         driveStates.remove(id)
@@ -850,8 +849,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** フォルダのドロワーで 1 つ上へ。もう上がなければ false（戻るでドロワーを閉じる）。 */
-    fun drawerUp(id: String): Boolean {
-        val t = tab(id)?.takeIf { it.kind == TabKind.FOLDER } ?: return false
+    fun drawerUp(t: TabSpec): Boolean {
         return when {
             t.nasPath != null -> nasUp(t.id)
             t.driveFolder != null -> driveUp(t.id)
@@ -860,21 +858,14 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** WEB のタブの URL を決める。 */
-    fun setTabUrl(id: String, url: String) {
-        val u = url.trim().let { if (it.contains("://")) it else "https://$it" }
-        updateTabs(tabs.map { if (it.id == id) it.copy(folderUri = u) else it })
-    }
+    fun setTabUrl(id: String, url: String) = setRef(id, url.trim().let { if (it.contains("://")) it else "https://$it" })
 
     /** FILE のタブのファイルを決める（読み取りの許可を持ち続ける）。 */
     fun setTabFile(id: String, uri: Uri) {
         runCatching { ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-        updateTabs(tabs.map { if (it.id == id) it.copy(folderUri = uri.toString()) else it })
+        setRef(id, uri.toString())
     }
 
-    fun renameWidgetTab(id: Int, label: String) {
-        if (label.isBlank()) return
-        saveWidgetTabs(widgetTabs.map { if (it.id == id) it.copy(label = label.trim()) else it })
-    }
 
     fun changeRailLeft(v: Boolean) { railLeft = v; store.railLeft = v }
     fun changeTheme(mode: String) { themeMode = mode; store.themeMode = mode }
@@ -1257,7 +1248,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         appOrder = store.appOrder()
         tabOpts = store.tabOpts()
         shortcuts = store.shortcuts()
-        widgetTabs = store.widgetTabs(profile)
+        boards = store.boards()
         folders.clear()
         open = null
         docked = emptyList()
@@ -1301,89 +1292,12 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         store.saveClips(clips)
     }
 
-    // ---- ウィジェットのタブ（並び・中身は両方の画面で共通、大きさは画面ごと） ----
-
     fun changeProfile(p: String) {
         if (p == profile) return
         profile = p
-        widgetTabs = store.widgetTabs(p)
-        if (open?.startsWith("w:") == true && widgetTab(open) == null) open = null
         // この画面では出さないタブは閉じる
         open?.let { if (!shownHere(it)) open = null }
-        docked = docked.filter { (!it.startsWith("w:") || widgetTab(it) != null) && shownHere(it) }
-    }
-
-    private fun saveWidgetTabs(list: List<WidgetTab>) {
-        widgetTabs = list
-        store.saveWidgetTabs(profile, list)
-    }
-
-    fun addWidgetTab(t: WidgetTab) {
-        saveWidgetTabs(widgetTabs.filter { it.id != t.id } + t)
-        open = "w:${t.id}"
-        lastOpened = open
-    }
-
-    /** なぞって大きさを変えている途中の幅。ドロワーの幅もこれに合わせる。 */
-    val liveWidth = mutableStateMapOf<Int, Int>()
-
-    fun resizeLive(id: Int, w: Int) {
-        liveWidth[id] = w
-    }
-
-    /** ドロワーの幅：中のウィジェットでいちばん広いもの。 */
-    fun widgetWidth(t: WidgetTab) = t.cells.maxOf { liveWidth[it.id] ?: it.w }
-
-    /** タブの中のウィジェット 1 つの大きさを変える。 */
-    fun updateWidgetCell(tabId: Int, cell: WidgetCell) {
-        liveWidth.remove(cell.id)
-        val t = widgetTabs.firstOrNull { it.id == tabId } ?: return
-        t.withCells(t.cells.map { if (it.id == cell.id) cell else it })?.let { n -> saveWidgetTabs(widgetTabs.map { if (it.id == tabId) n else it }) }
-    }
-
-    /** タブの中で上へ・下へ。1 つ目が入れ替わるとタブの id も変わるので、開いているドロワーも付け替える。 */
-    fun moveWidgetCell(tabId: Int, cellId: Int, delta: Int) {
-        val t = widgetTabs.firstOrNull { it.id == tabId } ?: return
-        val list = t.cells.toMutableList()
-        val i = list.indexOfFirst { it.id == cellId }
-        val j = i + delta
-        if (i < 0 || j !in list.indices) return
-        list.add(j, list.removeAt(i))
-        replaceWidgetTab(t, t.withCells(list))
-    }
-
-    /** タブの中のウィジェットを 1 つ外す。最後の 1 つならタブごと外す。 */
-    fun removeWidgetCell(tabId: Int, cellId: Int) {
-        val t = widgetTabs.firstOrNull { it.id == tabId } ?: return
-        val rest = t.cells.filter { it.id != cellId }
-        if (rest.isEmpty()) {
-            removeWidgetTab(tabId)
-            return
-        }
-        replaceWidgetTab(t, t.withCells(rest))
-        (ctx as HomeApp).widgets.release(cellId)
-    }
-
-    private fun replaceWidgetTab(old: WidgetTab, new: WidgetTab?) {
-        new ?: return
-        saveWidgetTabs(widgetTabs.map { if (it.id == old.id) new else it })
-        val o = "w:${old.id}"
-        val n = "w:${new.id}"
-        if (o != n) {
-            tabOpts[o]?.let { saveOpts(tabOpts - o + (n to it)) }
-            shortcuts.filter { it.catId == "tab:$o" }.takeIf { it.isNotEmpty() }?.let {
-                shortcuts = shortcuts.map { sc -> if (sc.catId == "tab:$o") sc.copy(catId = "tab:$n") else sc }
-                store.saveShortcuts(shortcuts)
-            }
-            if (open == o) open = n
-            if (lastOpened == o) lastOpened = n
-            docked = docked.map { if (it == o) n else it }
-        }
-    }
-
-    fun updateWidgetTab(t: WidgetTab) {
-        liveWidth.remove(t.id)
-        saveWidgetTabs(widgetTabs.map { if (it.id == t.id) t else it })
+        docked = docked.filter { shownHere(it) }
     }
 
     /** ドラッグで並べ替え：from を to の場所へ。 */
@@ -1394,12 +1308,6 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         updateTabs(tabs.toMutableList().also { it.add(j, it.removeAt(i)) })
     }
 
-    fun moveWidgetTabTo(from: Int, to: Int) {
-        val i = widgetTabs.indexOfFirst { it.id == from }
-        val j = widgetTabs.indexOfFirst { it.id == to }
-        if (i < 0 || j < 0 || i == j) return
-        saveWidgetTabs(widgetTabs.toMutableList().also { it.add(j, it.removeAt(i)) })
-    }
 
     /** カテゴリーごとのアプリの並び（ドラッグで決めたもの）。キーはカテゴリーの id（未分類は ""）。 */
     var appOrder by mutableStateOf(store.appOrder()); private set
@@ -1475,24 +1383,81 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         jp.yaegaki.theta.home.data.Shortcuts.setPinned(ctx, pkg, shortcuts.filter { it.packageName == pkg }.map { it.shortcutId }.distinct())
     }
 
-    fun moveWidgetTab(id: Int, delta: Int) {
-        val i = widgetTabs.indexOfFirst { it.id == id }
-        val j = i + delta
-        if (i < 0 || j !in widgetTabs.indices) return
-        saveWidgetTabs(widgetTabs.toMutableList().also { it.add(j, it.removeAt(i)) })
+    // ---- ふつうのタブ（BOARD）：ウィジェット・フォルダ・ファイル・ページを並べる ----
+
+    var boards by mutableStateOf(store.boards()); private set
+
+    fun boardItems(tabId: String) = boards[tabId].orEmpty()
+
+    private fun saveBoards(map: Map<String, List<BoardItem>>) {
+        boards = map
+        store.saveBoards(map)
     }
 
-    /** タブを外して、中のウィジェットも削除する（両方の画面で共通なので）。 */
-    fun removeWidgetTab(id: Int) {
-        val t = widgetTabs.firstOrNull { it.id == id }
-        saveWidgetTabs(widgetTabs.filter { it.id != id })
-        if (open == "w:$id") open = null
-        docked = docked - "w:$id"
-        saveOpts(tabOpts - "w:$id")
-        t?.cells?.forEach { (ctx as HomeApp).widgets.release(it.id) }
+    private fun editBoard(tabId: String, f: (List<BoardItem>) -> List<BoardItem>) = saveBoards(boards + (tabId to f(boardItems(tabId))))
+
+    /** 置いたもの 1 つがどのタブにあるか。 */
+    private fun boardOf(itemId: String): String? = boards.entries.firstOrNull { (_, v) -> v.any { it.id == itemId } }?.key
+
+    fun boardItem(itemId: String): BoardItem? = boards.values.firstNotNullOfOrNull { v -> v.firstOrNull { it.id == itemId } }
+
+    fun addBoardItem(tabId: String, item: BoardItem) = editBoard(tabId) { it + item }
+
+    fun updateBoardItem(item: BoardItem) {
+        val tabId = boardOf(item.id) ?: return
+        editBoard(tabId) { list -> list.map { if (it.id == item.id) item else it } }
     }
 
-    /** 割り当てが済んだウィジェットを、この画面のタブとして足す。大きさはウィジェットの最小サイズから。 */
+    /** この画面での高さ（dp）。 */
+    fun setItemHeight(itemId: String, dp: Int) {
+        val item = boardItem(itemId) ?: return
+        updateBoardItem(item.copy(h = item.h + (profile to dp)))
+    }
+
+    fun moveBoardItem(itemId: String, delta: Int) {
+        val tabId = boardOf(itemId) ?: return
+        editBoard(tabId) { list ->
+            val i = list.indexOfFirst { it.id == itemId }
+            val j = i + delta
+            if (i < 0 || j !in list.indices) list else list.toMutableList().also { it.add(j, it.removeAt(i)) }
+        }
+    }
+
+    /** 外す。ウィジェットなら割り当ても消す。 */
+    fun removeBoardItem(itemId: String) {
+        val tabId = boardOf(itemId) ?: return
+        val item = boardItem(itemId)
+        editBoard(tabId) { list -> list.filter { it.id != itemId } }
+        releaseItem(item)
+    }
+
+    private fun releaseItem(item: BoardItem?) {
+        if (item?.type == BoardItem.WIDGET) item.ref.toIntOrNull()?.let { (ctx as HomeApp).widgets.release(it) }
+        folders.remove(item?.id)
+        nasStates.remove(item?.id)
+        driveStates.remove(item?.id)
+    }
+
+    /** 置いたものを、フォルダ・ファイル・ページの画面に渡す形にする（id は置いたものの id）。 */
+    fun specOf(item: BoardItem): TabSpec {
+        val kind = when (item.type) {
+            BoardItem.FILE -> TabKind.FILE
+            BoardItem.WEB -> TabKind.WEB
+            else -> TabKind.FOLDER
+        }
+        return TabSpec(item.id, kind, item.label.ifEmpty { kind.defaultLabel }, item.ref.ifEmpty { null })
+    }
+
+    /** タブか置いたものの、場所（フォルダ・ファイル・URL）を変える。 */
+    private fun setRef(id: String, ref: String) {
+        if (tabs.any { it.id == id }) {
+            updateTabs(tabs.map { if (it.id == id) it.copy(folderUri = ref) else it })
+            return
+        }
+        boardItem(id)?.let { updateBoardItem(it.copy(ref = ref)) }
+    }
+
+    /** 割り当てが済んだウィジェットを置く。足している途中のタブがあればその下に、無ければ新しいタブにする。 */
     fun addWidget(id: Int) {
         val host = (ctx as HomeApp).widgets
         val info = host.info(id) ?: run {
@@ -1500,17 +1465,17 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             return
         }
         val d = ctx.resources.displayMetrics.density
-        val cell = WidgetCell(id, (info.minWidth / d).toInt().coerceIn(200, 600), (info.minHeight / d).toInt().coerceIn(120, 600))
-        // 既にあるタブに足す途中なら、その下に並べる
-        val into = store.pendingWidgetTab.also { store.pendingWidgetTab = -1 }
-        val t = widgetTabs.firstOrNull { it.id == into }
-        if (t != null) {
-            saveWidgetTabs(widgetTabs.map { if (it.id == into) it.copy(extra = it.extra + cell) else it })
-            open = "w:${t.id}"
-            lastOpened = open
-            return
+        val item = BoardItem(Store.newId(), BoardItem.WIDGET, id.toString(), h = mapOf(profile to (info.minHeight / d).toInt().coerceIn(120, 600)))
+        val into = store.pendingBoard.also { store.pendingBoard = "" }
+        val tabId = into.takeIf { t -> tabs.any { it.id == t } } ?: run {
+            val t = TabSpec(Store.newId(), TabKind.BOARD, host.label(info).take(14))
+            updateTabs(tabs + t)
+            setTabWidth(t.id, (info.minWidth / d).toInt().coerceIn(240, 600) + 16)
+            t.id
         }
-        addWidgetTab(WidgetTab(id, host.label(info), cell.w, cell.h))
+        addBoardItem(tabId, item)
+        open = tabId
+        lastOpened = open
     }
 
     // ---- Hatch ----

@@ -1,6 +1,10 @@
 package jp.yaegaki.theta.home
 
 import androidx.test.core.app.ApplicationProvider
+import jp.yaegaki.theta.home.data.BoardItem
+import jp.yaegaki.theta.home.data.PinnedShortcut
+import jp.yaegaki.theta.home.data.TabKind
+import jp.yaegaki.theta.home.data.TabOpts
 import jp.yaegaki.theta.home.data.WidgetCell
 import jp.yaegaki.theta.home.data.WidgetTab
 import org.junit.Assert.assertEquals
@@ -25,50 +29,53 @@ class WidgetTabTest {
         assertNull(t.withCells(emptyList()))
     }
 
-    @Test
-    fun storeRoundTrip() {
-        val app = ApplicationProvider.getApplicationContext<HomeApp>()
-        val t = WidgetTab(5, "カメラ", 300, 200, listOf(WidgetCell(7, 250, 150), WidgetCell(9, 200, 120)))
-        app.store.saveWidgetTabs("narrow", listOf(t))
-        assertEquals(listOf(t), app.store.widgetTabs("narrow"))
-    }
+    private fun tab(id: Int, w: Int, h: Int = 200, extra: String = "") = """{"id":$id,"label":"W$id","w":$w,"h":$h,"extra":[$extra]}"""
 
-    /** タブと中身は両方の画面で共通、大きさだけ画面ごと。 */
+    /** 0.20.0 までの画面ごとのウィジェットのタブは、ふつうのタブに移す。高さ・幅はそれぞれの画面のものを残す。 */
     @Test
-    fun sharedTabsSizesPerScreen() {
+    fun migrateToBoards() {
         val app = ApplicationProvider.getApplicationContext<HomeApp>()
-        app.store.prefs.edit().clear().commit()
-        val t = WidgetTab(5, "カメラ", 300, 200, listOf(WidgetCell(7, 250, 150)))
-        app.store.saveWidgetTabs("narrow", listOf(t))
-        // 開いた画面にも同じタブがある
-        assertEquals(listOf(5, 7), app.store.widgetTabs("wide").single().cells.map { it.id })
-        // 開いた画面で大きくしても、閉じた画面の大きさはそのまま
-        app.store.saveWidgetTabs("wide", listOf(t.copy(w = 600, h = 400)))
-        assertEquals(600, app.store.widgetTabs("wide").single().w)
-        assertEquals(300, app.store.widgetTabs("narrow").single().w)
-    }
-
-    /** 0.19.0 までの画面ごとのタブは 1 つにまとめ、大きさはそれぞれの画面のものを残す。 */
-    @Test
-    fun mergeOldProfiles() {
-        val app = ApplicationProvider.getApplicationContext<HomeApp>()
-        val prefs = app.store.prefs
-        prefs.edit().clear().commit()
-        fun tab(id: Int, w: Int) = """{"id":$id,"label":"W$id","w":$w,"h":200,"extra":[]}"""
-        prefs.edit()
-            .putString("wtabs_narrow", "[${tab(1, 300)},${tab(2, 300)}]")
-            .putString("wtabs_wide", "[${tab(2, 700)},${tab(3, 500)}]")
+        val store = app.store
+        store.prefs.edit().clear().commit()
+        store.prefs.edit()
+            .putString("wtabs_narrow", "[${tab(1, 300, extra = """{"id":4,"w":280,"h":150}""")},${tab(2, 300)}]")
+            .putString("wtabs_wide", "[${tab(2, 700, 400)},${tab(3, 500)}]")
+            .putString("tabOpts", """{"w:2":{"show":"wide","apps":["a/b"]}}""")
             .commit()
-        assertEquals(listOf(1, 2, 3), app.store.widgetTabs("narrow").map { it.id })
-        assertEquals(700, app.store.widgetTabs("wide").first { it.id == 2 }.w)
-        assertEquals(300, app.store.widgetTabs("narrow").first { it.id == 2 }.w)
+        store.saveShortcuts(listOf(PinnedShortcut("s", "p", "x", "トーク", "tab:w:2")))
+        val boards = store.tabs().filter { it.kind == TabKind.BOARD }
+        assertEquals(listOf("W1", "W2", "W3"), boards.map { it.label })
+        val items = store.boards()
+        assertEquals(listOf("1", "4"), items[boards[0].id]!!.map { it.ref })
+        val w2 = items[boards[1].id]!!.single()
+        assertEquals(BoardItem.WIDGET, w2.type)
+        assertEquals(200, w2.height("narrow"))
+        assertEquals(400, w2.height("wide"))
+        // タブの設定と置いたショートカットも新しいタブへ
+        val o = store.tabOpts()[boards[1].id]!!
+        assertEquals("wide", o.show)
+        assertEquals(listOf("a/b"), o.apps)
+        assertEquals(716, o.width["wide"])
+        assertEquals("tab:${boards[1].id}", store.shortcuts().single().catId)
+        // 2 回目は何もしない
+        assertEquals(3, store.tabs().count { it.kind == TabKind.BOARD })
+    }
+
+    @Test
+    fun boardItemsRoundTrip() {
+        val app = ApplicationProvider.getApplicationContext<HomeApp>()
+        val item = BoardItem("i1", BoardItem.WEB, "https://example.com", "例", half = true, h = mapOf("wide" to 500))
+        app.store.saveBoards(mapOf("t" to listOf(item)))
+        assertEquals(listOf(item), app.store.boards()["t"])
+        assertEquals(500, item.height("narrow"))
+        assertEquals(BoardItem.defaultHeight(BoardItem.FOLDER), BoardItem("x", BoardItem.FOLDER).height("wide"))
     }
 
     @Test
     fun tabOptsRoundTrip() {
         val app = ApplicationProvider.getApplicationContext<HomeApp>()
-        val o = jp.yaegaki.theta.home.data.TabOpts(show = "wide", width = mapOf("narrow" to 320), apps = listOf("a/b"), split = true)
-        app.store.saveTabOpts(mapOf("t1" to o, "t2" to jp.yaegaki.theta.home.data.TabOpts()))
+        val o = TabOpts(show = "wide", width = mapOf("narrow" to 320), apps = listOf("a/b"), split = true)
+        app.store.saveTabOpts(mapOf("t1" to o, "t2" to TabOpts()))
         assertEquals(mapOf("t1" to o), app.store.tabOpts())
         assertEquals(false, o.shownOn("narrow"))
     }
