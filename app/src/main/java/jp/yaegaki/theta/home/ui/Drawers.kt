@@ -95,9 +95,11 @@ fun DrawerFrame(model: HomeModel, id: String, docked: Boolean) {
     if (t == null && w == null) return
     val group = t?.kind?.group ?: 1
     val title = t?.label ?: w!!.label
-    val kicker = when (group) {
-        0 -> "FOLDER"
-        1 -> "WIDGET"
+    val kicker = when {
+        t?.kind == TabKind.WEB -> "WEB"
+        t?.kind == TabKind.FILE -> "FILE"
+        group == 0 -> "FOLDER"
+        group == 1 -> "WIDGET"
         else -> "LAUNCH"
     }
     val code = if (t != null) "%02d".format(model.tabs.indexOf(t) + 1) else "W%02d".format(model.widgetTabs.indexOf(w) + 1)
@@ -123,19 +125,23 @@ fun DrawerFrame(model: HomeModel, id: String, docked: Boolean) {
             if (!docked) GlyphButton(Glyph.CLOSE, "閉じる", { model.close() })
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
+        // カテゴリー以外のタブには、置いたアプリ・ショートカットを上に並べる
+        if (t?.kind != TabKind.CATEGORY && t?.kind != TabKind.APPS) TabAppsStrip(model, id)
         Box(if (wrap) Modifier.fillMaxWidth() else Modifier.weight(1f).fillMaxWidth()) {
             if (w != null) {
                 WidgetTabDrawer(model, w, editing)
                 return@Box
             }
             when (t!!.kind) {
-                TabKind.FOLDER -> Unit
+                TabKind.FOLDER -> FolderDrawer(model, t)
+                TabKind.WEB -> WebDrawer(model, t)
+                TabKind.FILE -> FileDrawer(model, t)
                 TabKind.CALENDAR -> CalendarDrawer(model)
                 TabKind.MAIL -> NoticeDrawer(model, mail = true)
                 TabKind.LINE -> NoticeDrawer(model, mail = false)
                 TabKind.PEOPLE -> PeopleDrawer(model)
                 TabKind.APPS -> AppsDrawer(model)
-                TabKind.CATEGORY -> AppsDrawer(model, only = t.folderUri.orEmpty())
+                TabKind.CATEGORY -> AppsDrawer(model, only = t.folderUri.orEmpty(), split = model.opts(t.id).split)
                 TabKind.BOOKMARKS -> BookmarkDrawer(model)
                 TabKind.CLIP -> ClipDrawer(model)
                 TabKind.CAPTURE -> CaptureDrawer(model)
@@ -528,13 +534,16 @@ private fun ShortcutMenu(model: HomeModel, sc: jp.yaegaki.theta.home.data.Pinned
 
 /** アプリの持っているショートカット。押すと開き、「置く」でこのカテゴリーのタブに置く。既定のホームのときだけ読める。 */
 @Composable
-private fun AppShortcutsDialog(model: HomeModel, app: jp.yaegaki.theta.home.data.AppEntry, catId: String, onDismiss: () -> Unit) {
+internal fun AppShortcutsDialog(model: HomeModel, app: jp.yaegaki.theta.home.data.AppEntry, catId: String, onDismiss: () -> Unit) {
     val p = LocalPalette.current
     val ctx = LocalActions.current.activity
     val ok = remember { jp.yaegaki.theta.home.data.Shortcuts.available(ctx) }
     val list = remember(app.packageName) { if (ok) jp.yaegaki.theta.home.data.Shortcuts.forApp(ctx, app.packageName) else emptyList() }
     val target = catId.ifEmpty { model.appCategories[app.key].orEmpty() }
-    val targetName = model.categories.firstOrNull { it.id == target }?.name ?: "未分類"
+    // "tab:<id>" はカテゴリー以外のタブ
+    val targetName = model.categories.firstOrNull { it.id == target }?.name
+        ?: target.takeIf { it.startsWith("tab:") }?.removePrefix("tab:")?.let { id -> model.tab(id)?.label ?: model.widgetTab(id)?.label }
+        ?: "未分類"
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(app.label) },
@@ -564,7 +573,7 @@ private val appCell = listOf(64.dp, 76.dp, 92.dp, 112.dp)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AppsDrawer(model: HomeModel, only: String? = null) {
+private fun AppsDrawer(model: HomeModel, only: String? = null, split: Boolean = false) {
     val p = LocalPalette.current
     val actions = LocalActions.current
     var q by remember { mutableStateOf("") }
@@ -609,6 +618,38 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
         if (model.voicePending && only == null) {
             model.voicePending = false
             voice.start()
+        }
+    }
+
+    // グリッドのショートカット 1 つ（アプリと同じマス）
+    @Composable
+    fun ShortcutCell(sc: jp.yaegaki.theta.home.data.PinnedShortcut, id: String) {
+        Box(Modifier.zIndex(if (reorder.dragging == "sc:" + sc.id) 10f else 0f)) {
+            Column(
+                Modifier.width(appCell[spec.size])
+                    .reorderable(reorder, "sc:" + sc.id, "sc:$id", p.accent, onMenu = { scMenu = sc.id }) { from, to -> model.moveShortcutTo(from.removePrefix("sc:"), to.removePrefix("sc:")) }
+                    .combinedClickable(onClick = { model.launchShortcut(sc) }, onLongClick = {}, onClickLabel = "開く")
+                    .padding(vertical = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Box {
+                    ShortcutIcon(sc, appIcon[spec.size])
+                    Box(Modifier.align(Alignment.BottomEnd).size(10.dp).background(p.accent))
+                }
+                Text(sc.label, color = p.fg, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(horizontal = 2.dp))
+            }
+            ShortcutMenu(model, sc, scMenu == sc.id, { scMenu = null }) { scRenaming = sc }
+        }
+    }
+
+    @Composable
+    fun ShortcutHeading(n: Int) {
+        Row(Modifier.padding(top = 6.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("SHORTCUTS", color = p.muted, fontSize = 11.sp, fontFamily = Hud.mono, letterSpacing = 1.5.sp)
+            Text("%02d".format(n), color = p.faint, fontSize = 11.sp)
+            Ticks(Modifier.weight(1f).height(5.dp))
         }
     }
 
@@ -693,29 +734,19 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
                             AppMenu(model, app, menuFor == app.key, { menuFor = null }, { shortcutsFor = app to id }) { moving = app }
                         }
                     }
-                    // 置いたショートカット（LINE のトークルームなど）。アプリと同じマスに、角に小さな印
-                    scs.forEach { sc ->
-                        Box(Modifier.zIndex(if (reorder.dragging == "sc:" + sc.id) 10f else 0f)) {
-                            Column(
-                                Modifier.width(appCell[spec.size])
-                                    .reorderable(reorder, "sc:" + sc.id, "sc:$id", p.accent, onMenu = { scMenu = sc.id }) { from, to -> model.moveShortcutTo(from.removePrefix("sc:"), to.removePrefix("sc:")) }
-                                    .combinedClickable(onClick = { model.launchShortcut(sc) }, onLongClick = {}, onClickLabel = "開く")
-                                    .padding(vertical = 6.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
-                                Box {
-                                    ShortcutIcon(sc, appIcon[spec.size])
-                                    Box(Modifier.align(Alignment.BottomEnd).size(10.dp).background(p.accent))
-                                }
-                                Text(sc.label, color = p.fg, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(horizontal = 2.dp))
-                            }
-                            ShortcutMenu(model, sc, scMenu == sc.id, { scMenu = null }) { scRenaming = sc }
-                        }
+                    // 置いたショートカット（LINE のトークルームなど）。アプリと同じマスに、角に小さな印。「別の段」なら下の段に
+                    if (!split) scs.forEach { sc -> ShortcutCell(sc, id) }
+                }
+            }
+            if (spec.grid && split && scs.isNotEmpty()) item(key = "gs:$id") {
+                Column {
+                    ShortcutHeading(scs.size)
+                    FlowRow(Modifier.zIndex(if (scs.any { "sc:" + it.id == reorder.dragging }) 10f else 0f).fillMaxWidth().padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        scs.forEach { sc -> ShortcutCell(sc, id) }
                     }
                 }
-            } else {
+            }
+            if (!spec.grid && !split) {
                 scs.forEachIndexed { zi, sc ->
                     item(key = "sc:$id:${sc.id}") {
                         Box(Modifier.zIndex(if (reorder.dragging == "sc:" + sc.id) 10f else 0f)) {
@@ -750,6 +781,27 @@ private fun AppsDrawer(model: HomeModel, only: String? = null) {
                             CountBadge(counts[app.packageName] ?: 0, Modifier)
                         }
                         AppMenu(model, app, menuFor == app.key, { menuFor = null }, { shortcutsFor = app to id }) { moving = app }
+                    }
+                }
+            }
+            if (!spec.grid && split && scs.isNotEmpty()) {
+                item(key = "sh:$id") { ShortcutHeading(scs.size) }
+                scs.forEachIndexed { zi, sc ->
+                    item(key = "sc2:$id:${sc.id}") {
+                        Box(Modifier.zIndex(if (reorder.dragging == "sc:" + sc.id) 10f else 0f)) {
+                            RowButton(
+                                zebra = zi,
+                                onClick = { model.launchShortcut(sc) },
+                                onLongClick = {},
+                                label = "開く",
+                                modifier = Modifier.reorderable(reorder, "sc:" + sc.id, "sc:$id", p.accent, onMenu = { scMenu = sc.id }) { from, to -> model.moveShortcutTo(from.removePrefix("sc:"), to.removePrefix("sc:")) },
+                            ) {
+                                ShortcutIcon(sc, listIcon[spec.size])
+                                Text(sc.label, color = p.fg, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                Text("SHORTCUT", color = p.faint, fontSize = 9.sp, fontFamily = Hud.mono)
+                            }
+                            ShortcutMenu(model, sc, scMenu == sc.id, { scMenu = null }) { scRenaming = sc }
+                        }
                     }
                 }
             }

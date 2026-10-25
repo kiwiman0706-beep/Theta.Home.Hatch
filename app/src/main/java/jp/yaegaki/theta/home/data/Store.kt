@@ -8,8 +8,8 @@ import java.util.UUID
 
 /**
  * タブの種類。group は端のタブの色分け（0=フォルダ, 1=ウィジェット, 2=起動）。key は物理キーボードの Alt＋キー。
- * フォルダのタブは背景のファイラーの場所を切り替え、それ以外はドロワーとしてスライドインする。
- * ウィジェットはタブ 1 つに 1 つ（[WidgetTab]）で、画面ごとに別に持つ。
+ * どのタブもドロワーとしてスライドインする（フォルダのタブはドロワーの中にフォルダの中身）。
+ * ウィジェットは [WidgetTab] で持ち、並び・中身は両方の画面で共通、大きさだけ画面ごと。
  */
 enum class TabKind(val group: Int, val defaultLabel: String, val key: Char?) {
     FOLDER(0, "FOLDER", null),
@@ -24,6 +24,10 @@ enum class TabKind(val group: Int, val defaultLabel: String, val key: Char?) {
     HATCH(2, "HATCH", 'H'),
     /** アプリのカテゴリー 1 つ分のアプリ。TabSpec.folderUri にカテゴリーの id を入れる。 */
     CATEGORY(2, "CATEGORY", null),
+    /** 決めた URL のページをタブの中に出す。TabSpec.folderUri に URL を入れる。 */
+    WEB(1, "WEB", null),
+    /** 決めたファイル（画像・PDF）をタブの中に出す。TabSpec.folderUri に content:// の URI を入れる。 */
+    FILE(1, "FILE", null),
 }
 
 /** folderUri は端末のフォルダ（SAF のツリー URI）か、NAS のフォルダ（"nas:" ＋ パス）。 */
@@ -65,6 +69,33 @@ data class WidgetTab(val id: Int, val label: String, val w: Int, val h: Int, val
 data class RecentFile(val uri: String, val name: String, val mime: String?, val where: String, val time: Long)
 
 data class Bookmark(val id: String, val name: String, val url: String)
+
+/**
+ * タブごとの設定。
+ * show："both"（両方の画面）・"narrow"（閉じた画面だけ）・"wide"（開いた画面だけ）。
+ * width：画面ごとのドロワーの幅（dp。無ければ決まった幅）。apps：タブに置いたアプリ（AppEntry.key）。
+ * split：カテゴリーのタブで、ショートカットをアプリと別の段にする。
+ */
+data class TabOpts(
+    val show: String = "both",
+    val width: Map<String, Int> = emptyMap(),
+    val apps: List<String> = emptyList(),
+    val split: Boolean = false,
+) {
+    fun shownOn(profile: String) = show == "both" || show == profile
+
+    fun toJson(): JSONObject = JSONObject().put("show", show).put("split", split)
+        .put("apps", JSONArray(apps)).put("width", JSONObject(width.mapValues { it.value }))
+
+    companion object {
+        fun from(o: JSONObject) = TabOpts(
+            show = o.optString("show", "both"),
+            width = o.optJSONObject("width")?.let { w -> w.keys().asSequence().associateWith { w.getInt(it) } }.orEmpty(),
+            apps = o.optJSONArray("apps")?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty(),
+            split = o.optBoolean("split", false),
+        )
+    }
+}
 
 /** フォルダの見せ方：一覧（LIST）かグリッド（GRID）か、大きさ 0〜3（S・M・L・XL）。 */
 data class ViewSpec(val grid: Boolean, val size: Int) {
@@ -213,18 +244,75 @@ class Store(context: Context) {
         get() = prefs.getString("location", "") ?: ""
         set(v) = prefs.edit().putString("location", v).apply()
 
-    /** profile は "narrow"（Fold5 カバー・Titan など幅 600dp 未満）か "wide"。 */
+    /**
+     * ウィジェットのタブ。0.20.0 から閉じた画面と開いた画面で共通（並び・中身）で、大きさだけ画面ごと（"wsize_<profile>"）。
+     * profile は "narrow"（Fold5 カバー・Titan など幅 600dp 未満）か "wide"。
+     */
     fun widgetTabs(profile: String): List<WidgetTab> {
         migrateWidgets()
-        return objects("wtabs_$profile") {
-            val extra = it.optJSONArray("extra")?.let { a -> (0 until a.length()).map { i -> a.getJSONObject(i).let { c -> WidgetCell(c.getInt("id"), c.getInt("w"), c.getInt("h")) } } }.orEmpty()
-            WidgetTab(it.getInt("id"), it.getString("label"), it.getInt("w"), it.getInt("h"), extra)
-        }
+        mergeWidgetProfiles()
+        val sizes = widgetSizes(profile)
+        fun sized(c: WidgetCell) = sizes[c.id]?.let { (w, h) -> c.copy(w = w, h = h) } ?: c
+        return readWidgetTabs("wtabs").mapNotNull { t -> t.withCells(t.cells.map(::sized))?.copy(label = t.label) }
     }
 
-    fun saveWidgetTabs(profile: String, list: List<WidgetTab>) = putObjects("wtabs_$profile", list) {
+    /** 並び・中身は両方の画面に、大きさはこの画面にだけ保存する。 */
+    fun saveWidgetTabs(profile: String, list: List<WidgetTab>) {
+        writeWidgetTabs("wtabs", list)
+        val sizes = widgetSizes(profile).toMutableMap()
+        list.flatMap { it.cells }.forEach { sizes[it.id] = it.w to it.h }
+        saveWidgetSizes(profile, sizes.filterKeys { id -> list.any { t -> t.cells.any { it.id == id } } })
+    }
+
+    private fun readWidgetTabs(key: String): List<WidgetTab> = objects(key) {
+        val extra = it.optJSONArray("extra")?.let { a -> (0 until a.length()).map { i -> a.getJSONObject(i).let { c -> WidgetCell(c.getInt("id"), c.getInt("w"), c.getInt("h")) } } }.orEmpty()
+        WidgetTab(it.getInt("id"), it.getString("label"), it.getInt("w"), it.getInt("h"), extra)
+    }
+
+    private fun writeWidgetTabs(key: String, list: List<WidgetTab>) = putObjects(key, list) {
         JSONObject().put("id", it.id).put("label", it.label).put("w", it.w).put("h", it.h)
             .put("extra", JSONArray(it.extra.map { c -> JSONObject().put("id", c.id).put("w", c.w).put("h", c.h) }))
+    }
+
+    private fun widgetSizes(profile: String): Map<Int, Pair<Int, Int>> = runCatching {
+        val o = JSONObject(prefs.getString("wsize_$profile", "{}") ?: "{}")
+        o.keys().asSequence().associate { k -> o.getJSONArray(k).let { a -> k.toInt() to (a.getInt(0) to a.getInt(1)) } }
+    }.getOrDefault(emptyMap())
+
+    private fun saveWidgetSizes(profile: String, map: Map<Int, Pair<Int, Int>>) {
+        val o = JSONObject()
+        map.forEach { (id, wh) -> o.put(id.toString(), JSONArray(listOf(wh.first, wh.second))) }
+        prefs.edit().putString("wsize_$profile", o.toString()).apply()
+    }
+
+    /**
+     * 0.19.0 までの、画面ごとに別だったウィジェットのタブを 1 つにまとめる。閉じた画面の並びを先に、開いた画面にだけあったものを後ろに。
+     * 同じウィジェットが両方にあれば 1 つにし、大きさはそれぞれの画面のものを残す。
+     */
+    private fun mergeWidgetProfiles() {
+        if (prefs.contains("wtabs")) return
+        val narrow = readWidgetTabs("wtabs_narrow")
+        val wide = readWidgetTabs("wtabs_wide")
+        val seen = mutableSetOf<Int>()
+        val merged = (narrow + wide).mapNotNull { t ->
+            val cells = t.cells.filter { seen.add(it.id) }
+            t.withCells(cells)?.copy(label = t.label)
+        }
+        writeWidgetTabs("wtabs", merged)
+        saveWidgetSizes("narrow", narrow.flatMap { it.cells }.associate { it.id to (it.w to it.h) })
+        saveWidgetSizes("wide", wide.flatMap { it.cells }.associate { it.id to (it.w to it.h) })
+    }
+
+    /** タブごとの設定（キーはタブの id。ウィジェットのタブは "w:<id>"）。 */
+    fun tabOpts(): Map<String, TabOpts> = runCatching {
+        val o = JSONObject(prefs.getString("tabOpts", "{}") ?: "{}")
+        o.keys().asSequence().associateWith { k -> TabOpts.from(o.getJSONObject(k)) }
+    }.getOrDefault(emptyMap())
+
+    fun saveTabOpts(map: Map<String, TabOpts>) {
+        val o = JSONObject()
+        map.filterValues { it != TabOpts() }.forEach { (k, v) -> o.put(k, v.toJson()) }
+        prefs.edit().putString("tabOpts", o.toString()).apply()
     }
 
     /** ウィジェットを足している途中のタブ（設定画面から戻ったときに使う）。-1 なら新しいタブ。 */

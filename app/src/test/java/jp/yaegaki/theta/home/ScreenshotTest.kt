@@ -435,4 +435,80 @@ class ScreenshotTest {
     @Test
     @Config(qualifiers = "w340dp-h760dp-xxhdpi")
     fun edgeRightPop() = edgeShot("edge-right-pop", left = false, theme = "pop")
+
+    private fun model(): HomeModel {
+        var m: HomeModel? = null
+        scenario!!.onActivity { a -> m = androidx.lifecycle.ViewModelProvider(a)[HomeModel::class.java] }
+        return m!!
+    }
+
+    /** フォルダのタブはドロワーで開く。上には、そのタブに置いたアプリ。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun folderDrawer() {
+        launch()
+        compose.waitForIdle()
+        scenario!!.onActivity {
+            val m = model()
+            m.setTabApps("work", m.apps.map { it.key }.take(4))
+        }
+        compose.onNodeWithContentDescription("WORK（Alt+1）").performClick()
+        compose.mainClock.advanceTimeBy(600)
+        shot("folder-drawer")
+    }
+
+    /** カテゴリーのタブで、ショートカットをアプリと別の段に。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun categorySplit() {
+        launch { app ->
+            app.store.saveShortcuts(listOf(
+                jp.yaegaki.theta.home.data.PinnedShortcut("s1", "com.example.chat", "x1", "家族のトーク", "split"),
+                jp.yaegaki.theta.home.data.PinnedShortcut("s2", "com.example.chat", "x2", "仕事のトーク", "split"),
+            ))
+        }
+        compose.waitForIdle()
+        scenario!!.onActivity {
+            val m = model()
+            val c = m.addCategory("COM")
+            m.apps.forEach { m.assign(it, c) }
+            m.addCategoryTab(c)
+            m.reloadShortcuts()
+            val store = (it.application as HomeApp).store
+            store.saveShortcuts(store.shortcuts().map { sc -> sc.copy(catId = c.id) })
+            m.reloadShortcuts()
+            m.setTabSplit(m.tabs.last().id, true)
+        }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("COM").performScrollTo().performClick()
+        compose.mainClock.advanceTimeBy(600)
+        shot("category-split")
+    }
+
+    /** FILE のタブ：決めた画像をタブの中に。 */
+    @Test
+    @Config(qualifiers = "w904dp-h1104dp-xhdpi")
+    fun fileTab() {
+        launch()
+        compose.waitForIdle()
+        val app = ApplicationProvider.getApplicationContext<HomeApp>()
+        val f = java.io.File(app.filesDir, "map.png")
+        val bmp = android.graphics.Bitmap.createBitmap(800, 600, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bmp)
+        canvas.drawColor(0xFF2A4A6A.toInt())
+        val paint = android.graphics.Paint().apply { color = android.graphics.Color.WHITE; strokeWidth = 6f }
+        for (k in 0..8) canvas.drawLine(0f, k * 75f, 800f, k * 75f, paint)
+        for (k in 0..10) canvas.drawLine(k * 80f, 0f, k * 80f, 600f, paint)
+        f.outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        scenario!!.onActivity {
+            val m = model()
+            val t = m.addTab(jp.yaegaki.theta.home.data.TabKind.FILE)
+            m.setTabFile(t.id, android.net.Uri.fromFile(f))
+            m.renameTab(t.id, "MAP")
+        }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("MAP").performScrollTo().performClick()
+        compose.mainClock.advanceTimeBy(1200)
+        shot("file-tab")
+    }
 }

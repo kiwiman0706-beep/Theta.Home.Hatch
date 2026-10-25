@@ -52,26 +52,22 @@ import jp.yaegaki.theta.home.data.WidgetTab
 import jp.yaegaki.theta.home.data.WidgetCell
 import androidx.compose.foundation.layout.Row
 
-private fun profileName(p: String) = if (p == "wide") "開いた画面" else "閉じた画面"
 
 /**
  * ウィジェットのタブ。ウィジェットを縦に何個でも並べられる。
- * ふだんはウィジェットだけ。編集（見出しの歯車）にすると、角をなぞって大きさ・上へ下へ・外す・足す・取り込む。
- * 大きさはこの画面（閉じた／開いた）だけに効く。
+ * ふだんはウィジェットだけ。編集（見出しの歯車）にすると、角をなぞって大きさ・上へ下へ・外す・足す。
+ * タブと中身は両方の画面で共通。大きさはこの画面（閉じた／開いた）だけに効く。
  */
 @Composable
 fun WidgetTabDrawer(model: HomeModel, t: WidgetTab, editing: Boolean) {
     var adding by remember { mutableStateOf(false) }
-    var importing by remember { mutableStateOf(false) }
     Column(Modifier.verticalScroll(rememberScrollState()).padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         t.cells.forEachIndexed { i, c -> WidgetCellView(model, t, c, i, editing) }
         if (editing) FlowRow2 {
             PillButton("＋ ウィジェットを足す", { adding = true }, primary = true)
-            PillButton("${profileName(model.otherProfile())}から取り込む", { importing = true })
         }
     }
     if (adding) AddWidgetDialog(model, intoTab = t.id) { adding = false }
-    if (importing) ImportWidgetsDialog(model) { importing = false }
 }
 
 @Composable
@@ -209,7 +205,7 @@ fun AddWidgetDialog(model: HomeModel, intoTab: Int = -1, onDismiss: () -> Unit) 
     val shown = groups.filter { (_, label, list) -> q.isBlank() || label.contains(q, true) || list.any { host.label(it).contains(q, true) } }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (intoTab == -1) "ウィジェットのタブを追加（${profileName(model.profile)}）" else "このタブにウィジェットを足す") },
+        title = { Text(if (intoTab == -1) "ウィジェットのタブを追加" else "このタブにウィジェットを足す") },
         text = {
             if (providers.isEmpty()) Text("置けるウィジェットが見つかりませんでした。", color = p.muted, fontSize = 14.sp)
             else Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -265,28 +261,3 @@ private fun android.graphics.drawable.Drawable.toBitmapSafe(max: Int): android.g
     return b
 }
 
-/** もう一方の画面（閉じた／開いた）のウィジェットのタブを、この画面に持ってくる。 */
-@Composable
-fun ImportWidgetsDialog(model: HomeModel, onDismiss: () -> Unit) {
-    val other = remember { model.otherWidgetTabs() }
-    val from = profileName(model.otherProfile())
-    val to = profileName(model.profile)
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("${from}から取り込む") },
-        text = {
-            Text(
-                if (other.isEmpty()) "${from}にはウィジェットのタブがありません。"
-                else "${from}のタブ ${other.size} 個（${other.joinToString("・") { it.label }}）を${to}に持ってきます。大きさも${from}のものになります。",
-                color = LocalPalette.current.muted, fontSize = 14.sp,
-            )
-        },
-        confirmButton = {
-            if (other.isNotEmpty()) TextButton(onClick = { model.importWidgets(replace = true); onDismiss() }) { Text("置き換える") }
-        },
-        dismissButton = {
-            if (other.isNotEmpty()) TextButton(onClick = { model.importWidgets(replace = false); onDismiss() }) { Text("今のタブに足す") }
-            else TextButton(onClick = onDismiss) { Text("閉じる") }
-        },
-    )
-}

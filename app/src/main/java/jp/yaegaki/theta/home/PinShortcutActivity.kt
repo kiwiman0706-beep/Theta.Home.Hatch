@@ -36,7 +36,7 @@ import jp.yaegaki.theta.home.ui.HomeTheme
 import jp.yaegaki.theta.home.ui.LocalPalette
 
 /**
- * ほかのアプリの「ホーム画面に追加」（LINE のトークルームなど）を受けて、どのカテゴリーのタブに置くかを選ぶ。
+ * ほかのアプリの「ホーム画面に追加」（LINE のトークルームなど）を受けて、どのタブに置くかを選ぶ（カテゴリーのタブ・ほかのタブ）。
  * 既定のホームのときだけ Android から呼ばれる。初めはそのアプリのカテゴリーを選んでおく。
  */
 class PinShortcutActivity : ComponentActivity() {
@@ -50,7 +50,10 @@ class PinShortcutActivity : ComponentActivity() {
             return
         }
         val store = (application as HomeApp).store
-        val cats = store.categories()
+        // 置き場所：カテゴリーのタブ（カテゴリーの id）と、ほかのタブ（"tab:<id>"）
+        val cats = store.categories().map { it.id to it.name } +
+            store.tabs().filter { it.kind != jp.yaegaki.theta.home.data.TabKind.CATEGORY && it.kind != jp.yaegaki.theta.home.data.TabKind.APPS }.map { "tab:${it.id}" to it.label } +
+            store.widgetTabs("narrow").map { "tab:w:${it.id}" to it.label }
         val appCat = store.appCategories().entries.firstOrNull { it.key.startsWith(info.`package` + "/") }?.value
         val icon = runCatching {
             getSystemService(LauncherApps::class.java).getShortcutIconDrawable(info, resources.displayMetrics.densityDpi)?.let { d ->
@@ -63,7 +66,7 @@ class PinShortcutActivity : ComponentActivity() {
             val dark = when (store.themeMode) { "light", "pop" -> false; "dark" -> true; else -> isSystemInDarkTheme() }
             HomeTheme(dark, pop = store.themeMode == "pop") {
                 val p = LocalPalette.current
-                var cat by remember { mutableStateOf(appCat ?: cats.firstOrNull()?.id ?: "") }
+                var cat by remember { mutableStateOf(appCat ?: cats.firstOrNull()?.first ?: "") }
                 AlertDialog(
                     onDismissRequest = { finish() },
                     title = { Text("タブに置く") },
@@ -73,13 +76,13 @@ class PinShortcutActivity : ComponentActivity() {
                                 icon?.let { Image(it.asImageBitmap(), null, Modifier.size(40.dp)) }
                                 Text(Shortcuts.label(info), color = p.fg, fontSize = 16.sp)
                             }
-                            Text(if (cats.isEmpty()) "カテゴリーがまだ無いので、アプリの一覧（未分類）に置きます。" else "どのカテゴリーのタブに置きますか", color = p.muted, fontSize = 13.sp)
+                            Text(if (cats.isEmpty()) "カテゴリーがまだ無いので、アプリの一覧（未分類）に置きます。" else "どのタブに置きますか", color = p.muted, fontSize = 13.sp)
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                cats.forEach { c ->
-                                    val on = c.id == cat
-                                    Text(c.name, color = if (on) p.onAccent else p.fg, fontSize = 14.sp,
+                                cats.forEach { (id, name) ->
+                                    val on = id == cat
+                                    Text(name, color = if (on) p.onAccent else p.fg, fontSize = 14.sp,
                                         modifier = Modifier.background(if (on) p.accent else Color.Transparent).border(1.dp, if (on) p.accent else p.line)
-                                            .clickable { cat = c.id }.padding(horizontal = 12.dp, vertical = 8.dp))
+                                            .clickable { cat = id }.padding(horizontal = 12.dp, vertical = 8.dp))
                                 }
                             }
                         }

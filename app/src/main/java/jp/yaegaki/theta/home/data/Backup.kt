@@ -57,6 +57,7 @@ object Backup {
             .put("folderViews", JSONObject(store.folderViews()))
             .put("queries", JSONArray(store.queries().map { it.toJson() }))
             .put("appOrder", JSONObject(store.appOrder().mapValues { JSONArray(it.value) }))
+            .put("tabOpts", JSONObject(store.prefs.getString("tabOpts", "{}") ?: "{}"))
             .put("nas", JSONObject().put("url", store.prefs.getString("nasUrl", "")).put("account", store.prefs.getString("nasAccount", "")))
             .put("apps", JSONArray(apps.map { JSONObject().put("package", it.packageName).put("component", it.key).put("label", it.label) }))
         val widgets = JSONObject()
@@ -94,6 +95,7 @@ object Backup {
         o.optJSONArray("bookmarks")?.let { e.putString("bookmarks", it.toString()) }
         o.optJSONObject("folderViews")?.let { e.putString("views", it.toString()) }
         o.optJSONObject("appOrder")?.let { e.putString("appOrder", it.toString()) }
+        o.optJSONObject("tabOpts")?.let { e.putString("tabOpts", it.toString()) }
         o.optJSONArray("queries")?.let { e.putString("queries", it.toString()).putBoolean("queriesSeeded", true) }
         e.putString("location", o.optString("location", ""))
         val nas = o.optJSONObject("nas")

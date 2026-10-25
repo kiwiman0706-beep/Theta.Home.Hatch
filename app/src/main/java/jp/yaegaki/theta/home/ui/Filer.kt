@@ -85,7 +85,7 @@ import java.util.Date
 import java.util.Locale
 
 /** 一覧の 1 行。端末のファイル（Entry）と NAS のファイル（Nas.Item）を同じ形で扱う。 */
-private data class Row(
+internal data class Row(
     val key: String,
     val name: String,
     val isDir: Boolean,
@@ -409,7 +409,7 @@ private fun Places(model: HomeModel, modifier: Modifier, openNasSettings: () -> 
         }
         PlaceButton(++n, "最近", "RECENT", model.location == "recent") { model.showRecent() }
         Gap(10.dp)
-        Note("フォルダは端のタブとも同じ。設定でタブを増やせます。")
+        Note("ここで選ぶと背景に出します。端のフォルダのタブは、ドロワーの中で開きます。")
     }
 }
 
@@ -455,9 +455,13 @@ internal fun PlaceChips(model: HomeModel) {
 }
 
 @Composable
-private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSelect: (Row?) -> Unit, openNasSettings: () -> Unit, openDriveSettings: () -> Unit) {
+internal fun FolderView(
+    model: HomeModel, preview: Boolean, selected: Row?, onSelect: (Row?) -> Unit, openNasSettings: () -> Unit, openDriveSettings: () -> Unit,
+    // 背景のファイラーは今の場所。フォルダのタブのドロワーは、そのタブの場所（NAS・ドライブはタブごとの key）
+    loc: String = model.location,
+    key: String = HomeModel.DESK,
+) {
     val actions = LocalActions.current
-    val loc = model.location
     val tab = model.tab(loc.removePrefix("tab:")).takeIf { loc.startsWith("tab:") }
     var editing by remember { mutableStateOf<SavedQuery?>(null) }
     editing?.let { q -> QueryDialog(model, q) { editing = null } }
@@ -518,7 +522,7 @@ private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSel
                 NeedPermission("NAS（Synology）を登録すると、ここで中のフォルダを辿れます。外出先からは Tailscale 経由でつなぎます。", "NAS を登録", openNasSettings)
                 return
             }
-            val s = model.nasState
+            val s = model.nasState(key)
             val crumbs = listOf("NAS" to "") + if (s.path.startsWith("?")) listOf((model.query(s.path.drop(1))?.name ?: "SEARCH") to s.path)
             else s.path.split('/').filter { it.isNotEmpty() }.let { parts ->
                 parts.mapIndexed { i, name -> name to "/" + parts.take(i + 1).joinToString("/") }
@@ -527,16 +531,16 @@ private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSel
                 model = model,
                 viewKeys = crumbs.reversed().map { "nas:" + it.second },
                 crumbs = crumbs.map { it.first },
-                onCrumb = { i -> model.loadNas(crumbs[i].second) },
+                onCrumb = { i -> model.loadNas(crumbs[i].second, key) },
                 canUp = s.path.isNotEmpty(),
-                onUp = { model.nasUp() },
+                onUp = { model.nasUp(key) },
                 rows = s.entries.map { e -> e.row().let { r -> if (e.path.startsWith("?")) r.copy(note = model.query(e.path.drop(1))?.summary()) else r } },
                 loading = s.loading,
                 error = s.error,
-                onRetry = { model.refreshStatus(force = true); model.loadNas(s.path) },
+                onRetry = { model.refreshStatus(force = true); model.loadNas(s.path, key) },
                 preview = preview,
                 selected = selected,
-                onTap = { r -> if (r.isDir) model.loadNas(r.nas!!.path) else if (preview) onSelect(r) else open(r, "NAS") },
+                onTap = { r -> if (r.isDir) model.loadNas(r.nas!!.path, key) else if (preview) onSelect(r) else open(r, "NAS") },
                 onOpen = { open(it, "NAS") },
                 onShare = ::share,
                 extraMenu = { r, close ->
@@ -558,22 +562,22 @@ private fun FolderView(model: HomeModel, preview: Boolean, selected: Row?, onSel
                 NeedPermission("Google ドライブを、端末のフォルダと同じように辿れます（読み取りのみ）。初回だけ Google Cloud での登録が要ります。", "Google ドライブにつなぐ", openDriveSettings)
                 return
             }
-            val s = model.driveState
+            val s = model.driveState(key)
             val stack = s.stack.ifEmpty { listOf(GDrive.ROOT to "DRIVE") }
             Listing(
                 model = model,
                 viewKeys = stack.reversed().map { "drive:" + it.first },
                 crumbs = stack.map { it.second },
-                onCrumb = { i -> model.loadDrive(stack.take(i + 1)) },
+                onCrumb = { i -> model.loadDrive(stack.take(i + 1), key) },
                 canUp = stack.size > 1,
-                onUp = { model.driveUp() },
+                onUp = { model.driveUp(key) },
                 rows = s.entries.map { e -> e.row().let { r -> if (e.id.startsWith(SavedQuery.PREFIX)) r.copy(note = model.query(e.id)?.summary()) else r } },
                 loading = s.loading,
                 error = s.error,
-                onRetry = { model.loadDrive(stack) },
+                onRetry = { model.loadDrive(stack, key) },
                 preview = preview,
                 selected = selected,
-                onTap = { r -> if (r.isDir) model.loadDrive(stack + (r.drive!!.id to r.name)) else if (preview) onSelect(r) else open(r, "DRIVE") },
+                onTap = { r -> if (r.isDir) model.loadDrive(stack + (r.drive!!.id to r.name), key) else if (preview) onSelect(r) else open(r, "DRIVE") },
                 onOpen = { open(it, "DRIVE") },
                 onShare = ::share,
                 extraMenu = { r, close ->

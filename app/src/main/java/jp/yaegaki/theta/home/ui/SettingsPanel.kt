@@ -51,7 +51,6 @@ fun SettingsPanel(model: HomeModel) {
     var nasDialog by remember { mutableStateOf(false) }
     var addingWidget by remember { mutableStateOf(false) }
     var driveDialog by remember { mutableStateOf(false) }
-    var importing by remember { mutableStateOf(false) }
     var sorting by remember { mutableStateOf(false) }
     var renamingCategory by remember { mutableStateOf<jp.yaegaki.theta.home.data.Category?>(null) }
     var renamingPreset by remember { mutableStateOf<String?>(null) }
@@ -103,11 +102,10 @@ fun SettingsPanel(model: HomeModel) {
                 }
                 Note("ホームが固まったら、通知パネルのクイック設定「ホームのレスキュー」から別のホームを選べます。起動してすぐ止まるのが続いたときは、自動でレスキュー画面になります。")
                 Gap(18.dp)
-                SectionTitle("NAS・GOOGLE DRIVE・ウィジェット", Modifier.padding(horizontal = 10.dp))
+                SectionTitle("NAS・GOOGLE DRIVE", Modifier.padding(horizontal = 10.dp))
                 FlowRow2 {
                     PillButton(if (model.nas.configured()) "NAS の接続先：${model.nas.base()}" else "NAS を登録", { nasDialog = true })
                     PillButton(if (model.driveOn) "Google ドライブ：${model.driveEmail.ifEmpty { "接続中" }}" else "Google ドライブにつなぐ", { driveDialog = true }, primary = !model.driveOn)
-                    PillButton("ウィジェット：${if (model.profile == "wide") "閉じた画面" else "開いた画面"}から取り込む", { importing = true })
                 }
                 Gap(18.dp)
                 SectionTitle("アプリのカテゴリー（押すと名前・並び・削除）", Modifier.padding(horizontal = 10.dp))
@@ -313,7 +311,6 @@ fun SettingsPanel(model: HomeModel) {
 
     if (nasDialog) NasDialog(model) { nasDialog = false }
     if (driveDialog) DriveDialog(model) { driveDialog = false }
-    if (importing) ImportWidgetsDialog(model) { importing = false }
     if (sorting) SortGuide(model) { sorting = false }
     renamingPreset?.let { old ->
         var name by remember(old) { mutableStateOf(old) }

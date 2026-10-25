@@ -171,11 +171,17 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     var location by mutableStateOf(store.location.ifEmpty { tabs.firstOrNull { it.kind == TabKind.FOLDER }?.let { "tab:${it.id}" } ?: "recent" }); private set
     /** NAS を開いたフォルダのタブ（タブから開いたときだけ）。 */
     var nasTab by mutableStateOf<String?>(null); private set
-    var nasState by mutableStateOf(NasState()); private set
+    /** NAS の場所ごとの中身。キーは DESK（背景のファイラー）か、フォルダのタブの id（ドロワー）。 */
+    val nasStates = androidx.compose.runtime.mutableStateMapOf<String, NasState>()
+    val nasState: NasState get() = nasStates[DESK] ?: NasState()
+    fun nasState(key: String) = nasStates[key] ?: NasState()
     val nas = Nas(app, store.prefs)
     var status by mutableStateOf<Nas.Status?>(null); private set
     val drive = GDrive(app, store.prefs)
-    var driveState by mutableStateOf(DriveState()); private set
+    /** ドライブの場所ごとの中身。キーは NAS と同じ。 */
+    val driveStates = androidx.compose.runtime.mutableStateMapOf<String, DriveState>()
+    val driveState: DriveState get() = driveStates[DESK] ?: DriveState()
+    fun driveState(key: String) = driveStates[key] ?: DriveState()
     /** Google ドライブを開いたフォルダのタブ（タブから開いたときだけ）。 */
     var driveTab by mutableStateOf<String?>(null); private set
     var driveEmail by mutableStateOf(drive.email); private set
@@ -341,7 +347,6 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     fun widgetTab(id: String?) = widgetTabs.firstOrNull { "w:${it.id}" == id }
 
     fun toggle(id: String) {
-        tab(id)?.takeIf { it.kind == TabKind.FOLDER }?.let { showFolder(it); return }
         if (id in docked) {
             docked = docked - id
             return
@@ -380,7 +385,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         } else {
             tabs.firstOrNull { it.kind.key == upper }
         } ?: if (upper == 'A') tab(APPS_ID)!! else return false
-        if (t.kind == TabKind.FOLDER) showFolder(t) else toggle(t.id)
+        toggle(t.id)
         return true
     }
 
@@ -397,6 +402,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     private fun onOpened(t: TabSpec?) {
         when (t?.kind) {
+            TabKind.FOLDER -> openFolderDrawer(t)
             TabKind.CALENDAR -> refreshEvents()
             TabKind.PEOPLE -> refreshPeople()
             TabKind.CAPTURE -> refreshCaptures()
@@ -446,8 +452,9 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         loadNas(path)
     }
 
-    fun loadNas(path: String) {
-        nasState = NasState(path = path, entries = if (path == nasState.path) nasState.entries else emptyList(), loading = true)
+    fun loadNas(path: String, key: String = DESK) {
+        val before = nasState(key)
+        nasStates[key] = NasState(path = path, entries = if (path == before.path) before.entries else emptyList(), loading = true)
         viewModelScope.launch {
             val r = runCatching {
                 withContext(Dispatchers.IO) {
@@ -465,8 +472,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
             }
-            if (nasState.path != path) return@launch
-            nasState = r.fold(
+            if (nasState(key).path != path) return@launch
+            nasStates[key] = r.fold(
                 { NasState(path, it) },
                 { NasState(path, error = if (status?.nas != Nas.OK && status != null) status!!.message else "読み込めませんでした（${it.message}）") },
             )
@@ -475,15 +482,15 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** NAS の上のフォルダへ。共有フォルダの一覧より上は無い。 */
-    fun nasUp(): Boolean {
-        val p = nasState.path
+    fun nasUp(key: String = DESK): Boolean {
+        val p = nasState(key).path
         if (p.isEmpty()) return false
         if (p.startsWith("?")) {
-            loadNas("")
+            loadNas("", key)
             return true
         }
         val cut = p.lastIndexOf('/')
-        loadNas(if (cut <= 0) "" else p.substring(0, cut))
+        loadNas(if (cut <= 0) "" else p.substring(0, cut), key)
         return true
     }
 
@@ -513,11 +520,12 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         filerOpen = true
         driveTab = fromTab
         moveTo("drive")
-        if (drive.enabled) loadDrive(stack) else driveState = DriveState(stack)
+        if (drive.enabled) loadDrive(stack) else driveStates[DESK] = DriveState(stack)
     }
 
-    fun loadDrive(stack: List<Pair<String, String>>) {
-        driveState = DriveState(stack, entries = if (stack == driveState.stack) driveState.entries else emptyList(), loading = true)
+    fun loadDrive(stack: List<Pair<String, String>>, key: String = DESK) {
+        val before = driveState(key)
+        driveStates[key] = DriveState(stack, entries = if (stack == before.stack) before.entries else emptyList(), loading = true)
         viewModelScope.launch {
             val id = stack.last().first
             val r = runCatching {
@@ -531,16 +539,16 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
             }
-            if (driveState.stack != stack) return@launch
+            if (driveState(key).stack != stack) return@launch
             r.exceptionOrNull()?.let { if (it is GDrive.NeedConsent) driveConsent = it.intent }
-            driveState = r.fold({ DriveState(stack, it) }, { DriveState(stack, error = it.message ?: it.javaClass.simpleName) })
+            driveStates[key] = r.fold({ DriveState(stack, it) }, { DriveState(stack, error = it.message ?: it.javaClass.simpleName) })
         }
     }
 
-    fun driveUp(): Boolean {
-        val st = driveState.stack
+    fun driveUp(key: String = DESK): Boolean {
+        val st = driveState(key).stack
         if (st.size <= 1) return false
-        loadDrive(st.dropLast(1))
+        loadDrive(st.dropLast(1), key)
         return true
     }
 
@@ -579,7 +587,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         drive.signOut()
         driveOn = false
         driveEmail = ""
-        driveState = DriveState()
+        driveStates.clear()
     }
 
     /** ドライブのファイルを端末（キャッシュ）に取得して渡す。Google ドキュメントはリンクで開く。 */
@@ -708,11 +716,10 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         reloadPlace()
     }
 
+    /** 検索フォルダを変えたら、開いている NAS・ドライブの一覧（背景とドロワー）を読み直す。 */
     private fun reloadPlace() {
-        when (location) {
-            "drive" -> if (driveState.stack.isNotEmpty() && drive.enabled) loadDrive(driveState.stack)
-            "nas" -> loadNas(nasState.path)
-        }
+        if (nas.configured()) nasStates.toMap().forEach { (k, st) -> if (k != DESK || location == "nas") loadNas(st.path, k) }
+        if (drive.enabled) driveStates.toMap().forEach { (k, st) -> if (st.stack.isNotEmpty() && (k != DESK || location == "drive")) loadDrive(st.stack, k) }
     }
 
     // ---- フォルダの見せ方（フォルダごとに記憶） ----
@@ -774,7 +781,94 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         updateTabs(tabs.filter { it.id != id })
         if (open == id) open = null
         docked = docked - id
+        saveOpts(tabOpts - id)
+        folders.remove(id)
+        nasStates.remove(id)
+        driveStates.remove(id)
         if (location == "tab:$id") showRecent()
+    }
+
+    // ---- タブごとの設定（出す画面・幅・置いたアプリ） ----
+
+    var tabOpts by mutableStateOf(store.tabOpts()); private set
+
+    fun opts(id: String) = tabOpts[id] ?: jp.yaegaki.theta.home.data.TabOpts()
+
+    private fun saveOpts(map: Map<String, jp.yaegaki.theta.home.data.TabOpts>) {
+        tabOpts = map
+        store.saveTabOpts(map)
+    }
+
+    private fun editOpts(id: String, f: (jp.yaegaki.theta.home.data.TabOpts) -> jp.yaegaki.theta.home.data.TabOpts) = saveOpts(tabOpts + (id to f(opts(id))))
+
+    /** 今の画面（閉じた／開いた）で出すタブか。 */
+    fun shownHere(id: String) = opts(id).shownOn(profile)
+
+    /** 出す画面を変える。今の画面で隠したら、開いていれば閉じる。 */
+    fun setTabShow(id: String, show: String) {
+        editOpts(id) { it.copy(show = show) }
+        if (!shownHere(id)) {
+            if (open == id) open = null
+            docked = docked - id
+        }
+    }
+
+    /** この画面でのドロワーの幅（dp）。null なら決まった幅に戻す。 */
+    fun setTabWidth(id: String, dp: Int?) = editOpts(id) { o -> o.copy(width = if (dp == null) o.width - profile else o.width + (profile to dp)) }
+
+    fun tabWidth(id: String): Int? = opts(id).width[profile]
+
+    /** なぞってドロワーの幅を変えている途中の幅（dp）。 */
+    val liveDrawer = mutableStateMapOf<String, Int>()
+
+    fun setTabApps(id: String, keys: List<String>) = editOpts(id) { it.copy(apps = keys.distinct()) }
+
+    fun removeTabApp(id: String, key: String) = editOpts(id) { it.copy(apps = it.apps - key) }
+
+    fun moveTabAppTo(id: String, from: String, to: String) = editOpts(id) { o ->
+        val i = o.apps.indexOf(from)
+        val j = o.apps.indexOf(to)
+        if (i < 0 || j < 0 || i == j) o else o.copy(apps = o.apps.toMutableList().also { it.add(j, it.removeAt(i)) })
+    }
+
+    fun setTabSplit(id: String, split: Boolean) = editOpts(id) { it.copy(split = split) }
+
+    /** ショートカットの置き場所のキー。カテゴリーのタブはカテゴリーの id、ほかのタブは "tab:<id>"。 */
+    fun placeOf(id: String): String = tab(id)?.takeIf { it.kind == TabKind.CATEGORY }?.folderUri ?: "tab:$id"
+
+    // ---- フォルダのタブ（ドロワーの中にフォルダの中身） ----
+
+    /** 開いたときに、まだ読んでいなければ読む。NAS・ドライブはタブごとに別の場所を覚える。 */
+    fun openFolderDrawer(t: TabSpec) {
+        val nasPath = t.nasPath
+        val df = t.driveFolder
+        when {
+            nasPath != null -> if (nasStates[t.id] == null || nasState(t.id).error != null) loadNas(nasPath, t.id)
+            df != null -> if (drive.enabled && (driveStates[t.id] == null || driveState(t.id).error != null)) loadDrive(listOf(df), t.id)
+            else -> if (folders[t.id]?.stack.isNullOrEmpty() || folders[t.id]?.error != null) openRoot(t)
+        }
+    }
+
+    /** フォルダのドロワーで 1 つ上へ。もう上がなければ false（戻るでドロワーを閉じる）。 */
+    fun drawerUp(id: String): Boolean {
+        val t = tab(id)?.takeIf { it.kind == TabKind.FOLDER } ?: return false
+        return when {
+            t.nasPath != null -> nasUp(t.id)
+            t.driveFolder != null -> driveUp(t.id)
+            else -> up(t.id)
+        }
+    }
+
+    /** WEB のタブの URL を決める。 */
+    fun setTabUrl(id: String, url: String) {
+        val u = url.trim().let { if (it.contains("://")) it else "https://$it" }
+        updateTabs(tabs.map { if (it.id == id) it.copy(folderUri = u) else it })
+    }
+
+    /** FILE のタブのファイルを決める（読み取りの許可を持ち続ける）。 */
+    fun setTabFile(id: String, uri: Uri) {
+        runCatching { ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        updateTabs(tabs.map { if (it.id == id) it.copy(folderUri = uri.toString()) else it })
     }
 
     fun renameWidgetTab(id: Int, label: String) {
@@ -1161,6 +1255,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         folderViews = store.folderViews()
         queries = store.queries()
         appOrder = store.appOrder()
+        tabOpts = store.tabOpts()
         shortcuts = store.shortcuts()
         widgetTabs = store.widgetTabs(profile)
         folders.clear()
@@ -1206,19 +1301,17 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         store.saveClips(clips)
     }
 
-    // ---- Widget（1 タブ 1 ウィジェット、画面ごと） ----
+    // ---- ウィジェットのタブ（並び・中身は両方の画面で共通、大きさは画面ごと） ----
 
     fun changeProfile(p: String) {
         if (p == profile) return
         profile = p
         widgetTabs = store.widgetTabs(p)
         if (open?.startsWith("w:") == true && widgetTab(open) == null) open = null
-        docked = docked.filter { !it.startsWith("w:") || widgetTab(it) != null }
+        // この画面では出さないタブは閉じる
+        open?.let { if (!shownHere(it)) open = null }
+        docked = docked.filter { (!it.startsWith("w:") || widgetTab(it) != null) && shownHere(it) }
     }
-
-    fun otherProfile() = if (profile == "wide") "narrow" else "wide"
-
-    fun otherWidgetTabs() = store.widgetTabs(otherProfile())
 
     private fun saveWidgetTabs(list: List<WidgetTab>) {
         widgetTabs = list
@@ -1268,7 +1361,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             return
         }
         replaceWidgetTab(t, t.withCells(rest))
-        if (otherWidgetTabs().none { o -> o.cells.any { it.id == cellId } }) (ctx as HomeApp).widgets.release(cellId)
+        (ctx as HomeApp).widgets.release(cellId)
     }
 
     private fun replaceWidgetTab(old: WidgetTab, new: WidgetTab?) {
@@ -1277,6 +1370,11 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         val o = "w:${old.id}"
         val n = "w:${new.id}"
         if (o != n) {
+            tabOpts[o]?.let { saveOpts(tabOpts - o + (n to it)) }
+            shortcuts.filter { it.catId == "tab:$o" }.takeIf { it.isNotEmpty() }?.let {
+                shortcuts = shortcuts.map { sc -> if (sc.catId == "tab:$o") sc.copy(catId = "tab:$n") else sc }
+                store.saveShortcuts(shortcuts)
+            }
             if (open == o) open = n
             if (lastOpened == o) lastOpened = n
             docked = docked.map { if (it == o) n else it }
@@ -1384,17 +1482,16 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         saveWidgetTabs(widgetTabs.toMutableList().also { it.add(j, it.removeAt(i)) })
     }
 
-    /** この画面のタブから外す。もう一方の画面でも使っていなければウィジェット自体を削除する。 */
+    /** タブを外して、中のウィジェットも削除する（両方の画面で共通なので）。 */
     fun removeWidgetTab(id: Int) {
         val t = widgetTabs.firstOrNull { it.id == id }
         saveWidgetTabs(widgetTabs.filter { it.id != id })
         if (open == "w:$id") open = null
         docked = docked - "w:$id"
-        val others = otherWidgetTabs().flatMap { o -> o.cells.map { it.id } }.toSet()
-        t?.cells?.filter { it.id !in others }?.forEach { (ctx as HomeApp).widgets.release(it.id) }
+        saveOpts(tabOpts - "w:$id")
+        t?.cells?.forEach { (ctx as HomeApp).widgets.release(it.id) }
     }
 
-    /** もう一方の画面のウィジェットを取り込む。replace なら今の設定と置き換える。 */
     /** 割り当てが済んだウィジェットを、この画面のタブとして足す。大きさはウィジェットの最小サイズから。 */
     fun addWidget(id: Int) {
         val host = (ctx as HomeApp).widgets
@@ -1414,18 +1511,6 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             return
         }
         addWidgetTab(WidgetTab(id, host.label(info), cell.w, cell.h))
-    }
-
-    fun importWidgets(replace: Boolean) {
-        val other = otherWidgetTabs()
-        val before = widgetTabs
-        val next = if (replace) other else before + other.filter { o -> before.none { it.id == o.id } }
-        saveWidgetTabs(next)
-        if (replace) {
-            val kept = next.flatMap { t -> t.cells.map { it.id } }.toSet()
-            before.flatMap { it.cells }.filter { it.id !in kept }.forEach { (ctx as HomeApp).widgets.release(it.id) }
-        }
-        if (open?.startsWith("w:") == true && widgetTab(open) == null) open = null
     }
 
     // ---- Hatch ----
@@ -1482,6 +1567,9 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     companion object {
         const val APPS_ID = "@apps"
+
+        /** NAS・ドライブの中身のうち、背景のファイラーのもの。 */
+        const val DESK = ""
 
         fun clipDir(context: Context): File = File(context.filesDir, "Clip").apply { mkdirs() }
 
