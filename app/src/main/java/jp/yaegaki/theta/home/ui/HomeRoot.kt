@@ -416,7 +416,6 @@ private fun RailTab(model: HomeModel, reorder: ReorderState, id: String, label: 
     val tabShape = if (p.pop) {
         if (left) RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp) else RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp)
     } else RoundedCornerShape(0.dp)
-    val code = "%02d".format(model.tabs.indexOfFirst { it.id == id } + 1)
     var menu by remember(id) { mutableStateOf(false) }
     var renaming by remember(id) { mutableStateOf(false) }
     var placing by remember(id) { mutableStateOf(false) }
@@ -441,9 +440,8 @@ private fun RailTab(model: HomeModel, reorder: ReorderState, id: String, label: 
                 .height(20.dp)
                 .background(if (active) onActive else groupColor),
         )
-        Column(Modifier.padding(top = 4.dp, bottom = 10.dp).align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(code, color = if (active) onActive else p.faint, fontSize = 9.sp, fontFamily = Hud.mono)
-            Gap(4.dp)
+        // 番号（01・02…）は出さない：印の分だけタブが長くなるので
+        Column(Modifier.padding(top = 8.dp, bottom = 10.dp).align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
             // 印（中身から自動か、長押し →「印を変える」で選んだもの）。パッと見て分かるように名前の上に
             model.tab(id)?.let(model::tabIcon)?.let { icon ->
                 TabIconView(model, icon, if (active) onActive else groupColor)
