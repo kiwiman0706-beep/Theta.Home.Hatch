@@ -13,6 +13,9 @@ class HomeApp : Application() {
     lateinit var widgets: WidgetController
         private set
 
+    /** ホームとエッジで同じものを使う（タブ・中身・開いているドロワー）。 */
+    val model: HomeModel by lazy { HomeModel(this) }
+
     override fun onCreate() {
         super.onCreate()
         // 落ちたときの記録はいちばん最初に（レスキュー画面を出すかの判断に使う）

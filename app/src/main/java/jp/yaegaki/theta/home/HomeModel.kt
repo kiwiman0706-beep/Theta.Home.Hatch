@@ -1506,6 +1506,19 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         boardItem(id)?.let { updateBoardItem(it.copy(ref = ref)) }
     }
 
+    /** ウィジェットの設定画面から戻ったとき（ホーム・エッジの onActivityResult から）。 */
+    fun onWidgetConfigured(ok: Boolean) {
+        val id = store.pendingWidget
+        if (id == -1) return
+        if (ok) addWidget(id)
+        else {
+            (ctx as HomeApp).widgets.release(id)
+            store.pendingBoard = ""
+            (ctx as HomeApp).toast("ウィジェットの設定をやめたので、置きませんでした")
+        }
+        store.pendingWidget = -1
+    }
+
     /** 割り当てが済んだウィジェットを置く。足している途中のタブがあればその下に、無ければ新しいタブにする。 */
     fun addWidget(id: Int) {
         val host = (ctx as HomeApp).widgets

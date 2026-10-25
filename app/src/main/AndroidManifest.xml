@@ -153,6 +153,18 @@
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
+        <!-- エッジ：ほかのアプリの上に重ねる透けた画面（ホームと同じタブと中身）。自分のタスクで、最近の一覧には出さない -->
+        <activity
+            android:name=".edge.EdgeActivity"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode|density"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:resizeableActivity="true"
+            android:taskAffinity="jp.yaegaki.theta.home.edge"
+            android:theme="@style/Theme.HomeHatch.Edge"
+            android:windowSoftInputMode="adjustResize" />
+
         <service
             android:name=".edge.EdgeService"
             android:exported="false"

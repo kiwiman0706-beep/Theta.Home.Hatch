@@ -8,7 +8,7 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**0.22.0-alpha（versionCode 26）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.23.0-alpha（versionCode 27）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
@@ -26,7 +26,7 @@
 
 ## エッジ（ほかのアプリの上で端からタブ）
 
-設定 → EDGE をオンにすると、どのアプリを使っていても、画面の端の細い線を内側へなぞる（または押す）だけでカテゴリーのタブとアプリを引き出せます。HOME でホーム全体へ、外側を押すか「戻る」で閉じます。左右の端と高さを選べます。「ほかのアプリの上に表示」の許可と、常駐の通知が要ります。ホームキーの動き（押すとホーム全体）は Android の決まりなので変えていません。
+設定 → EDGE をオンにすると、どのアプリを使っていても、画面の端の細い線を内側へなぞる（または押す）だけで、**ホームと同じタブと中身**（ウィジェット・フォルダ・予定・アプリ・置いたショートカットなど）を下のアプリの上に重ねて出せます。外側を押すか「戻る」で閉じ、アプリを開くと自動で閉じます。左右の端と高さを選べます。「ほかのアプリの上に表示」の許可と、常駐の通知が要ります。ホームキーの動き（押すとホーム全体）は Android の決まりなので変えていません。
 
 <img src="docs/screenshots/edge-left.png" width="200" alt="エッジ（ダーク）"> <img src="docs/screenshots/edge-right-pop.png" width="200" alt="エッジ（POP・右端）">
 

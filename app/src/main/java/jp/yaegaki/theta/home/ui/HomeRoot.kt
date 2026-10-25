@@ -100,13 +100,26 @@ class Actions(
 )
 
 val LocalActions = staticCompositionLocalOf<Actions> { error("Actions not provided") }
+
+/** 端のタブが左か（ホームは設定、エッジはエッジの側）。 */
+val LocalRailLeft = staticCompositionLocalOf { false }
+
+/** エッジ（ほかのアプリの上）で開いているときの「閉じる」。ホームでは null。 */
+val LocalEdgeExit = staticCompositionLocalOf<(() -> Unit)?> { null }
 val LocalLayout = staticCompositionLocalOf { Layout(true, 360.dp, 0, false) }
 
 private const val SETTINGS = "__settings"
 
+/**
+ * ホーム。edgeExit を渡すとエッジ（ほかのアプリの上に重ねる画面）として、背景のファイラーを出さずに、
+ * 端のタブとドロワーだけを透けた画面に出す。タブ・中身はホームと同じもの。
+ */
 @Composable
-fun HomeRoot(model: HomeModel, activity: ComponentActivity) {
-    val actions = rememberActions(model, activity)
+fun HomeRoot(model: HomeModel, activity: ComponentActivity, edgeExit: (() -> Unit)? = null) {
+    val edge = edgeExit != null
+    // エッジでは、何も開いていなければ戻るで閉じる（ほかの戻るより後回し）
+    BackHandler(enabled = edge) { edgeExit?.invoke() }
+    val actions = rememberActions(model, activity, edgeExit)
     // Google ドライブの許可の画面
     val consent = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
         model.driveConsentResult(it.resultCode == android.app.Activity.RESULT_OK, it.data)
@@ -139,9 +152,10 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity) {
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
-            .background(p.bg)
+            .background(if (edge) Color.Black.copy(alpha = 0.3f) else p.bg)
             .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
+        val railLeft = if (edge) model.edgeSide != "right" else model.railLeft
         val railW = 46.dp
         val w = maxWidth
         val compact = w < 600.dp
@@ -152,8 +166,9 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity) {
                 w < 900.dp -> 360.dp
                 else -> 420.dp
             },
-            // 並べて出すと、残りのホームが 280dp 以上残る枚数まで
+            // 並べて出すと、残りのホームが 280dp 以上残る枚数まで（エッジでは並べない）
             maxDocked = when {
+                edge -> 0
                 w >= 1180.dp -> 2
                 w >= 690.dp -> 1
                 else -> 0
@@ -162,19 +177,26 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity) {
         )
         LaunchedEffect(w >= 600.dp) { model.changeProfile(if (w >= 600.dp) "wide" else "narrow") }
         val available = w - railW
-        CompositionLocalProvider(LocalActions provides actions, LocalLayout provides layout, LocalIconLook provides IconLook(model.iconMode, model.iconVersion, model.iconColors)) {
+        CompositionLocalProvider(
+            LocalActions provides actions, LocalLayout provides layout, LocalIconLook provides IconLook(model.iconMode, model.iconVersion, model.iconColors),
+            LocalRailLeft provides railLeft, LocalEdgeExit provides edgeExit,
+        ) {
             val docked = model.docked.takeLast(layout.maxDocked)
             Row(Modifier.fillMaxSize()) {
-                if (model.railLeft) Rail(model, railW)
+                if (railLeft) Rail(model, railW)
                 Box(Modifier.weight(1f).fillMaxHeight()) {
                     Row(Modifier.fillMaxSize()) {
-                        if (model.railLeft) docked.forEach { DockedDrawer(model, it, drawerWidth(model, it, layout, available), available) }
-                        Box(Modifier.weight(1f).fillMaxHeight()) { Filer(model) }
-                        if (!model.railLeft) docked.forEach { DockedDrawer(model, it, drawerWidth(model, it, layout, available), available) }
+                        if (railLeft) docked.forEach { DockedDrawer(model, it, drawerWidth(model, it, layout, available), available) }
+                        Box(Modifier.weight(1f).fillMaxHeight()) {
+                            // エッジでは背景は透けたまま。押すと閉じる
+                            if (edge) Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClickLabel = "閉じる") { edgeExit?.invoke() })
+                            else Filer(model)
+                        }
+                        if (!railLeft) docked.forEach { DockedDrawer(model, it, drawerWidth(model, it, layout, available), available) }
                     }
                     Overlay(model, layout, available)
                 }
-                if (!model.railLeft) Rail(model, railW)
+                if (!railLeft) Rail(model, railW)
             }
             model.importReport?.let { r -> ImportReportDialog(model, r) { model.importReport = null } }
         }
@@ -193,7 +215,7 @@ private fun DockedDrawer(model: HomeModel, id: String, width: Dp, available: Dp)
     val p = LocalPalette.current
     Box(Modifier.width(width).fillMaxHeight().background(p.panel)) {
         DrawerFrame(model, id, docked = true)
-        WidthHandle(model, id, width, available, Modifier.align(if (model.railLeft) Alignment.CenterEnd else Alignment.CenterStart))
+        WidthHandle(model, id, width, available, Modifier.align(if (LocalRailLeft.current) Alignment.CenterEnd else Alignment.CenterStart))
     }
 }
 
@@ -206,12 +228,13 @@ private fun WidthHandle(model: HomeModel, id: String, width: Dp, available: Dp, 
     val p = LocalPalette.current
     val density = LocalDensity.current
     // 取っ手はドロワーの内側（画面の中央寄り）。右から出るドロワーは左へなぞると広がる
-    val grow = if (model.railLeft) 1f else -1f
+    val left = LocalRailLeft.current
+    val grow = if (left) 1f else -1f
     Box(
         modifier
             .width(16.dp)
             .height(72.dp)
-            .pointerInput(id, model.railLeft) {
+            .pointerInput(id, left) {
                 var start = 0f
                 var total = 0f
                 detectHorizontalDragGestures(
@@ -243,7 +266,8 @@ private fun Overlay(model: HomeModel, layout: Layout, available: Dp) {
     // 閉じるアニメーションの間も中身を描けるよう、最後に開いたものを覚えておく
     var shown by remember { mutableStateOf<String?>(null) }
     if (visibleId != null) shown = visibleId
-    val fromRight = !model.railLeft
+    val fromRight = !LocalRailLeft.current
+    val edgeExit = LocalEdgeExit.current
 
     AnimatedVisibility(visible = visibleId != null, enter = fadeIn(tween(200)), exit = fadeOut(tween(200))) {
         Box(
@@ -251,7 +275,8 @@ private fun Overlay(model: HomeModel, layout: Layout, available: Dp) {
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.45f))
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClickLabel = "閉じる") {
-                    model.close(); model.settingsOpen = false
+                    // エッジでは外側を押すとエッジごと閉じる
+                    if (edgeExit != null) edgeExit() else { model.close(); model.settingsOpen = false }
                 },
         )
     }
@@ -300,11 +325,12 @@ private fun Overlay(model: HomeModel, layout: Layout, available: Dp) {
 private fun Rail(model: HomeModel, width: Dp) {
     val p = LocalPalette.current
     val density = LocalDensity.current
-    val left = model.railLeft
+    val left = LocalRailLeft.current
     Column(
         Modifier
             .width(width)
             .fillMaxHeight()
+            .background(p.bg)
             .pointerInput(left) {
                 // 画面の端から内側へなぞると、最後に開いたドロワーを出す
                 var total = 0f
@@ -548,7 +574,7 @@ fun AddTabDialog(model: HomeModel, onWidget: () -> Unit, onDismiss: () -> Unit) 
 }
 
 @Composable
-private fun rememberActions(model: HomeModel, activity: ComponentActivity): Actions {
+private fun rememberActions(model: HomeModel, activity: ComponentActivity, edgeExit: (() -> Unit)?): Actions {
     var folderTab by remember { mutableStateOf<String?>(null) }
     var permDone by remember { mutableStateOf<(() -> Unit)?>(null) }
     var cameraDone by remember { mutableStateOf<((Boolean) -> Unit)?>(null) }
@@ -587,6 +613,8 @@ private fun rememberActions(model: HomeModel, activity: ComponentActivity): Acti
             start = { intent ->
                 try {
                     activity.startActivity(intent)
+                    // エッジから開いたら、エッジは閉じる（開いたアプリを前に）
+                    edgeExit?.invoke()
                 } catch (_: ActivityNotFoundException) {
                     Toast.makeText(activity, "開けるアプリがありません", Toast.LENGTH_SHORT).show()
                 } catch (_: SecurityException) {

@@ -533,11 +533,6 @@ class Store(context: Context) {
         get() = prefs.getInt("edgePos", 35)
         set(v) = prefs.edit().putInt("edgePos", v).apply()
 
-    /** エッジで最後に開いていたタブ（カテゴリーの id。"" はすべてのアプリ）。 */
-    var edgeTab: String
-        get() = prefs.getString("edgeTab", "") ?: ""
-        set(v) = prefs.edit().putString("edgeTab", v).apply()
-
     fun appOrder(): Map<String, List<String>> = runCatching {
         val o = JSONObject(prefs.getString("appOrder", "{}") ?: "{}")
         o.keys().asSequence().associateWith { k -> o.getJSONArray(k).let { a -> (0 until a.length()).map { a.getString(it) } } }

@@ -11,7 +11,6 @@ import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalView
@@ -21,7 +20,7 @@ import jp.yaegaki.theta.home.ui.HomeRoot
 import jp.yaegaki.theta.home.ui.HomeTheme
 
 class MainActivity : ComponentActivity() {
-    private val model: HomeModel by viewModels()
+    private val model: HomeModel get() = (application as HomeApp).model
     private val widgets get() = (application as HomeApp).widgets
 
     /** 回線が変わったら（Wi-Fi⇔モバイル、Tailscale のオン・オフ）NAS の状態を調べ直す。 */
@@ -144,17 +143,7 @@ class MainActivity : ComponentActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQ_WIDGET_CONFIGURE) {
-            val id = (application as HomeApp).store.pendingWidget
-            if (id == -1) return
-            if (resultCode == RESULT_OK) model.addWidget(id)
-            else {
-                widgets.release(id)
-                (application as HomeApp).store.pendingBoard = ""
-                (application as HomeApp).toast("ウィジェットの設定をやめたので、置きませんでした")
-            }
-            (application as HomeApp).store.pendingWidget = -1
-        }
+        if (requestCode == REQ_WIDGET_CONFIGURE) model.onWidgetConfigured(resultCode == RESULT_OK)
     }
 
     /**

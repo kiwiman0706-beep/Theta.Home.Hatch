@@ -179,7 +179,7 @@ class ScreenshotTest {
         launch()
         compose.waitForIdle()
         scenario!!.onActivity { a ->
-            val m = androidx.lifecycle.ViewModelProvider(a)[HomeModel::class.java]
+            val m = (a.application as HomeApp).model
             m.tabs.toList().forEach { m.removeTab(it.id) }
         }
         compose.waitForIdle()
@@ -197,7 +197,7 @@ class ScreenshotTest {
         compose.waitForIdle()
         var model: HomeModel? = null
         scenario!!.onActivity { a ->
-            val m = androidx.lifecycle.ViewModelProvider(a)[HomeModel::class.java]
+            val m = (a.application as HomeApp).model
             val c = m.addCategory("DRAG")
             m.apps.forEach { m.assign(it, c) }
             m.addCategoryTab(c)
@@ -239,7 +239,7 @@ class ScreenshotTest {
         launch()
         compose.waitForIdle()
         var model: HomeModel? = null
-        scenario!!.onActivity { a -> model = androidx.lifecycle.ViewModelProvider(a)[HomeModel::class.java] }
+        scenario!!.onActivity { a -> model = (a.application as HomeApp).model }
         val from = compose.onNodeWithContentDescription("WORK（Alt+1）")
         val a = from.fetchSemanticsNode().boundsInRoot
         val b = compose.onNodeWithContentDescription("PHOTO（Alt+3）").fetchSemanticsNode().boundsInRoot
@@ -329,7 +329,7 @@ class ScreenshotTest {
         launch()
         compose.waitForIdle()
         scenario!!.onActivity { a ->
-            val model = androidx.lifecycle.ViewModelProvider(a)[HomeModel::class.java]
+            val model = (a.application as HomeApp).model
             val c = model.addCategory("ツール")
             model.apps.forEach { model.assign(it, c) }
             model.addCategoryTab(c)
@@ -346,7 +346,7 @@ class ScreenshotTest {
     fun queryDialog() {
         launch()
         scenario!!.onActivity { a ->
-            val model = androidx.lifecycle.ViewModelProvider(a)[HomeModel::class.java]
+            val model = (a.application as HomeApp).model
             val q = jp.yaegaki.theta.home.data.SavedQuery(
                 "q-test", "請求書", "drive", kinds = setOf("pdf", "sheet"), nameContains = "請求", days = 30,
                 folderId = "1abc", folderName = "経理",
@@ -406,39 +406,47 @@ class ScreenshotTest {
         shot("titan-home")
     }
 
-    /** エッジ：ほかのアプリの上に引き出したタブ（本物はサービスの窓。ここでは画面の中に同じものを描く）。 */
-    private fun edgeShot(name: String, left: Boolean, theme: String) {
-        launch(theme = theme)
-        val app = ApplicationProvider.getApplicationContext<HomeApp>()
-        val apps = jp.yaegaki.theta.home.data.Apps.load(app)
-        scenario!!.onActivity { a ->
-            a.setContent {
-                jp.yaegaki.theta.home.ui.HomeTheme(dark = theme == "dark", pop = theme == "pop") {
-                    androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.background(androidx.compose.ui.graphics.Color(0xFF3A4A5A))) {
-                        jp.yaegaki.theta.home.edge.EdgePanel(
-                            tabs = listOf(jp.yaegaki.theta.home.edge.EdgeTab("c1", "COM"), jp.yaegaki.theta.home.edge.EdgeTab("c2", "MEDIA"), jp.yaegaki.theta.home.edge.EdgeTab("", "ALL")),
-                            selected = "c1", apps = apps, shortcuts = emptyList(), left = left, counts = mapOf("com.example.chat" to 3),
-                            onSelect = {}, onApp = {}, onShortcut = {}, onHome = {}, onClose = {},
-                        )
-                    }
-                }
-            }
-        }
+    /** エッジ：ほかのアプリの上に重ねる画面。タブと中身はホームと同じ（ここではフォルダと画像のタブを開いたところ）。 */
+    private fun edgeShot(name: String, side: String, theme: String) {
+        launch(theme = theme) { it.store.edgeSide = side }
         compose.waitForIdle()
+        val app = ApplicationProvider.getApplicationContext<HomeApp>()
+        val f = java.io.File(app.filesDir, "edge.png")
+        val bmp = android.graphics.Bitmap.createBitmap(600, 400, android.graphics.Bitmap.Config.ARGB_8888)
+        android.graphics.Canvas(bmp).apply {
+            drawColor(0xFF3C8C4A.toInt())
+            drawCircle(300f, 200f, 120f, android.graphics.Paint().apply { color = android.graphics.Color.WHITE })
+        }
+        f.outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        scenario!!.onActivity {
+            val m = model()
+            val (t, item) = m.addBoardTab(jp.yaegaki.theta.home.data.BoardItem.FILE, fill = false)
+            m.setTabFile(item.id, android.net.Uri.fromFile(f))
+            m.renameTab(t.id, "DESK")
+            m.addBoardItem(t.id, jp.yaegaki.theta.home.data.BoardItem("e2", "calendar", h = mapOf("narrow" to 300)))
+            m.setTabApps(t.id, m.apps.map { it.key }.take(4))
+            m.toggle(t.id)
+        }
+        scenario?.close()
+        scenario = null
+        val edge = ActivityScenario.launch(jp.yaegaki.theta.home.edge.EdgeActivity::class.java)
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(1200)
         compose.onRoot().captureRoboImage("build/screenshots/$name.png")
+        edge.close()
     }
 
     @Test
-    @Config(qualifiers = "w340dp-h760dp-xxhdpi")
-    fun edgeLeft() = edgeShot("edge-left", left = true, theme = "dark")
+    @Config(qualifiers = "w360dp-h800dp-xxhdpi")
+    fun edgeLeft() = edgeShot("edge-left", side = "left", theme = "dark")
 
     @Test
-    @Config(qualifiers = "w340dp-h760dp-xxhdpi")
-    fun edgeRightPop() = edgeShot("edge-right-pop", left = false, theme = "pop")
+    @Config(qualifiers = "w360dp-h800dp-xxhdpi")
+    fun edgeRightPop() = edgeShot("edge-right-pop", side = "right", theme = "pop")
 
     private fun model(): HomeModel {
         var m: HomeModel? = null
-        scenario!!.onActivity { a -> m = androidx.lifecycle.ViewModelProvider(a)[HomeModel::class.java] }
+        scenario!!.onActivity { a -> m = (a.application as HomeApp).model }
         return m!!
     }
 

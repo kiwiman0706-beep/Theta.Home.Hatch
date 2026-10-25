@@ -55,9 +55,18 @@ class WidgetController(context: Context) {
         return host.createView(activity, id, info).also { views[id] = it }
     }
 
-    fun start() = runCatching { host.startListening() }
+    /** 見せている画面（ホーム・エッジ）の数。0 になったら更新を受けるのをやめる。 */
+    private var users = 0
 
-    fun stop() = runCatching { host.stopListening() }
+    fun start() {
+        users++
+        if (users == 1) runCatching { host.startListening() }
+    }
+
+    fun stop() {
+        users = (users - 1).coerceAtLeast(0)
+        if (users == 0) runCatching { host.stopListening() }
+    }
 
     companion object {
         const val HOST_ID = 6105
