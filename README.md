@@ -8,7 +8,7 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**0.26.0-alpha（versionCode 31）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.27.0-alpha（versionCode 32）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
@@ -69,7 +69,9 @@
 
 画像（JPEG・PNG・HEIC・動く GIF/WebP など）・動画・音声（ExoPlayer）・PDF・文字（txt・md・json・ソースコードなど、Shift_JIS も）・CSV/TSV（表）・zip（中身の一覧）は、ほかのアプリに切り替えずに**ホームの上のポップアップ**で開く。左右にめくると同じフォルダのほかのファイル、画像は 2 本指・2 回押しで拡大。上の「共有」「アプリで開く」で、今までどおりほかのアプリへ。NAS・Google ドライブのファイルも取得してから同じように開く。設定 → VIEWER でオフにできる。
 
-<img src="docs/screenshots/viewer-image.png" width="200" alt="画像を中で開く"> <img src="docs/screenshots/viewer-csv.png" width="200" alt="CSV を表で">
+Word・Excel・PowerPoint（docx・xlsx・pptx）は**かんたんなプレビュー**：Excel はシートごとの表（日付も読める形に）、Word は見出し・本文・箇条書き・表・画像、PowerPoint はスライドごとの文字と画像。ライブラリを足さずに中の XML を読むので、見た目どおりではない（正確には「アプリで開く」）。
+
+<img src="docs/screenshots/viewer-image.png" width="200" alt="画像を中で開く"> <img src="docs/screenshots/viewer-csv.png" width="200" alt="CSV を表で"> <img src="docs/screenshots/viewer-docx.png" width="200" alt="Word"> <img src="docs/screenshots/viewer-xlsx.png" width="200" alt="Excel"> <img src="docs/screenshots/viewer-pptx.png" width="200" alt="PowerPoint">
 
 ## ファイラーの見せ方
 

@@ -15,7 +15,8 @@ class ViewableTest {
         assertEquals("csv", Viewable.kind("data.tsv", null))
         assertEquals("text", Viewable.kind("main.kt", null))
         assertEquals("zip", Viewable.kind("x.zip", null))
-        assertNull(Viewable.kind("report.docx", null))
+        assertEquals("docx", Viewable.kind("report.docx", null))
+        assertNull(Viewable.kind("old.doc", null))
         assertNull(Viewable.kind("logo.svg", "image/svg+xml"))
     }
 

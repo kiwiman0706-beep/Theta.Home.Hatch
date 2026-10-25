@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
@@ -117,6 +118,7 @@ private fun ViewerPage(item: ViewItem, active: Boolean) {
         "text" -> TextPage(item)
         "csv" -> CsvPage(item)
         "zip" -> ZipPage(item)
+        "docx", "xlsx", "pptx" -> OfficePage(item)
         else -> Message("この形式は中で開けません。上の「アプリで開く」から。")
     }
 }
@@ -280,21 +282,29 @@ private fun CsvPage(item: ViewItem) {
     when {
         r == null -> Message("読み込み中…")
         r.isFailure -> Message("読めませんでした。上の「アプリで開く」から。")
-        else -> {
-            val rows = r.getOrThrow()
-            val cols = rows.maxOfOrNull { it.size } ?: 0
-            // 列の幅は中身の長さから（長すぎる列は 240dp で切る）
-            val widths = (0 until cols).map { c -> (rows.take(200).maxOfOrNull { it.getOrNull(c)?.length ?: 0 } ?: 0).coerceIn(3, 30) * 8 + 16 }
-            Box(Modifier.fillMaxSize().background(p.bg).horizontalScroll(rememberScrollState())) {
-                LazyColumn(Modifier.width(widths.sum().dp + 48.dp)) {
-                    itemsIndexed(rows) { ri, row ->
-                        Row(Modifier.background(if (ri == 0) p.raised else if (ri % 2 == 0) p.zebra else Color.Transparent)) {
-                            Text("%d".format(ri + 1), color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, modifier = Modifier.width(48.dp).padding(6.dp))
-                            widths.forEachIndexed { c, w ->
-                                Text(row.getOrNull(c).orEmpty(), color = p.fg, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.width(w.dp).border(0.5.dp, p.line).padding(horizontal = 6.dp, vertical = 5.dp))
-                            }
-                        }
+        else -> TableView(r.getOrThrow())
+    }
+}
+
+/** 表（CSV・Excel のシート）。1 行目は見出しとして地を変え、左に行番号。 */
+@Composable
+private fun TableView(rows: List<List<String>>) {
+    val p = LocalPalette.current
+    val cols = rows.maxOfOrNull { it.size } ?: 0
+    if (rows.isEmpty()) {
+        Message("空です")
+        return
+    }
+    // 列の幅は中身の長さから（長すぎる列は 240dp で切る）
+    val widths = (0 until cols).map { c -> (rows.take(200).maxOfOrNull { it.getOrNull(c)?.length ?: 0 } ?: 0).coerceIn(3, 30) * 8 + 16 }
+    Box(Modifier.fillMaxSize().background(p.bg).horizontalScroll(rememberScrollState())) {
+        LazyColumn(Modifier.width(widths.sum().dp + 48.dp)) {
+            itemsIndexed(rows) { ri, row ->
+                Row(Modifier.background(if (ri == 0) p.raised else if (ri % 2 == 0) p.zebra else Color.Transparent)) {
+                    Text("%d".format(ri + 1), color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, modifier = Modifier.width(48.dp).padding(6.dp))
+                    widths.forEachIndexed { c, w ->
+                        Text(row.getOrNull(c).orEmpty(), color = p.fg, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.width(w.dp).border(0.5.dp, p.line).padding(horizontal = 6.dp, vertical = 5.dp))
                     }
                 }
             }
@@ -337,3 +347,142 @@ private fun ZipPage(item: ViewItem) {
     }
 }
 
+
+// ---- Word・Excel・PowerPoint（かんたんなプレビュー） ----
+
+private sealed class OfficeDoc {
+    class Sheets(val list: List<jp.yaegaki.theta.home.data.Office.Sheet>) : OfficeDoc()
+    class Words(val file: java.io.File, val blocks: List<jp.yaegaki.theta.home.data.Office.Block>) : OfficeDoc()
+    class Slides(val file: java.io.File, val list: List<jp.yaegaki.theta.home.data.Office.Slide>) : OfficeDoc()
+}
+
+/** docx・xlsx・pptx：文字・表・画像だけを取り出して出す。見た目どおりにはしない（正確には「アプリで開く」）。 */
+@Composable
+private fun OfficePage(item: ViewItem) {
+    val ctx = LocalActions.current.activity
+    val p = LocalPalette.current
+    val kind = Viewable.kind(item.name, item.mime)
+    val doc by produceState<Result<OfficeDoc>?>(null, item.uri) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                val f = jp.yaegaki.theta.home.data.Office.copyToCache(ctx, item.uri)
+                java.util.zip.ZipFile(f).use { z ->
+                    when (kind) {
+                        "xlsx" -> OfficeDoc.Sheets(jp.yaegaki.theta.home.data.Office.xlsx(z))
+                        "docx" -> OfficeDoc.Words(f, jp.yaegaki.theta.home.data.Office.docx(z))
+                        else -> OfficeDoc.Slides(f, jp.yaegaki.theta.home.data.Office.pptx(z))
+                    }
+                }
+            }
+        }
+    }
+    val r = doc
+    when {
+        r == null -> Message("読み込み中…")
+        r.isFailure -> Message("中身を読めませんでした（古い形式・パスワード付きなど）。上の「アプリで開く」から。")
+        else -> Column(Modifier.fillMaxSize().background(p.bg)) {
+            Text("かんたんなプレビュー ・ 見た目どおりは「アプリで開く」", color = p.faint, fontSize = 10.sp, maxLines = 1,
+                modifier = Modifier.fillMaxWidth().background(p.panel).padding(horizontal = 12.dp, vertical = 4.dp))
+            when (val d = r.getOrThrow()) {
+                is OfficeDoc.Sheets -> SheetsView(d.list)
+                is OfficeDoc.Words -> WordsView(d.file, d.blocks)
+                is OfficeDoc.Slides -> SlidesView(d.file, d.list)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SheetsView(sheets: List<jp.yaegaki.theta.home.data.Office.Sheet>) {
+    val p = LocalPalette.current
+    var index by remember { mutableStateOf(0) }
+    Column(Modifier.fillMaxSize()) {
+        if (sheets.size > 1) Row(Modifier.horizontalScroll(rememberScrollState()).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            sheets.forEachIndexed { i, s ->
+                val on = i == index
+                Text(s.name, color = if (on) p.onAccent else p.fg, fontSize = 12.sp,
+                    modifier = Modifier.background(if (on) p.accent else Color.Transparent).border(1.dp, if (on) p.accent else p.line)
+                        .clickable { index = i }.padding(horizontal = 10.dp, vertical = 5.dp))
+            }
+        }
+        Box(Modifier.weight(1f)) { TableView(sheets.getOrNull(index)?.rows.orEmpty()) }
+    }
+}
+
+/** Word：紙のような白地に、見出し・本文・箇条書き・表・画像。 */
+@Composable
+private fun WordsView(file: java.io.File, blocks: List<jp.yaegaki.theta.home.data.Office.Block>) {
+    val ink = Color(0xFF1C1C1C)
+    LazyColumn(
+        Modifier.fillMaxSize().background(Color(0xFFE9E8E4)),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
+    ) {
+        itemsIndexed(blocks) { _, b ->
+            Box(Modifier.fillMaxWidth().background(Color(0xFFFCFBF8)).padding(horizontal = 16.dp, vertical = 3.dp)) {
+                when (b) {
+                    is jp.yaegaki.theta.home.data.Office.Block.Para -> SelectionContainer {
+                        Text(
+                            (if (b.list) "・" else "") + b.text,
+                            color = ink,
+                            fontSize = when (b.level) { 1 -> 22.sp; 2 -> 18.sp; 3 -> 16.sp; else -> 14.sp },
+                            fontWeight = if (b.level > 0) androidx.compose.ui.text.font.FontWeight.Bold else null,
+                            lineHeight = if (b.level > 0) 28.sp else 22.sp,
+                            modifier = Modifier.padding(top = if (b.level > 0) 10.dp else 0.dp, start = if (b.list) 8.dp else 0.dp),
+                        )
+                    }
+                    is jp.yaegaki.theta.home.data.Office.Block.Table -> Column(Modifier.padding(vertical = 6.dp).border(1.dp, Color(0xFF9A9A9A))) {
+                        b.rows.forEach { row ->
+                            Row {
+                                row.forEach { c ->
+                                    Text(c, color = ink, fontSize = 12.sp, modifier = Modifier.weight(1f).border(0.5.dp, Color(0xFFBDBDBD)).padding(6.dp))
+                                }
+                            }
+                        }
+                    }
+                    is jp.yaegaki.theta.home.data.Office.Block.Image -> ZipImage(file, b.path, Modifier.fillMaxWidth().padding(vertical = 6.dp))
+                }
+            }
+        }
+    }
+}
+
+/** PowerPoint：スライドごとのカード。1 つ目の文字を題に、残りを箇条書き、画像は下に。 */
+@Composable
+private fun SlidesView(file: java.io.File, slides: List<jp.yaegaki.theta.home.data.Office.Slide>) {
+    val p = LocalPalette.current
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        itemsIndexed(slides) { i, s ->
+            Column(Modifier.fillMaxWidth().background(Color(0xFFFCFBF8)).border(1.dp, p.line).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("SLIDE %02d".format(i + 1), color = Color(0xFF8A8A8A), fontSize = 10.sp, fontFamily = Hud.mono)
+                s.texts.firstOrNull()?.let { Text(it, color = Color(0xFF1C1C1C), fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
+                s.texts.drop(1).forEach { Text("・$it", color = Color(0xFF2A2A2A), fontSize = 13.sp, lineHeight = 19.sp) }
+                s.images.take(4).forEach { ZipImage(file, it, Modifier.fillMaxWidth().height(200.dp)) }
+                if (s.texts.isEmpty() && s.images.isEmpty()) Text("（文字・画像なし）", color = Color(0xFF8A8A8A), fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+/** zip の中の画像。幅 1200px 程度に縮めて読む（EMF・WMF など読めないものは出さない）。 */
+@Composable
+private fun ZipImage(file: java.io.File, path: String, modifier: Modifier) {
+    val bmp by produceState<android.graphics.Bitmap?>(null, file, path) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                java.util.zip.ZipFile(file).use { z ->
+                    val e = z.getEntry(path) ?: return@use null
+                    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    z.getInputStream(e).use { android.graphics.BitmapFactory.decodeStream(it, null, bounds) }
+                    var sample = 1
+                    while (bounds.outWidth / sample > 1200) sample *= 2
+                    z.getInputStream(e).use { android.graphics.BitmapFactory.decodeStream(it, null, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }) }
+                }
+            }.getOrNull()
+        }
+    }
+    bmp?.let { androidx.compose.foundation.Image(it.asImageBitmap(), null, modifier, contentScale = androidx.compose.ui.layout.ContentScale.Fit) }
+}

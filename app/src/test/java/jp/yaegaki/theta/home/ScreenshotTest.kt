@@ -659,4 +659,31 @@ class ScreenshotTest {
         compose.mainClock.advanceTimeBy(1500)
         shot("viewer-csv")
     }
+
+    /** 中で開く：Word・Excel・PowerPoint のかんたんなプレビュー。 */
+    private fun officeShot(file: String, mime: String, name: String) {
+        launch()
+        compose.waitForIdle()
+        val app = ApplicationProvider.getApplicationContext<HomeApp>()
+        val f = java.io.File(app.filesDir, file)
+        javaClass.classLoader!!.getResourceAsStream("office/$file")!!.use { i -> f.outputStream().use { o -> i.copyTo(o) } }
+        scenario!!.onActivity { model().openViewer(listOf(jp.yaegaki.theta.home.data.ViewItem(android.net.Uri.fromFile(f), file, mime)), 0) }
+        compose.mainClock.autoAdvance = true
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("読み込み中…").fetchSemanticsNodes().isEmpty() }
+        Thread.sleep(500)
+        compose.waitForIdle()
+        shot(name)
+    }
+
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-xxhdpi")
+    fun viewerDocx() = officeShot("sample.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "viewer-docx")
+
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-xxhdpi")
+    fun viewerXlsx() = officeShot("sample.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "viewer-xlsx")
+
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-xxhdpi")
+    fun viewerPptx() = officeShot("sample.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation", "viewer-pptx")
 }

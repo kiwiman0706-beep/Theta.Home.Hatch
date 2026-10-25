@@ -7,7 +7,8 @@ import java.util.Locale
 data class ViewItem(val uri: Uri, val name: String, val mime: String?)
 
 /**
- * ホームの中（ポップアップ）で開ける形式か。種類は "image"・"video"・"audio"・"pdf"・"text"・"csv"・"zip"、開けなければ null。
+ * ホームの中（ポップアップ）で開ける形式か。種類は "image"・"video"・"audio"・"pdf"・"text"・"csv"・"zip"・
+ * "docx"・"xlsx"・"pptx"（中身のかんたんなプレビュー）、開けなければ null。
  * 拡張子を先に見る（SAF の MIME は application/octet-stream のことがあるので）。
  */
 object Viewable {
@@ -33,6 +34,9 @@ object Viewable {
             ext in CSV -> "csv"
             ext in ZIP -> "zip"
             ext in TEXT -> "text"
+            ext == "docx" -> "docx"
+            ext == "xlsx" || ext == "xlsm" -> "xlsx"
+            ext == "pptx" -> "pptx"
             m == "image/svg+xml" -> null
             m.startsWith("image/") -> "image"
             m.startsWith("video/") -> "video"
