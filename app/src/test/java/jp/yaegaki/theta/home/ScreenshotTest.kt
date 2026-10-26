@@ -686,4 +686,32 @@ class ScreenshotTest {
     @Test
     @Config(qualifiers = "w360dp-h800dp-xxhdpi")
     fun viewerPptx() = officeShot("sample.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation", "viewer-pptx")
+
+    /** カテゴリーのタブにも、アプリの上にウィジェットなどを置ける（ここでは画像と予定）。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun categoryBoard() {
+        launch()
+        compose.waitForIdle()
+        val app = ApplicationProvider.getApplicationContext<HomeApp>()
+        val f = java.io.File(app.filesDir, "family.png")
+        val bmp = android.graphics.Bitmap.createBitmap(600, 300, android.graphics.Bitmap.Config.ARGB_8888)
+        android.graphics.Canvas(bmp).apply { drawColor(0xFF3C8C4A.toInt()); drawCircle(300f, 150f, 90f, android.graphics.Paint().apply { color = android.graphics.Color.WHITE }) }
+        f.outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        scenario!!.onActivity {
+            val m = model()
+            val c = m.addCategory("COM")
+            m.apps.forEach { a -> m.assign(a, c) }
+            m.addCategoryTab(c)
+            val t = m.tabs.last()
+            m.addBoardItem(t.id, jp.yaegaki.theta.home.data.BoardItem("cb1", jp.yaegaki.theta.home.data.BoardItem.FILE, android.net.Uri.fromFile(f).toString(), h = mapOf("narrow" to 160)))
+        }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("COM", substring = true).performScrollTo().performClick()
+        compose.mainClock.advanceTimeBy(1200)
+        shot("category-board")
+        compose.onNodeWithContentDescription("高さ・並び・足す").performClick()
+        compose.mainClock.advanceTimeBy(600)
+        shot("category-board-edit")
+    }
 }

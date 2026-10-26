@@ -121,6 +121,21 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     fun changeEdgeSide(v: String) { edgeSide = v; store.edgeSide = v; syncEdge() }
     fun changeEdgePos(v: Int) { edgePos = v; store.edgePos = v; syncEdge() }
 
+    /** アプリの一覧の「タブを出す」（モードとルーチンなどから開く入口）を出しているか。 */
+    var showTabsIcon by mutableStateOf(
+        ctx.packageManager.getComponentEnabledSetting(android.content.ComponentName(ctx, "jp.yaegaki.theta.home.ShowTabs")) !=
+            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+    ); private set
+
+    fun changeShowTabsIcon(v: Boolean) {
+        showTabsIcon = v
+        ctx.packageManager.setComponentEnabledSetting(
+            android.content.ComponentName(ctx, "jp.yaegaki.theta.home.ShowTabs"),
+            if (v) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+            android.content.pm.PackageManager.DONT_KILL_APP,
+        )
+    }
+
     fun syncEdge() {
         edgeAllowed = android.provider.Settings.canDrawOverlays(ctx)
         edgeOn = store.edgeOn

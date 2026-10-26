@@ -8,7 +8,7 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**0.27.0-alpha（versionCode 32）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.28.0-alpha（versionCode 33）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
@@ -30,6 +30,8 @@
 
 ## エッジ（ほかのアプリの上で端からタブ）
 
+**「タブを出す」ショートカット**：端をなぞる代わりに、ほかのアプリから同じタブを出せる（エッジがオフでも使える）。Dimple などショートカットを置けるアプリでは「タブを出す」ショートカット、Galaxy のモードとルーチンでは「アプリを開く」でアプリの一覧の「タブを出す」を選ぶ。自動化アプリからはアクティビティのアクション `jp.yaegaki.theta.home.SHOW_TABS`。アプリの一覧の「タブを出す」は設定 → SHORTCUT で隠せる。
+
 設定 → EDGE をオンにすると、どのアプリを使っていても、画面の端の細い線を内側へなぞる（または押す）だけで、**ホームと同じタブと中身**（ウィジェット・フォルダ・予定・アプリ・置いたショートカットなど）を下のアプリの上に重ねて出せます。外側を押すか「戻る」で閉じ、アプリを開くと自動で閉じます。左右の端と高さを選べます。「ほかのアプリの上に表示」の許可と、常駐の通知が要ります。ホームキーの動き（押すとホーム全体）は Android の決まりなので変えていません。
 
 <img src="docs/screenshots/edge-left.png" width="200" alt="エッジ（ダーク）"> <img src="docs/screenshots/edge-right-pop.png" width="200" alt="エッジ（POP・右端）">
@@ -50,7 +52,7 @@
     - フォルダ：ドロワーの中にフォルダの中身。端末のフォルダ（SAF）・NAS・ドライブ。場所は置いたものごとに覚え、戻るで上のフォルダへ。
     - Web ページ：リンクもその中で開き、戻るでページを戻る。画像・PDF：画像は指で拡大、PDF は縦に並べる。
     - 予定・メールなど：今までのドロワーと同じ中身。
-  - **アプリのカテゴリーのタブ**：そのカテゴリーのアプリ・ショートカットと、そのアプリの通知。
+  - **アプリのカテゴリーのタブ**：そのカテゴリーのアプリ・ショートカットと、そのアプリの通知。歯車から、アプリの上にウィジェット・フォルダ・予定なども置ける（アプリと一緒にスクロール）。
   - 0.21.0 までの専用のタブ（フォルダ・予定・メール…・ウィジェット）は、更新すると中身が 1 つのふつうのタブに移る（見た目は今までどおり）。
 
 <img src="docs/screenshots/board-tab.png" width="320" alt="ふつうのタブ（画像を半分ずつ・フォルダ）"> <img src="docs/screenshots/board-tab-edit.png" width="320" alt="ふつうのタブの編集"> <img src="docs/screenshots/panel-board.png" width="320" alt="予定の下にメールを足したタブ">

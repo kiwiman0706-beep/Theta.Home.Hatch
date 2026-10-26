@@ -3,4 +3,6 @@
     <string name="app_name">Theta Home Hatch</string>
     <string name="share_label">Clip に保存</string>
     <string name="listener_label">Theta Home Hatch（LINE・メールの通知を表示）</string>
+    <string name="show_tabs">タブを出す</string>
+    <string name="show_tabs_long">ほかのアプリの上にタブを出す</string>
 </resources>

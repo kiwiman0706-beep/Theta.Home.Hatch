@@ -116,7 +116,8 @@ fun DrawerFrame(model: HomeModel, id: String, docked: Boolean) {
             model.tabIcon(t)?.let { TabIconView(model, it, p.group(group), 16.dp) }
             Text("[$kicker]·$code", color = p.group(group), fontSize = 10.sp, letterSpacing = 1.sp, fontFamily = Hud.mono)
             Text(title, color = p.fg, fontSize = 18.sp, fontFamily = Hud.display, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            if (board) GlyphButton(Glyph.GEAR, if (editing) "編集を終える" else "高さ・並び・足す", { editing = !editing }, filled = editing)
+            // カテゴリーのタブも、アプリの上にウィジェットなどを置ける
+            if (board || t.kind == TabKind.CATEGORY) GlyphButton(Glyph.GEAR, if (editing) "編集を終える" else "高さ・並び・足す", { editing = !editing }, filled = editing)
             if (docked) {
                 GlyphButton(Glyph.PIN, "ピン留めを外す", { model.unpin(id) }, filled = true)
             } else if (layout.maxDocked > 0) {
@@ -130,7 +131,9 @@ fun DrawerFrame(model: HomeModel, id: String, docked: Boolean) {
         Box(if (wrap) Modifier.fillMaxWidth() else Modifier.weight(1f).fillMaxWidth()) {
             when (t.kind) {
                 TabKind.APPS -> AppsDrawer(model)
-                TabKind.CATEGORY -> AppsDrawer(model, only = t.folderUri.orEmpty(), split = model.opts(t.id).split)
+                TabKind.CATEGORY -> AppsDrawer(model, only = t.folderUri.orEmpty(), split = model.opts(t.id).split) {
+                    BoardDrawer(model, t, editing, inline = true)
+                }
                 // 0.22.0 から、ほかのタブはすべてふつうのタブ（古い種類は読み込むときに移す）
                 else -> BoardDrawer(model, t, editing)
             }
@@ -576,7 +579,7 @@ private val appCell = listOf(64.dp, 76.dp, 92.dp, 112.dp)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AppsDrawer(model: HomeModel, only: String? = null, split: Boolean = false) {
+private fun AppsDrawer(model: HomeModel, only: String? = null, split: Boolean = false, header: (@Composable () -> Unit)? = null) {
     val p = LocalPalette.current
     val actions = LocalActions.current
     var q by remember { mutableStateOf("") }
@@ -657,6 +660,8 @@ private fun AppsDrawer(model: HomeModel, only: String? = null, split: Boolean = 
     }
 
     DrawerList {
+        // カテゴリーのタブに置いたウィジェットなど（アプリの上、一緒にスクロール）
+        if (header != null) item(key = "board") { Box(Modifier.padding(bottom = 8.dp)) { header() } }
         if (voice.listening) item {
             Row(Modifier.fillMaxWidth().padding(bottom = 8.dp).border(1.dp, p.accent).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 GlyphIcon(Glyph.MIC, p.accent)

@@ -49,22 +49,28 @@ import kotlin.math.roundToInt
  * 並びは両方の画面で共通、高さは画面（閉じた／開いた）ごと。
  */
 @Composable
-fun BoardDrawer(model: HomeModel, t: TabSpec, editing: Boolean) {
+fun BoardDrawer(model: HomeModel, t: TabSpec, editing: Boolean, inline: Boolean = false) {
     val items = model.boardItems(t.id)
     var adding by remember { mutableStateOf(false) }
+    // inline はカテゴリーのタブのアプリの上：アプリと一緒にスクロールするので、縦いっぱいは使わない。置いていなければ何も出さない
+    if (inline && items.isEmpty() && !editing) return
     // 縦いっぱいのものがあれば、それが残りの高さを分け合う（全体はスクロールしない）。無ければ中身の高さで、はみ出たらスクロール
-    val fills = items.any { it.fill }
+    val fills = !inline && items.any { it.fill }
     Column(
-        (if (fills) Modifier.fillMaxSize() else Modifier.verticalScroll(rememberScrollState())).padding(8.dp),
+        (if (fills) Modifier.fillMaxSize() else if (inline) Modifier.fillMaxWidth() else Modifier.verticalScroll(rememberScrollState()))
+            .padding(if (inline) 0.dp else 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (items.isEmpty()) Note("ウィジェット・フォルダ・画像や PDF・Web ページ・予定・通知などを、このタブに好きな数だけ並べられます。")
+        if (items.isEmpty()) Note(
+            if (inline) "このカテゴリーのアプリの上に、ウィジェット・フォルダ・予定などを置けます。"
+            else "ウィジェット・フォルダ・画像や PDF・Web ページ・予定・通知などを、このタブに好きな数だけ並べられます。",
+        )
         rows(items).forEach { row ->
-            val fillRow = row.any { it.fill }
+            val fillRow = !inline && row.any { it.fill }
             Row(if (fillRow) Modifier.weight(1f) else Modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { item ->
                     Box(Modifier.weight(1f).then(if (fillRow) Modifier.fillMaxHeight() else Modifier)) {
-                        ItemView(model, t, item, items.indexOf(item), items.size, editing, fillRow)
+                        ItemView(model, t, item, items.indexOf(item), items.size, editing, fillRow, allowFill = !inline)
                     }
                 }
             }
@@ -93,7 +99,8 @@ private fun rows(items: List<BoardItem>): List<List<BoardItem>> {
 }
 
 @Composable
-private fun ItemView(model: HomeModel, t: TabSpec, item: BoardItem, index: Int, count: Int, editing: Boolean, fillRow: Boolean) {
+private fun ItemView(model: HomeModel, t: TabSpec, item: BoardItem, index: Int, count: Int, editing: Boolean, fillRow: Boolean, allowFill: Boolean = true) {
+    val fill = item.fill && allowFill
     val p = LocalPalette.current
     val density = LocalDensity.current.density
     val maxH = LocalConfiguration.current.screenHeightDp - 120
@@ -112,7 +119,7 @@ private fun ItemView(model: HomeModel, t: TabSpec, item: BoardItem, index: Int, 
                 else -> Note("この版では表示できないものです")
             }
         }
-        if (editing && !item.fill) {
+        if (editing && !fill) {
             // 下の帯：なぞって高さを変える
             Box(
                 Modifier.fillMaxWidth().height(22.dp).background(p.raised)
@@ -135,9 +142,9 @@ private fun ItemView(model: HomeModel, t: TabSpec, item: BoardItem, index: Int, 
         if (editing) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // 半分の幅では詰めて出す
-                Text(if (item.half) (if (item.fill) "FILL" else "${h}dp") else "${kindName(item.type)}  ${if (item.fill) "FILL" else "${h}dp"}",
+                Text(if (item.half) (if (fill) "FILL" else "${h}dp") else "${kindName(item.type)}  ${if (fill) "FILL" else "${h}dp"}",
                     color = p.faint, fontSize = 11.sp, fontFamily = Hud.mono, maxLines = 1, modifier = Modifier.weight(1f))
-                TextButton(onClick = { model.updateBoardItem(item.copy(fill = !item.fill)) }) { Text(if (item.fill) "高さを決める" else "縦いっぱい", color = p.fg, fontSize = 12.sp) }
+                if (allowFill) TextButton(onClick = { model.updateBoardItem(item.copy(fill = !item.fill)) }) { Text(if (item.fill) "高さを決める" else "縦いっぱい", color = p.fg, fontSize = 12.sp) }
                 TextButton(onClick = { model.updateBoardItem(item.copy(half = !item.half)) }) { Text(if (item.half) "全幅" else "半分", color = p.fg, fontSize = 12.sp) }
                 if (index > 0) TextButton(onClick = { model.moveBoardItem(item.id, -1) }) { Text("▲", color = p.fg) }
                 if (index < count - 1) TextButton(onClick = { model.moveBoardItem(item.id, 1) }) { Text("▼", color = p.fg) }

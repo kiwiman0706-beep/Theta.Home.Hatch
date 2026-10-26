@@ -92,6 +92,9 @@
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
 
         <!-- レスキュー：ホームが落ち続ける・固まったときの画面とクイック設定のタイル。本体と別のプロセス -->
@@ -158,12 +161,31 @@
             android:name=".edge.EdgeActivity"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode|density"
             android:excludeFromRecents="true"
-            android:exported="false"
+            android:exported="true"
             android:launchMode="singleTask"
             android:resizeableActivity="true"
             android:taskAffinity="jp.yaegaki.theta.home.edge"
             android:theme="@style/Theme.HomeHatch.Edge"
-            android:windowSoftInputMode="adjustResize" />
+            android:windowSoftInputMode="adjustResize">
+            <!-- ほかのアプリ（Dimple・モードとルーチン・自動化アプリ）から呼べる入口 -->
+            <intent-filter>
+                <action android:name="jp.yaegaki.theta.home.SHOW_TABS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- アプリの一覧の「タブを出す」：アプリを開くことしかできないもの（モードとルーチンなど）向け。設定で隠せる -->
+        <activity-alias
+            android:name=".ShowTabs"
+            android:exported="true"
+            android:icon="@drawable/ic_tabs"
+            android:label="@string/show_tabs"
+            android:targetActivity=".edge.EdgeActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <service
             android:name=".edge.EdgeService"

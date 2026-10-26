@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- アイコンの長押し・ショートカットを置けるアプリ（Dimple・モードとルーチンなど）から「タブを出す」 -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_tabs"
+        android:shortcutId="show_tabs"
+        android:shortcutLongLabel="@string/show_tabs_long"
+        android:shortcutShortLabel="@string/show_tabs">
+        <intent
+            android:action="jp.yaegaki.theta.home.SHOW_TABS"
+            android:targetClass="jp.yaegaki.theta.home.edge.EdgeActivity"
+            android:targetPackage="jp.yaegaki.theta.home" />
+    </shortcut>
+</shortcuts>

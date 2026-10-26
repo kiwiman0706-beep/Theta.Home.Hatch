@@ -205,6 +205,10 @@ fun SettingsPanel(model: HomeModel) {
                 }
                 Note("端の細い線を内側へなぞる（または押す）と、ホームと同じタブと中身（ウィジェット・フォルダ・予定・アプリなど）が出ます。最後に開いていたタブを開いた状態で出ます。外側を押すか「戻る」で閉じ、アプリを開くと自動で閉じます。ホームを開いている間は線を隠します。消されないように常駐の通知が出ます（通知は長押しでしまえます）。右の端は Galaxy のエッジパネルと重なりやすいので、初めは左にしています。")
                 Gap(18.dp)
+                SectionTitle("SHORTCUT / ほかのアプリからタブを出す", Modifier.padding(horizontal = 10.dp))
+                Note("「タブを出す」で、端をなぞったときと同じタブを、今のアプリの上に出せます（エッジがオフでも使えます）。Dimple などショートカットを置けるアプリでは、このアプリの「タブを出す」ショートカットを選びます。Galaxy のモードとルーチンでは「アプリを開く」で、アプリの一覧の「タブを出す」を選びます。自動化アプリからは jp.yaegaki.theta.home.SHOW_TABS（アクティビティ）でも呼べます。")
+                Toggle("アプリの一覧に「タブを出す」を出す（モードとルーチン向け）", model.showTabsIcon) { model.changeShowTabsIcon(it) }
+                Gap(18.dp)
                 SectionTitle("ONE UI / Galaxy の見た目を合わせる", Modifier.padding(horizontal = 10.dp))
                 Note("One UI のテーマは自分では配れないので、材料を作ります。壁紙を HUD にすると、One UI が壁紙から色を取って、クイックパネル・設定・キーボードなども黒とオレンジ寄りになります。アイコンは今の 3 色・配色で PNG に書き出し、Good Lock の Theme Park でアプリごとに選べます（手順は README）。")
                 FlowRow2 {
