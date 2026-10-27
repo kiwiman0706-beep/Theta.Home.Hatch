@@ -1387,9 +1387,27 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         }
     fun changeMonoIcons(v: Boolean) { monoIcons = v; store.monoIcons = v }
 
-    fun toggleFavorite(app: AppEntry) {
-        favoriteApps = if (app.key in favoriteApps) favoriteApps - app.key else (favoriteApps + app.key).take(8)
-        store.favoriteApps = favoriteApps
+    // ---- 端の下に固定（よく使うアプリ・ショートカット。タブをスクロールしても隠れない） ----
+
+    /** 端の下に置けるのは 8 つまで。キーはアプリ（AppEntry.key）か "sc:<ショートカットの id>"。 */
+    fun toggleDock(key: String) = saveDock(if (key in favoriteApps) favoriteApps - key else (favoriteApps + key).take(DOCK_MAX))
+
+    fun setDockApps(appKeys: List<String>) {
+        // ショートカットはそのまま、アプリだけ選び直す
+        val kept = favoriteApps.filter { it.startsWith("sc:") || it in appKeys }
+        saveDock((kept + appKeys.filter { it !in kept }).take(DOCK_MAX))
+    }
+
+    fun moveDock(key: String, delta: Int) {
+        val i = favoriteApps.indexOf(key)
+        val j = i + delta
+        if (i < 0 || j !in favoriteApps.indices) return
+        saveDock(favoriteApps.toMutableList().also { it.add(j, it.removeAt(i)) })
+    }
+
+    private fun saveDock(list: List<String>) {
+        favoriteApps = list
+        store.favoriteApps = list
     }
 
     // ---- 栞と Clip ----
@@ -1466,6 +1484,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         store.saveShortcuts(shortcuts)
         repin(sc.packageName)
         iconVersion++
+        // 端の下に置くものは、並びにも足す
+        if (catId == DOCK) toggleDock("sc:" + sc.id)
     }
 
     /** ほかのアプリの「ホーム画面に追加」で受け取ったもの（固定は受け取った時点で済んでいる）。 */
@@ -1476,6 +1496,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     fun removeShortcut(id: String) {
         val sc = shortcuts.firstOrNull { it.id == id } ?: return
+        if ("sc:$id" in favoriteApps) saveDock(favoriteApps - "sc:$id")
         shortcuts = shortcuts.filter { it.id != id }
         store.saveShortcuts(shortcuts)
         jp.yaegaki.theta.home.data.Shortcuts.iconFile(ctx, id).delete()
@@ -1668,6 +1689,10 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     companion object {
         const val APPS_ID = "@apps"
+
+        /** 端の下（よく使う）に置いたショートカットの置き場所。 */
+        const val DOCK = "dock"
+        const val DOCK_MAX = 8
 
         /** NAS・ドライブの中身のうち、背景のファイラーのもの。 */
         const val DESK = ""

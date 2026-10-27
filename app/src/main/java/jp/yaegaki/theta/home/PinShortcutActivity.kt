@@ -50,7 +50,7 @@ class PinShortcutActivity : ComponentActivity() {
         }
         val store = (application as HomeApp).store
         // 置き場所：カテゴリーのタブ（カテゴリーの id）と、ほかのタブ（"tab:<id>"）
-        val cats = store.categories().map { it.id to it.name } +
+        val cats = listOf(HomeModel.DOCK to "ピン留め（端の下）") + store.categories().map { it.id to it.name } +
             store.tabs().filter { it.kind != jp.yaegaki.theta.home.data.TabKind.CATEGORY && it.kind != jp.yaegaki.theta.home.data.TabKind.APPS }.map { "tab:${it.id}" to it.label }
         val appCat = store.appCategories().entries.firstOrNull { it.key.startsWith(info.`package` + "/") }?.value
         val icon = runCatching {
@@ -63,7 +63,7 @@ class PinShortcutActivity : ComponentActivity() {
         setContent {
             HomeTheme(store.themeMode) {
                 val p = LocalPalette.current
-                var cat by remember { mutableStateOf(appCat ?: cats.firstOrNull()?.first ?: "") }
+                var cat by remember { mutableStateOf(appCat ?: cats.getOrNull(1)?.first ?: cats.first().first) }
                 AlertDialog(
                     onDismissRequest = { finish() },
                     title = { Text("タブに置く") },
@@ -90,6 +90,8 @@ class PinShortcutActivity : ComponentActivity() {
                                 val sc = PinnedShortcut(Store.newId(), info.`package`, info.id, Shortcuts.label(info), cat)
                                 Shortcuts.saveIcon(this@PinShortcutActivity, info, sc.id)
                                 store.saveShortcuts(store.shortcuts() + sc)
+                                // 端の下に置くときは並びにも（8 つまで）
+                                if (cat == HomeModel.DOCK) store.favoriteApps = (store.favoriteApps + ("sc:" + sc.id)).take(HomeModel.DOCK_MAX)
                                 (application as HomeApp).toast("「${sc.label}」を置きました")
                             }
                             finish()

@@ -714,4 +714,19 @@ class ScreenshotTest {
         compose.mainClock.advanceTimeBy(600)
         shot("category-board-edit")
     }
+
+    /** 端の下（START の上）に固定のよく使うアプリ。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun railDock() {
+        launch()
+        compose.waitForIdle()
+        scenario!!.onActivity { val m = model(); m.apps.take(3).forEach { a -> m.toggleDock(a.key) } }
+        compose.waitForIdle()
+        shot("rail-dock")
+        // すべてのアプリの上にも同じものを
+        compose.onNodeWithContentDescription("START", substring = true).performClick()
+        compose.mainClock.advanceTimeBy(600)
+        shot("apps-pinned")
+    }
 }

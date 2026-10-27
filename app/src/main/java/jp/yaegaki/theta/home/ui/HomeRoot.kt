@@ -43,6 +43,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -374,8 +376,104 @@ private fun Rail(model: HomeModel, width: Dp) {
         if (adding) AddTabDialog(model, onWidget = { adding = false; addingWidget = true }) { adding = false }
         if (addingWidget) AddWidgetDialog(model) { addingWidget = false }
     }
+    // よく使うアプリ・ショートカット：タブをスクロールしても隠れない、START の上
+    RailDock(model)
     StartButton(model)
     }
+}
+
+/** 端の下に固定のよく使うアプリ・ショートカット。押すと開く、長押しで並べ替え・外す・選ぶ。 */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun RailDock(model: HomeModel) {
+    val p = LocalPalette.current
+    val actions = LocalActions.current
+    val items = model.favoriteApps.mapNotNull { key ->
+        if (key.startsWith("sc:")) model.shortcuts.firstOrNull { it.id == key.removePrefix("sc:") }?.let { key to it }
+        else model.apps.firstOrNull { it.key == key }?.let { key to it }
+    }
+    if (items.isEmpty()) return
+    var menu by remember { mutableStateOf<String?>(null) }
+    var choosing by remember { mutableStateOf(false) }
+    // 場所を取らないよう、小さめのマス（34dp）を詰めて並べる
+    Column(Modifier.width(40.dp).padding(top = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.width(24.dp).height(1.dp).background(p.line))
+        items.forEachIndexed { i, (key, item) ->
+            Box {
+                Box(
+                    Modifier.size(34.dp)
+                        .combinedClickable(
+                            onClick = {
+                                when (item) {
+                                    is jp.yaegaki.theta.home.data.AppEntry -> actions.start(jp.yaegaki.theta.home.data.Apps.launchIntent(item))
+                                    is jp.yaegaki.theta.home.data.PinnedShortcut -> model.launchShortcut(item)
+                                }
+                            },
+                            onLongClick = { menu = key },
+                            onClickLabel = "開く",
+                            onLongClickLabel = "並べ替え・外す",
+                        )
+                        .semantics {
+                            contentDescription = when (item) {
+                                is jp.yaegaki.theta.home.data.AppEntry -> item.label
+                                is jp.yaegaki.theta.home.data.PinnedShortcut -> item.label
+                                else -> ""
+                            }
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    when (item) {
+                        is jp.yaegaki.theta.home.data.AppEntry -> AppIcon(item, 26.dp)
+                        is jp.yaegaki.theta.home.data.PinnedShortcut -> ShortcutIcon(item, 26.dp)
+                    }
+                }
+                DropdownMenu(expanded = menu == key, onDismissRequest = { menu = null }) {
+                    if (i > 0) DropdownMenuItem(text = { Text("▲ 上へ") }, onClick = { model.moveDock(key, -1) })
+                    if (i < items.lastIndex) DropdownMenuItem(text = { Text("▼ 下へ") }, onClick = { model.moveDock(key, 1) })
+                    DropdownMenuItem(text = { Text("ピン留めを外す") }, onClick = { menu = null; model.toggleDock(key) })
+                    DropdownMenuItem(text = { Text("ピン留めするアプリを選ぶ") }, onClick = { menu = null; choosing = true })
+                }
+            }
+        }
+    }
+    if (choosing) DockDialog(model) { choosing = false }
+}
+
+/** 端の下に置くアプリを選ぶ（8 つまで）。ショートカットは「SC」から。 */
+@Composable
+fun DockDialog(model: HomeModel, onDismiss: () -> Unit) {
+    val p = LocalPalette.current
+    var chosen by remember { mutableStateOf(model.favoriteApps.filter { !it.startsWith("sc:") }) }
+    var q by remember { mutableStateOf("") }
+    var shortcutsFor by remember { mutableStateOf<jp.yaegaki.theta.home.data.AppEntry?>(null) }
+    val scCount = model.favoriteApps.count { it.startsWith("sc:") }
+    val room = HomeModel.DOCK_MAX - scCount
+    val list = model.apps.filter { q.isBlank() || it.label.contains(q, ignoreCase = true) }.sortedBy { it.key !in chosen }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("ピン留め（${chosen.size + scCount}/${HomeModel.DOCK_MAX}）") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Note("端のタブの下（START の上）と、すべてのアプリの上に並べます。タブをスクロールしても隠れません。「SC」でそのアプリのショートカット（LINE のトークルームなど）も置けます。")
+                Field(q, { q = it }, "名前で絞り込み")
+                Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState())) {
+                    list.forEachIndexed { zi, app ->
+                        val on = app.key in chosen
+                        RowButton(zebra = zi, onClick = { chosen = if (on) chosen - app.key else if (chosen.size < room) chosen + app.key else chosen }) {
+                            androidx.compose.material3.Checkbox(checked = on, onCheckedChange = null)
+                            AppIcon(app, 28.dp)
+                            Text(app.label, color = p.fg, fontSize = 14.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            Text("SC", color = p.accent, fontSize = 11.sp, fontFamily = Hud.mono,
+                                modifier = Modifier.clickable(onClickLabel = "ショートカットを選ぶ") { shortcutsFor = app }.padding(8.dp))
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { model.setDockApps(chosen); onDismiss() }) { Text("保存") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("やめる") } },
+    )
+    shortcutsFor?.let { app -> AppShortcutsDialog(model, app, HomeModel.DOCK) { shortcutsFor = null } }
 }
 
 /**
@@ -561,6 +659,10 @@ fun AddTabDialog(model: HomeModel, onWidget: () -> Unit, onDismiss: () -> Unit) 
                     BoardItem.PANELS.forEach { (type, kind) -> PillButton("＋ " + kind.defaultLabel, { create(type) }) }
                     PillButton("＋ 空のタブ", { val t = model.addTab(TabKind.BOARD); onDismiss(); model.toggle(t.id) })
                 }
+                SectionTitle("PINNED / ピン留め（端の下・すべてのアプリの上）")
+                var docking by remember { mutableStateOf(false) }
+                PillButton("アプリ・ショートカットを選ぶ（${model.favoriteApps.size}/${HomeModel.DOCK_MAX}）", { docking = true })
+                if (docking) DockDialog(model) { docking = false; onDismiss() }
                 SectionTitle("CATEGORY / アプリのカテゴリー")
                 val cats = model.categories.filter { it.id !in usedCats }
                 if (model.categories.isEmpty()) Note("アプリのドロワーの「仕分け」でカテゴリーを作ると、ここでタブにできます。")

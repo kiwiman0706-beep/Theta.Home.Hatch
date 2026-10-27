@@ -519,6 +519,7 @@ private fun AppMenu(model: HomeModel, app: jp.yaegaki.theta.home.data.AppEntry, 
     val actions = LocalActions.current
     DropdownMenu(expanded = expanded, onDismissRequest = close) {
         DropdownMenuItem(text = { Text("ショートカット（タブに置く）") }, onClick = { close(); shortcuts() })
+        DropdownMenuItem(text = { Text(if (app.key in model.favoriteApps) "ピン留めを外す" else "ピン留め（端の下・すべてのアプリの上）") }, onClick = { close(); model.toggleDock(app.key) })
         DropdownMenuItem(text = { Text("カテゴリーを変える") }, onClick = { close(); move() })
         DropdownMenuItem(text = { Text("アプリ情報") }, onClick = { actions.start(Apps.infoIntent(app.packageName)); close() })
         if (!Apps.isSystem(actions.activity, app.packageName)) {
@@ -533,6 +534,7 @@ private fun AppMenu(model: HomeModel, app: jp.yaegaki.theta.home.data.AppEntry, 
 @Composable
 private fun ShortcutMenu(model: HomeModel, sc: jp.yaegaki.theta.home.data.PinnedShortcut, expanded: Boolean, close: () -> Unit, rename: () -> Unit) {
     DropdownMenu(expanded = expanded, onDismissRequest = close) {
+        DropdownMenuItem(text = { Text(if ("sc:" + sc.id in model.favoriteApps) "ピン留めを外す" else "ピン留め（端の下・すべてのアプリの上）") }, onClick = { close(); model.toggleDock("sc:" + sc.id) })
         DropdownMenuItem(text = { Text("名前を変える") }, onClick = { close(); rename() })
         DropdownMenuItem(text = { Text("このショートカットを外す") }, onClick = { close(); model.removeShortcut(sc.id) })
     }
@@ -549,7 +551,7 @@ internal fun AppShortcutsDialog(model: HomeModel, app: jp.yaegaki.theta.home.dat
     // "tab:<id>" はカテゴリー以外のタブ
     val targetName = model.categories.firstOrNull { it.id == target }?.name
         ?: target.takeIf { it.startsWith("tab:") }?.removePrefix("tab:")?.let { id -> model.tab(id)?.label }
-        ?: "未分類"
+        ?: if (target == HomeModel.DOCK) "端の下" else "未分類"
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(app.label) },
@@ -682,6 +684,60 @@ private fun AppsDrawer(model: HomeModel, only: String? = null, split: Boolean = 
                     GlyphButton(if (spec.grid) Glyph.LIST else Glyph.GRID, if (spec.grid) "一覧で見る" else "グリッドで見る", { model.setView(viewKey, spec.copy(grid = !spec.grid)) })
                     Box(Modifier.size(44.dp).clickable(onClickLabel = "大きさを変える") { model.setView(viewKey, spec.copy(size = (spec.size + 1) % ViewSpec.SIZES)) }, contentAlignment = Alignment.Center) {
                         Text(ViewSpec.NAMES[spec.size], color = p.muted, fontSize = 12.sp, fontFamily = Hud.mono, modifier = Modifier.border(1.dp, p.line).padding(horizontal = 5.dp, vertical = 2.dp))
+                    }
+                }
+            }
+        }
+        // すべてのアプリ：端の下に置いたもの（ピン留め）を上に 1 列で。長押しで外す
+        if (only == null && q.isBlank()) {
+            val pinned = model.favoriteApps.mapNotNull { key ->
+                if (key.startsWith("sc:")) model.shortcuts.firstOrNull { it.id == key.removePrefix("sc:") }?.let { key to it }
+                else model.apps.firstOrNull { it.key == key }?.let { key to it }
+            }
+            if (pinned.isNotEmpty()) item(key = "pinned") {
+                Column(Modifier.padding(bottom = 6.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        GlyphIcon(Glyph.PIN, p.accent, 12.dp)
+                        Text("PINNED", color = p.muted, fontSize = 11.sp, fontFamily = Hud.mono, letterSpacing = 1.5.sp)
+                        Ticks(Modifier.weight(1f).height(5.dp))
+                    }
+                    Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 4.dp)) {
+                        pinned.forEach { (key, item) ->
+                            var unpin by remember(key) { mutableStateOf(false) }
+                            Box {
+                                Column(
+                                    Modifier.width(60.dp)
+                                        .combinedClickable(
+                                            onClick = {
+                                                when (item) {
+                                                    is jp.yaegaki.theta.home.data.AppEntry -> actions.start(Apps.launchIntent(item))
+                                                    is jp.yaegaki.theta.home.data.PinnedShortcut -> model.launchShortcut(item)
+                                                }
+                                            },
+                                            onLongClick = { unpin = true },
+                                        )
+                                        .padding(vertical = 4.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                                ) {
+                                    when (item) {
+                                        is jp.yaegaki.theta.home.data.AppEntry -> AppIcon(item, 36.dp)
+                                        is jp.yaegaki.theta.home.data.PinnedShortcut -> ShortcutIcon(item, 36.dp)
+                                    }
+                                    Text(
+                                        when (item) {
+                                            is jp.yaegaki.theta.home.data.AppEntry -> item.label
+                                            is jp.yaegaki.theta.home.data.PinnedShortcut -> item.label
+                                            else -> ""
+                                        },
+                                        color = p.fg, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                                DropdownMenu(expanded = unpin, onDismissRequest = { unpin = false }) {
+                                    DropdownMenuItem(text = { Text("ピン留めを外す") }, onClick = { unpin = false; model.toggleDock(key) })
+                                }
+                            }
+                        }
                     }
                 }
             }
