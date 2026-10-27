@@ -729,4 +729,26 @@ class ScreenshotTest {
         compose.mainClock.advanceTimeBy(600)
         shot("apps-pinned")
     }
+
+    /** ピン留めの初め：LINE・Google の音声検索・MemoHatch の音声メモ（入っているので出る）。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun defaultPins() {
+        launch { app ->
+            val pm = shadowOf(app.packageManager)
+            val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+            listOf("jp.naver.line.android" to "LINE", "com.google.android.googlequicksearchbox" to "Google", "jp.yaegaki.theta.memo" to "Memo Hatch").forEach { (pkg, label) ->
+                val info = ApplicationInfo().apply { packageName = pkg; nonLocalizedLabel = label }
+                pm.addResolveInfoForIntent(launcher, ResolveInfo().apply {
+                    activityInfo = ActivityInfo().apply { packageName = pkg; name = "$pkg.Main"; applicationInfo = info; nonLocalizedLabel = label }
+                    nonLocalizedLabel = label
+                })
+            }
+        }
+        compose.waitForIdle()
+        org.junit.Assert.assertEquals(listOf("LINE", "音声検索", "音声メモ"), model().dockItems().map { jp.yaegaki.theta.home.ui.dockLabel(it.second) })
+        compose.onNodeWithContentDescription("START", substring = true).performClick()
+        compose.mainClock.advanceTimeBy(600)
+        shot("default-pins")
+    }
 }

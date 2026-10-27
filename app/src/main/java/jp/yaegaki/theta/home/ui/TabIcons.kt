@@ -95,3 +95,38 @@ fun TabIconDialog(model: HomeModel, id: String, onDismiss: () -> Unit) {
         confirmButton = { TextButton(onClick = onDismiss) { Text("閉じる") } },
     )
 }
+
+/** ピン留めの 1 つの名前。 */
+fun dockLabel(item: Any): String = when (item) {
+    is jp.yaegaki.theta.home.data.AppEntry -> item.label
+    is jp.yaegaki.theta.home.data.PinnedShortcut -> item.label
+    is jp.yaegaki.theta.home.DockAction -> item.label
+    else -> ""
+}
+
+/** ピン留めの 1 つを開く。 */
+fun dockLaunch(model: HomeModel, actions: Actions, item: Any) {
+    when (item) {
+        is jp.yaegaki.theta.home.data.AppEntry -> actions.start(jp.yaegaki.theta.home.data.Apps.launchIntent(item))
+        is jp.yaegaki.theta.home.data.PinnedShortcut -> model.launchShortcut(item)
+        is jp.yaegaki.theta.home.DockAction -> model.runDockAction(item, actions.start)
+    }
+}
+
+/** ピン留めの 1 つのアイコン。機能はそのアプリのアイコンに、右下のマイクの印（アプリが無ければマイクだけ）。 */
+@Composable
+fun DockIcon(model: HomeModel, item: Any, size: Dp) {
+    val p = LocalPalette.current
+    when (item) {
+        is jp.yaegaki.theta.home.data.AppEntry -> AppIcon(item, size)
+        is jp.yaegaki.theta.home.data.PinnedShortcut -> ShortcutIcon(item, size)
+        is jp.yaegaki.theta.home.DockAction -> Box(Modifier.size(size)) {
+            val app = item.pkg?.let { pkg -> model.apps.firstOrNull { it.packageName == pkg } }
+            if (app != null) AppIcon(app, size) else GlyphIcon(Glyph.MIC, p.accent, size)
+            if (app != null) Box(
+                Modifier.align(Alignment.BottomEnd).size(size * 0.5f).background(p.accent),
+                contentAlignment = Alignment.Center,
+            ) { GlyphIcon(Glyph.MIC, p.onAccent, size * 0.4f) }
+        }
+    }
+}

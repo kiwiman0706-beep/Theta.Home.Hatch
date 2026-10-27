@@ -1389,13 +1389,48 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     // ---- 端の下に固定（よく使うアプリ・ショートカット。タブをスクロールしても隠れない） ----
 
-    /** 端の下に置けるのは 8 つまで。キーはアプリ（AppEntry.key）か "sc:<ショートカットの id>"。 */
+    /** 端の下に置けるのは 8 つまで。キーは Store.favoriteApps の説明のとおり。 */
     fun toggleDock(key: String) = saveDock(if (key in favoriteApps) favoriteApps - key else (favoriteApps + key).take(DOCK_MAX))
 
+    /** アプリをピン留めしているか（"pkg:" で置いた LINE なども）。 */
+    fun isPinned(app: AppEntry) = app.key in favoriteApps || "pkg:" + app.packageName in favoriteApps
+
+    fun toggleDockApp(app: AppEntry) {
+        if (isPinned(app)) saveDock(favoriteApps - app.key - ("pkg:" + app.packageName)) else toggleDock(app.key)
+    }
+
+    /** ピン留めのアプリだけ選び直す（ショートカット・機能はそのまま）。 */
     fun setDockApps(appKeys: List<String>) {
-        // ショートカットはそのまま、アプリだけ選び直す
-        val kept = favoriteApps.filter { it.startsWith("sc:") || it in appKeys }
-        saveDock((kept + appKeys.filter { it !in kept }).take(DOCK_MAX))
+        val kept = favoriteApps.filter { k ->
+            k.startsWith("sc:") || k.startsWith("act:") || k in appKeys ||
+                k.startsWith("pkg:") && apps.any { "pkg:" + it.packageName == k && it.key in appKeys }
+        }
+        val keptApps = kept.flatMap { k -> if (k.startsWith("pkg:")) apps.filter { "pkg:" + it.packageName == k }.map { it.key } else listOf(k) }
+        saveDock((kept + appKeys.filter { it !in keptApps }).take(DOCK_MAX))
+    }
+
+    /** ピン留めの中身：アプリ・ショートカット・機能。入っていないアプリ・消えたショートカットは出さない。 */
+    fun dockItems(): List<Pair<String, Any>> = favoriteApps.mapNotNull { key ->
+        when {
+            key.startsWith("sc:") -> shortcuts.firstOrNull { it.id == key.removePrefix("sc:") }
+            key.startsWith("pkg:") -> apps.firstOrNull { it.packageName == key.removePrefix("pkg:") }
+            key.startsWith("act:") -> DOCK_ACTIONS.firstOrNull { it.id == key.removePrefix("act:") }?.takeIf { a -> a.pkg == null || apps.any { it.packageName == a.pkg } || a.fallback }
+            else -> apps.firstOrNull { it.key == key }
+        }?.let { key to it }
+    }
+
+    /** ピン留めの機能を動かす。 */
+    fun runDockAction(a: DockAction, start: (Intent) -> Unit) {
+        when (a.id) {
+            // Google の音声検索（Google アプリが無ければ、端末の音声入力の検索）
+            "voice" -> {
+                val google = Intent(android.speech.RecognizerIntent.ACTION_WEB_SEARCH).setPackage(GOOGLE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                if (apps.any { it.packageName == GOOGLE }) start(google)
+                else start(Intent(android.speech.RecognizerIntent.ACTION_WEB_SEARCH).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+            // MemoHatch：新しい音声メモ（録音から）
+            "memo-audio" -> start(Intent("jp.yaegaki.theta.memo.NEW").setPackage(MEMO).putExtra("type", "audio").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
     }
 
     fun moveDock(key: String, delta: Int) {
@@ -1690,6 +1725,15 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     companion object {
         const val APPS_ID = "@apps"
 
+        const val GOOGLE = "com.google.android.googlequicksearchbox"
+        const val MEMO = "jp.yaegaki.theta.memo"
+
+        /** ピン留めできる機能。pkg のアプリが入っているときだけ出す（fallback は無くても出す）。 */
+        val DOCK_ACTIONS = listOf(
+            DockAction("voice", "音声検索", GOOGLE, fallback = true),
+            DockAction("memo-audio", "音声メモ", MEMO),
+        )
+
         /** 端の下（よく使う）に置いたショートカットの置き場所。 */
         const val DOCK = "dock"
         const val DOCK_MAX = 8
@@ -1721,3 +1765,6 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         }
     }
 }
+
+/** ピン留めできる機能（アプリの中の 1 つの操作）。アイコンは pkg のアプリのアイコンにマイクの印。 */
+data class DockAction(val id: String, val label: String, val pkg: String?, val fallback: Boolean = false)

@@ -373,8 +373,13 @@ class Store(context: Context) {
         get() = prefs.getBoolean("monoIcons", true)
         set(v) = prefs.edit().putBoolean("monoIcons", v).apply()
 
+    /**
+     * ピン留め（端の下・すべてのアプリの上）。キーはアプリ（AppEntry.key）・"pkg:<パッケージ>"（そのアプリ）・
+     * "sc:<ショートカットの id>"・"act:<機能>"（Google の音声検索・MemoHatch の音声メモ）。
+     * 一度も決めていなければ、LINE・Google の音声検索・MemoHatch の音声メモ（入っているものだけ出る）。
+     */
     var favoriteApps: List<String>
-        get() = strings("favApps")
+        get() = if (prefs.contains("favApps")) strings("favApps") else DEFAULT_PINS
         set(v) = putStrings("favApps", v)
 
     /** 背景のファイラーで最後に見ていた場所（"tab:<id>"・"nas"・"recent"）。 */
@@ -611,6 +616,8 @@ class Store(context: Context) {
 
     companion object {
         fun newId(): String = UUID.randomUUID().toString().take(8)
+
+        val DEFAULT_PINS = listOf("pkg:jp.naver.line.android", "act:voice", "act:memo-audio")
 
         /** 0.5.x までの日本語の初期名。名前を変えていなければ英語の初期名に置き換える。 */
         private val OLD_LABELS = mapOf(

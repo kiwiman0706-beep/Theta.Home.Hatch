@@ -388,10 +388,7 @@ private fun Rail(model: HomeModel, width: Dp) {
 private fun RailDock(model: HomeModel) {
     val p = LocalPalette.current
     val actions = LocalActions.current
-    val items = model.favoriteApps.mapNotNull { key ->
-        if (key.startsWith("sc:")) model.shortcuts.firstOrNull { it.id == key.removePrefix("sc:") }?.let { key to it }
-        else model.apps.firstOrNull { it.key == key }?.let { key to it }
-    }
+    val items = model.dockItems()
     if (items.isEmpty()) return
     var menu by remember { mutableStateOf<String?>(null) }
     var choosing by remember { mutableStateOf(false) }
@@ -403,30 +400,14 @@ private fun RailDock(model: HomeModel) {
                 Box(
                     Modifier.size(34.dp)
                         .combinedClickable(
-                            onClick = {
-                                when (item) {
-                                    is jp.yaegaki.theta.home.data.AppEntry -> actions.start(jp.yaegaki.theta.home.data.Apps.launchIntent(item))
-                                    is jp.yaegaki.theta.home.data.PinnedShortcut -> model.launchShortcut(item)
-                                }
-                            },
+                            onClick = { dockLaunch(model, actions, item) },
                             onLongClick = { menu = key },
                             onClickLabel = "開く",
                             onLongClickLabel = "並べ替え・外す",
                         )
-                        .semantics {
-                            contentDescription = when (item) {
-                                is jp.yaegaki.theta.home.data.AppEntry -> item.label
-                                is jp.yaegaki.theta.home.data.PinnedShortcut -> item.label
-                                else -> ""
-                            }
-                        },
+                        .semantics { contentDescription = dockLabel(item) },
                     contentAlignment = Alignment.Center,
-                ) {
-                    when (item) {
-                        is jp.yaegaki.theta.home.data.AppEntry -> AppIcon(item, 26.dp)
-                        is jp.yaegaki.theta.home.data.PinnedShortcut -> ShortcutIcon(item, 26.dp)
-                    }
-                }
+                ) { DockIcon(model, item, 26.dp) }
                 DropdownMenu(expanded = menu == key, onDismissRequest = { menu = null }) {
                     if (i > 0) DropdownMenuItem(text = { Text("▲ 上へ") }, onClick = { model.moveDock(key, -1) })
                     if (i < items.lastIndex) DropdownMenuItem(text = { Text("▼ 下へ") }, onClick = { model.moveDock(key, 1) })
@@ -443,10 +424,13 @@ private fun RailDock(model: HomeModel) {
 @Composable
 fun DockDialog(model: HomeModel, onDismiss: () -> Unit) {
     val p = LocalPalette.current
-    var chosen by remember { mutableStateOf(model.favoriteApps.filter { !it.startsWith("sc:") }) }
+    // "pkg:" で置いたもの（初めの LINE など）は、そのアプリとして選んだことに
+    var chosen by remember {
+        mutableStateOf(model.dockItems().mapNotNull { (_, it) -> (it as? jp.yaegaki.theta.home.data.AppEntry)?.key })
+    }
     var q by remember { mutableStateOf("") }
     var shortcutsFor by remember { mutableStateOf<jp.yaegaki.theta.home.data.AppEntry?>(null) }
-    val scCount = model.favoriteApps.count { it.startsWith("sc:") }
+    val scCount = model.favoriteApps.count { it.startsWith("sc:") || it.startsWith("act:") }
     val room = HomeModel.DOCK_MAX - scCount
     val list = model.apps.filter { q.isBlank() || it.label.contains(q, ignoreCase = true) }.sortedBy { it.key !in chosen }
     AlertDialog(
@@ -455,8 +439,15 @@ fun DockDialog(model: HomeModel, onDismiss: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Note("端のタブの下（START の上）と、すべてのアプリの上に並べます。タブをスクロールしても隠れません。「SC」でそのアプリのショートカット（LINE のトークルームなど）も置けます。")
+                // 機能：Google の音声検索・MemoHatch の音声メモ
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    HomeModel.DOCK_ACTIONS.forEach { a ->
+                        val on = "act:" + a.id in model.favoriteApps
+                        PillButton((if (on) "✓ " else "＋ ") + a.label, { model.toggleDock("act:" + a.id) }, primary = on)
+                    }
+                }
                 Field(q, { q = it }, "名前で絞り込み")
-                Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState())) {
+                Column(Modifier.heightIn(max = 340.dp).verticalScroll(rememberScrollState())) {
                     list.forEachIndexed { zi, app ->
                         val on = app.key in chosen
                         RowButton(zebra = zi, onClick = { chosen = if (on) chosen - app.key else if (chosen.size < room) chosen + app.key else chosen }) {

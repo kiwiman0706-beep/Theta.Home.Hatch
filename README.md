@@ -8,7 +8,7 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**0.29.0-alpha（versionCode 34）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.29.1-alpha（versionCode 35）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
@@ -65,7 +65,7 @@
 <img src="docs/screenshots/folder-drawer.png" width="200" alt="フォルダのタブ（ドロワー、上に置いたアプリ）"> <img src="docs/screenshots/category-split.png" width="200" alt="カテゴリーのタブ（ショートカットを別の段に）"> <img src="docs/screenshots/file-tab.png" width="320" alt="FILE のタブ">
 
 - アプリの一覧は端のタブのいちばん下に固定の「START（ALL）」か、検索の横のボタン（Alt＋A）。仕分けたカテゴリーは、それぞれタブにもできる（アイコンのグリッド）。
-- **ピン留め**：よく使うアプリ・ショートカット（8 つまで）を、端のタブの下（START の上、スクロールしても隠れない）と、すべてのアプリの上に並べる。アプリ・ショートカットの長押し →「ピン留め」、または「＋」→ PINNED で選ぶ。
+- **ピン留め**：よく使うアプリ・ショートカット（8 つまで）を、端のタブの下（START の上、スクロールしても隠れない）と、すべてのアプリの上に並べる。アプリ・ショートカットの長押し →「ピン留め」、または「＋」→ PINNED で選ぶ。初めは LINE・Google の音声検索・MemoHatch の音声メモ（入っているものだけ）。音声検索・音声メモのような「機能」もピン留めできる。
 
 <img src="docs/screenshots/rail-dock.png" width="200" alt="端の下のピン留め"> <img src="docs/screenshots/apps-pinned.png" width="200" alt="すべてのアプリの上のピン留め">
 

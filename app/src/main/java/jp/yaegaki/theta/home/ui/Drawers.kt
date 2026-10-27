@@ -519,7 +519,7 @@ private fun AppMenu(model: HomeModel, app: jp.yaegaki.theta.home.data.AppEntry, 
     val actions = LocalActions.current
     DropdownMenu(expanded = expanded, onDismissRequest = close) {
         DropdownMenuItem(text = { Text("ショートカット（タブに置く）") }, onClick = { close(); shortcuts() })
-        DropdownMenuItem(text = { Text(if (app.key in model.favoriteApps) "ピン留めを外す" else "ピン留め（端の下・すべてのアプリの上）") }, onClick = { close(); model.toggleDock(app.key) })
+        DropdownMenuItem(text = { Text(if (model.isPinned(app)) "ピン留めを外す" else "ピン留め（端の下・すべてのアプリの上）") }, onClick = { close(); model.toggleDockApp(app) })
         DropdownMenuItem(text = { Text("カテゴリーを変える") }, onClick = { close(); move() })
         DropdownMenuItem(text = { Text("アプリ情報") }, onClick = { actions.start(Apps.infoIntent(app.packageName)); close() })
         if (!Apps.isSystem(actions.activity, app.packageName)) {
@@ -690,10 +690,7 @@ private fun AppsDrawer(model: HomeModel, only: String? = null, split: Boolean = 
         }
         // すべてのアプリ：端の下に置いたもの（ピン留め）を上に 1 列で。長押しで外す
         if (only == null && q.isBlank()) {
-            val pinned = model.favoriteApps.mapNotNull { key ->
-                if (key.startsWith("sc:")) model.shortcuts.firstOrNull { it.id == key.removePrefix("sc:") }?.let { key to it }
-                else model.apps.firstOrNull { it.key == key }?.let { key to it }
-            }
+            val pinned = model.dockItems()
             if (pinned.isNotEmpty()) item(key = "pinned") {
                 Column(Modifier.padding(bottom = 6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -708,28 +705,16 @@ private fun AppsDrawer(model: HomeModel, only: String? = null, split: Boolean = 
                                 Column(
                                     Modifier.width(60.dp)
                                         .combinedClickable(
-                                            onClick = {
-                                                when (item) {
-                                                    is jp.yaegaki.theta.home.data.AppEntry -> actions.start(Apps.launchIntent(item))
-                                                    is jp.yaegaki.theta.home.data.PinnedShortcut -> model.launchShortcut(item)
-                                                }
-                                            },
+                                            onClick = { dockLaunch(model, actions, item) },
                                             onLongClick = { unpin = true },
                                         )
                                         .padding(vertical = 4.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(2.dp),
                                 ) {
-                                    when (item) {
-                                        is jp.yaegaki.theta.home.data.AppEntry -> AppIcon(item, 36.dp)
-                                        is jp.yaegaki.theta.home.data.PinnedShortcut -> ShortcutIcon(item, 36.dp)
-                                    }
+                                    DockIcon(model, item, 36.dp)
                                     Text(
-                                        when (item) {
-                                            is jp.yaegaki.theta.home.data.AppEntry -> item.label
-                                            is jp.yaegaki.theta.home.data.PinnedShortcut -> item.label
-                                            else -> ""
-                                        },
+                                        dockLabel(item),
                                         color = p.fg, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     )
                                 }
