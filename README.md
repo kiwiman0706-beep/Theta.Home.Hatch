@@ -8,7 +8,7 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**0.29.1-alpha（versionCode 35）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.30.0-alpha（versionCode 36）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
@@ -68,6 +68,12 @@
 - **ピン留め**：よく使うアプリ・ショートカット（8 つまで）を、端のタブの下（START の上、スクロールしても隠れない）と、すべてのアプリの上に並べる。アプリ・ショートカットの長押し →「ピン留め」、または「＋」→ PINNED で選ぶ。初めは LINE・Google の音声検索・MemoHatch の音声メモ（入っているものだけ）。音声検索・音声メモのような「機能」もピン留めできる。
 
 <img src="docs/screenshots/rail-dock.png" width="200" alt="端の下のピン留め"> <img src="docs/screenshots/apps-pinned.png" width="200" alt="すべてのアプリの上のピン留め">
+
+- **入力**（ピン留めのペンのアイコン）：声・文字・写真で書いて、そのまま **LINE・メール・ほかへ共有・Clip** へ送る。どれを押しても先に **MemoHatch に残す**（入っていなければこのホームの Clip）。「送り先…」で並びと、LINE の決まった宛先（最近の会話から。試しの機能）を選べる。
+
+<img src="docs/screenshots/quick-input.png" width="200" alt="入力"> <img src="docs/screenshots/quick-targets.png" width="200" alt="送り先">
+
+- **回線の速さ**：上の帯に下りの速さと応答時間（初めは 30 分おき、設定の NETWORK で 15・30・60 分・切る、モバイル回線では測らない設定も）。押すとすぐ測る。つながらない・遅いときは **再接続** のボタン：アプリからはモバイルデータを切り替えられないので、Galaxy のモードとルーチンなどで「モバイルデータを切って入れる」ルーチンを作り、そのショートカットを「再接続ボタン」の置き場に置くとそれを動かす。置いていなければ、Android に「つながらない」と知らせて、インターネットの切り替えパネルを開く。
 
 - ピン留め：Fold5 メイン（690dp 以上）で 1 枚、横向きタブレット（1180dp 以上）で 2 枚、ドロワーを横に並べて出しておける。
 

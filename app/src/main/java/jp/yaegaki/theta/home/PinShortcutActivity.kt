@@ -50,7 +50,7 @@ class PinShortcutActivity : ComponentActivity() {
         }
         val store = (application as HomeApp).store
         // 置き場所：カテゴリーのタブ（カテゴリーの id）と、ほかのタブ（"tab:<id>"）
-        val cats = listOf(HomeModel.DOCK to "ピン留め（端の下）") + store.categories().map { it.id to it.name } +
+        val cats = listOf(HomeModel.DOCK to "ピン留め（端の下）", HomeModel.RECONNECT to "再接続ボタン（ルーチンなど）") + store.categories().map { it.id to it.name } +
             store.tabs().filter { it.kind != jp.yaegaki.theta.home.data.TabKind.CATEGORY && it.kind != jp.yaegaki.theta.home.data.TabKind.APPS }.map { "tab:${it.id}" to it.label }
         val appCat = store.appCategories().entries.firstOrNull { it.key.startsWith(info.`package` + "/") }?.value
         val icon = runCatching {

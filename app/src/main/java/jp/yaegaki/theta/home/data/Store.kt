@@ -376,11 +376,22 @@ class Store(context: Context) {
     /**
      * ピン留め（端の下・すべてのアプリの上）。キーはアプリ（AppEntry.key）・"pkg:<パッケージ>"（そのアプリ）・
      * "sc:<ショートカットの id>"・"act:<機能>"（Google の音声検索・MemoHatch の音声メモ）。
-     * 一度も決めていなければ、LINE・Google の音声検索・MemoHatch の音声メモ（入っているものだけ出る）。
+     * 一度も決めていなければ、入力（声・文字・写真 → 送る）・LINE・Google の音声検索・MemoHatch の音声メモ（入っているものだけ出る）。
      */
     var favoriteApps: List<String>
-        get() = if (prefs.contains("favApps")) strings("favApps") else DEFAULT_PINS
-        set(v) = putStrings("favApps", v)
+        get() {
+            if (!prefs.contains("favApps")) return DEFAULT_PINS
+            val saved = strings("favApps")
+            // 0.30 で足した「入力」：前からピンを決めていた人にも一度だけ先頭に足す
+            if (prefs.getBoolean("quickPinned", false)) return saved
+            prefs.edit().putBoolean("quickPinned", true).apply()
+            if ("act:quick" in saved) return saved
+            return (listOf("act:quick") + saved).take(8).also { putStrings("favApps", it) }
+        }
+        set(v) {
+            prefs.edit().putBoolean("quickPinned", true).apply()
+            putStrings("favApps", v)
+        }
 
     /** 背景のファイラーで最後に見ていた場所（"tab:<id>"・"nas"・"recent"）。 */
     var location: String
@@ -529,6 +540,29 @@ class Store(context: Context) {
         set(v) = prefs.edit().putString("calMode", v).apply()
 
     /** エッジ：どのアプリの上でも、画面の端からタブを引き出す。side は "left"・"right"、pos は取っ手の上端（画面の高さの %）。 */
+    /**
+     * 入力（声・文字・写真）の送り先。"line"（LINE で宛先を選ぶ）・"line:<ショートカットの id>|<名前>"（決めた宛先）・
+     * "mail"・"share"（共有メニュー）・"clip"（このホームの Clip）。
+     */
+    var quickTargets: List<String>
+        get() = if (prefs.contains("quickTargets")) strings("quickTargets") else listOf("line", "mail", "share")
+        set(v) = putStrings("quickTargets", v)
+
+    /** 入力したものを、送り先に関わらず MemoHatch にも残す。 */
+    var quickMemo: Boolean
+        get() = prefs.getBoolean("quickMemo", true)
+        set(v) = prefs.edit().putBoolean("quickMemo", v).apply()
+
+    /** 回線の速さを測る間隔（分）。0 なら測らない。ホームが見えている間だけ測る。 */
+    var speedEvery: Int
+        get() = prefs.getInt("speedEvery", 30)
+        set(v) = prefs.edit().putInt("speedEvery", v).apply()
+
+    /** モバイルデータのときも測るか（1 回 0.5MB）。 */
+    var speedOnMobile: Boolean
+        get() = prefs.getBoolean("speedOnMobile", true)
+        set(v) = prefs.edit().putBoolean("speedOnMobile", v).apply()
+
     /** ファイルをホームの中（ポップアップ）で開く。オフなら今までどおりほかのアプリで。 */
     var inAppViewer: Boolean
         get() = prefs.getBoolean("inAppViewer", true)
@@ -617,7 +651,7 @@ class Store(context: Context) {
     companion object {
         fun newId(): String = UUID.randomUUID().toString().take(8)
 
-        val DEFAULT_PINS = listOf("pkg:jp.naver.line.android", "act:voice", "act:memo-audio")
+        val DEFAULT_PINS = listOf("act:quick", "pkg:jp.naver.line.android", "act:voice", "act:memo-audio")
 
         /** 0.5.x までの日本語の初期名。名前を変えていなければ英語の初期名に置き換える。 */
         private val OLD_LABELS = mapOf(

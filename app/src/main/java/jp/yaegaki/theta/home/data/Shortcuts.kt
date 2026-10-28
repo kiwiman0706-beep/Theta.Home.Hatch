@@ -39,6 +39,17 @@ object Shortcuts {
         la(ctx).getShortcuts(q, Process.myUserHandle()).orEmpty().filter { it.isEnabled }.sortedBy { it.rank }
     }.getOrDefault(emptyList())
 
+    /**
+     * 共有の宛先に使えるショートカット（LINE のトークルームなど）。最近の会話（動的・保存済み）と、置いたもの。
+     * 送るときは共有の Intent に EXTRA_SHORTCUT_ID を付ける（共有メニューの「直接共有」と同じ）。
+     */
+    fun shareTargets(ctx: Context, pkg: String): List<ShortcutInfo> = runCatching {
+        var flags = LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC or LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED
+        if (android.os.Build.VERSION.SDK_INT >= 30) flags = flags or LauncherApps.ShortcutQuery.FLAG_MATCH_CACHED
+        val q = LauncherApps.ShortcutQuery().setPackage(pkg).setQueryFlags(flags)
+        la(ctx).getShortcuts(q, Process.myUserHandle()).orEmpty().filter { it.isEnabled }.distinctBy { it.id }.sortedBy { it.rank }
+    }.getOrDefault(emptyList())
+
     fun label(s: ShortcutInfo): String = (s.shortLabel ?: s.longLabel ?: s.id).toString()
 
     fun start(ctx: Context, s: PinnedShortcut): Boolean = runCatching {

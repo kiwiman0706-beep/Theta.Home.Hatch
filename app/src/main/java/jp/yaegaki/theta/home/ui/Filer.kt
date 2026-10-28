@@ -341,6 +341,17 @@ internal fun StatusStrip(model: HomeModel, openNasSettings: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             chip("NET", if (s == null) "----" else if (s.network) "ONLINE" else "OFFLINE", s?.network) { model.refreshStatus(force = true) }
+            // 回線の速さ（押すと測り直す）。つながらない・とても遅いときは再接続
+            val sp = model.speed
+            chip("SPEED", when {
+                model.measuring -> "MEASURE…"
+                sp != null -> "↓${jp.yaegaki.theta.home.data.NetSpeed.label(sp.down)}M · ${sp.ping}ms"
+                model.speedError != null -> "ERR"
+                else -> "----"
+            }, if (sp == null) (if (model.speedError != null) false else null) else sp.down >= 1.0) { model.refreshSpeed(force = true) }
+            if (s?.network == false || model.speedError != null || (sp != null && sp.down < 0.5)) {
+                chip("RECONNECT", "再接続 ›", false) { model.reconnect(actions.start) }
+            }
             chip("TAILSCALE", when {
                 s == null -> "----"
                 !s.tailscale -> "未導入"

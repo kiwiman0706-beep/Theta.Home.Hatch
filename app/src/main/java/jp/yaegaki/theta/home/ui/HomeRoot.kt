@@ -205,6 +205,7 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity, edgeExit: (() -> Uni
             model.importReport?.let { r -> ImportReportDialog(model, r) { model.importReport = null } }
             // 中で開いたファイル（いちばん上に重ねる）
             ViewerOverlay(model)
+            QuickInput(model)
         }
     }
 }

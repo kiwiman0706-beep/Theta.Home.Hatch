@@ -327,7 +327,7 @@ private fun SwipeRow(rightLabel: String, leftLabel: String, onRight: () -> Unit,
 class VoiceState(val start: () -> Unit, val stop: () -> Unit, val listening: Boolean)
 
 @Composable
-private fun rememberVoice(onPartial: (String) -> Unit, onFinal: (List<String>) -> Unit): VoiceState {
+internal fun rememberVoice(onPartial: (String) -> Unit, onFinal: (List<String>) -> Unit): VoiceState {
     val actions = LocalActions.current
     val ctx = actions.activity
     var listening by remember { mutableStateOf(false) }

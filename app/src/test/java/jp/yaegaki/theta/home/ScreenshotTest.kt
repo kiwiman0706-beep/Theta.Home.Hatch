@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.assertIsDisplayed
@@ -730,7 +731,7 @@ class ScreenshotTest {
         shot("apps-pinned")
     }
 
-    /** ピン留めの初め：LINE・Google の音声検索・MemoHatch の音声メモ（入っているので出る）。 */
+    /** ピン留めの初め：入力・LINE・Google の音声検索・MemoHatch の音声メモ（入っているので出る）。 */
     @Test
     @Config(qualifiers = "w360dp-h860dp-xxhdpi")
     fun defaultPins() {
@@ -746,9 +747,42 @@ class ScreenshotTest {
             }
         }
         compose.waitForIdle()
-        org.junit.Assert.assertEquals(listOf("LINE", "音声検索", "音声メモ"), model().dockItems().map { jp.yaegaki.theta.home.ui.dockLabel(it.second) })
+        org.junit.Assert.assertEquals(listOf("入力", "LINE", "音声検索", "音声メモ"), model().dockItems().map { jp.yaegaki.theta.home.ui.dockLabel(it.second) })
         compose.onNodeWithContentDescription("START", substring = true).performClick()
         compose.mainClock.advanceTimeBy(600)
         shot("default-pins")
+    }
+
+    /** ピン留めの「入力」：書いて、送り先を選ぶ。MemoHatch が無ければ Clip に残る。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun quickInput() {
+        launch()
+        compose.waitForIdle()
+        scenario!!.onActivity { model().quickOpen = "text" }
+        compose.waitForIdle()
+        compose.onNodeWithText("ここに書く・マイクで話す").performTextInput("牛乳を買う")
+        compose.waitForIdle()
+        shot("quick-input")
+        compose.onNodeWithText("送り先…").performClick()
+        compose.waitForIdle()
+        shot("quick-targets")
+        compose.onNodeWithText("やめる").performClick()
+        compose.onNodeWithText("メモだけ").performClick()
+        compose.waitForIdle()
+        org.junit.Assert.assertNull(model().quickOpen)
+        org.junit.Assert.assertEquals("牛乳を買う", model().clips.firstOrNull()?.text)
+    }
+
+    /** 前から決めていたピンにも「入力」が一度だけ足される。外したら戻らない。 */
+    @Test
+    fun quickPinMigrates() {
+        val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val store = jp.yaegaki.theta.home.data.Store(ctx)
+        // 0.29 までに決めたピン（印なし）
+        store.prefs.edit().putString("favApps", "[\"pkg:a\"]").apply()
+        org.junit.Assert.assertEquals(listOf("act:quick", "pkg:a"), store.favoriteApps)
+        store.favoriteApps = listOf("pkg:a")
+        org.junit.Assert.assertEquals(listOf("pkg:a"), store.favoriteApps)
     }
 }

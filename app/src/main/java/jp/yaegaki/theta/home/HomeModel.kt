@@ -437,6 +437,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     fun onHome() {
         viewer = null
+        quickOpen = null
         open = null
         settingsOpen = false
         query = ""
@@ -746,6 +747,136 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             checking = false
         }
     }
+
+    // ---- 入力（声・文字・写真）→ 送る。MemoHatch にも残す ----
+
+    /** 開いている入力の初めのやり方（"voice"・"text"・"photo"）。null なら閉じている。 */
+    var quickOpen by mutableStateOf<String?>(null)
+    var quickTargets by mutableStateOf(store.quickTargets); private set
+    var quickMemo by mutableStateOf(store.quickMemo); private set
+    fun changeQuickMemo(v: Boolean) { quickMemo = v; store.quickMemo = v }
+    fun changeQuickTargets(list: List<String>) { quickTargets = list.distinct(); store.quickTargets = quickTargets }
+
+    /** 送り先の名前。 */
+    fun quickTargetLabel(t: String): String = when {
+        t == "line" -> "LINE"
+        t.startsWith("line:") -> t.substringAfter('|', "LINE")
+        t == "mail" -> "メール"
+        t == "share" -> "ほかへ共有"
+        t == "clip" -> "Clip"
+        else -> t
+    }
+
+    /** LINE の最近の会話（宛先に選べるもの）。このアプリが既定のホームのときだけ取れる。 */
+    fun lineRecipients(): List<Pair<String, String>> =
+        jp.yaegaki.theta.home.data.Shortcuts.shareTargets(ctx, LINE).map { it.id to jp.yaegaki.theta.home.data.Shortcuts.label(it) }
+
+    fun memoInstalled() = apps.any { it.packageName == MEMO }
+
+    /**
+     * 送る。まず MemoHatch に残し（入っていなければこのホームの Clip に）、それから送り先へ。
+     * target が "memo" なら残すだけ。photo は端末の中の写真（FileProvider の URI）。
+     */
+    fun sendQuick(text: String, photo: Uri?, target: String, start: (Intent) -> Unit) {
+        val body = text.trim()
+        if (body.isEmpty() && photo == null) return
+        fun put(i: Intent): Intent {
+            if (photo != null) {
+                i.setType("image/jpeg").putExtra(Intent.EXTRA_STREAM, photo).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                i.clipData = android.content.ClipData.newRawUri("photo", photo)
+            } else i.setType("text/plain")
+            if (body.isNotEmpty()) i.putExtra(Intent.EXTRA_TEXT, body)
+            return i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        // 必ず残す（MemoHatch は受け取るとそのまま保存して閉じる）
+        if (quickMemo || target == "memo") {
+            if (memoInstalled()) start(put(Intent(Intent.ACTION_SEND).setClassName(MEMO, "$MEMO.ShareActivity")))
+            else {
+                addToClip(ctx, body.ifEmpty { null }, listOfNotNull(photo))
+                reloadClips()
+            }
+        }
+        when {
+            target == "memo" -> (ctx as HomeApp).toast(if (memoInstalled()) "MemoHatch に残しました" else "Clip に残しました（MemoHatch が入っていません）")
+            target == "line" -> start(put(Intent(Intent.ACTION_SEND).setPackage(LINE)))
+            // 決めた宛先：共有メニューの「直接共有」と同じく、ショートカットの id を付けて LINE に渡す
+            target.startsWith("line:") -> start(put(Intent(Intent.ACTION_SEND).setPackage(LINE)).putExtra(Intent.EXTRA_SHORTCUT_ID, target.removePrefix("line:").substringBefore('|')))
+            target == "mail" -> {
+                val subject = body.lineSequence().firstOrNull().orEmpty().take(40)
+                if (photo == null) start(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")).putExtra(Intent.EXTRA_SUBJECT, subject).putExtra(Intent.EXTRA_TEXT, body).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                else start(put(Intent(Intent.ACTION_SEND)).putExtra(Intent.EXTRA_SUBJECT, subject).apply { selector = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")) })
+            }
+            target == "clip" -> {
+                if (!(quickMemo && !memoInstalled())) { addToClip(ctx, body.ifEmpty { null }, listOfNotNull(photo)); reloadClips() }
+                (ctx as HomeApp).toast("Clip に残しました")
+            }
+            else -> start(Intent.createChooser(put(Intent(Intent.ACTION_SEND)), "送る").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+        quickOpen = null
+    }
+
+    // ---- 回線の速さ・再接続 ----
+
+    var speed by mutableStateOf<jp.yaegaki.theta.home.data.Speed?>(null); private set
+    var speedError by mutableStateOf<String?>(null); private set
+    var measuring by mutableStateOf(false); private set
+    var speedEvery by mutableStateOf(store.speedEvery); private set
+    var speedOnMobile by mutableStateOf(store.speedOnMobile); private set
+    fun changeSpeedEvery(v: Int) { speedEvery = v; store.speedEvery = v }
+    fun changeSpeedOnMobile(v: Boolean) { speedOnMobile = v; store.speedOnMobile = v }
+
+    private fun onWifi(): Boolean {
+        val cm = ctx.getSystemService(android.net.ConnectivityManager::class.java) ?: return false
+        return cm.getNetworkCapabilities(cm.activeNetwork)?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true
+    }
+
+    private fun online(): Boolean {
+        val cm = ctx.getSystemService(android.net.ConnectivityManager::class.java) ?: return false
+        return cm.getNetworkCapabilities(cm.activeNetwork)?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+    }
+
+    /** 間隔が過ぎていれば測る（force ならすぐ）。モバイルデータで測らない設定なら、Wi-Fi のときだけ。 */
+    fun refreshSpeed(force: Boolean = false) {
+        if (safeMode || measuring) return
+        if (!force) {
+            if (speedEvery <= 0) return
+            val last = speed?.at ?: 0L
+            if (System.currentTimeMillis() - last < speedEvery * 60_000L) return
+            if (!speedOnMobile && !onWifi()) return
+        }
+        if (!online()) {
+            speedError = "つながっていません"
+            return
+        }
+        measuring = true
+        viewModelScope.launch {
+            val wifi = onWifi()
+            runCatching { withContext(Dispatchers.IO) { jp.yaegaki.theta.home.data.NetSpeed.measure(wifi) } }
+                .onSuccess { speed = it; speedError = null }
+                .onFailure { speedError = "測れませんでした（${it.message ?: it.javaClass.simpleName}）" }
+            measuring = false
+        }
+    }
+
+    /**
+     * 再接続。普通のアプリはモバイルデータをオフ・オンできない（Android の決まり）ので、
+     * 再接続用に置いたショートカット（Galaxy のルーチンなど）があればそれを、無ければ
+     * 今の回線を「つながらない」と知らせて確かめ直させ、インターネットの設定パネル（モバイルデータの切り替え）を出す。
+     */
+    fun reconnect(start: (Intent) -> Unit) {
+        shortcuts.firstOrNull { it.catId == RECONNECT }?.let { sc ->
+            launchShortcut(sc)
+            return
+        }
+        val cm = ctx.getSystemService(android.net.ConnectivityManager::class.java)
+        runCatching { cm?.activeNetwork?.let { cm.reportNetworkConnectivity(it, false) } }
+        start(Intent(android.provider.Settings.Panel.ACTION_INTERNET_CONNECTIVITY).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        // 戻ってきたら測り直す
+        speed = null
+        refreshStatus(force = true)
+    }
+
+    fun reconnectShortcut() = shortcuts.firstOrNull { it.catId == RECONNECT }
 
     /** 保存して、すぐ確かめる。otp は 2 段階認証のコード（求められたときだけ）。 */
     fun saveNas(url: String, account: String, password: String, otp: String = "") {
@@ -1428,6 +1559,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
                 if (apps.any { it.packageName == GOOGLE }) start(google)
                 else start(Intent(android.speech.RecognizerIntent.ACTION_WEB_SEARCH).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
+            // 入力：声・文字・写真を入れてから、送り先を選ぶ
+            "quick" -> quickOpen = "voice"
             // MemoHatch：新しい音声メモ（録音から）
             "memo-audio" -> start(Intent("jp.yaegaki.theta.memo.NEW").setPackage(MEMO).putExtra("type", "audio").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
@@ -1727,12 +1860,17 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
         const val GOOGLE = "com.google.android.googlequicksearchbox"
         const val MEMO = "jp.yaegaki.theta.memo"
+        const val LINE = "jp.naver.line.android"
 
         /** ピン留めできる機能。pkg のアプリが入っているときだけ出す（fallback は無くても出す）。 */
         val DOCK_ACTIONS = listOf(
+            DockAction("quick", "入力", null, fallback = true),
             DockAction("voice", "音声検索", GOOGLE, fallback = true),
             DockAction("memo-audio", "音声メモ", MEMO),
         )
+
+        /** 再接続ボタンで動かすショートカット（Galaxy のルーチンなど）の置き場所。 */
+        const val RECONNECT = "reconnect"
 
         /** 端の下（よく使う）に置いたショートカットの置き場所。 */
         const val DOCK = "dock"

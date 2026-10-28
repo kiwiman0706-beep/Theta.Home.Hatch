@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
 
     /** 回線が変わったら（Wi-Fi⇔モバイル、Tailscale のオン・オフ）NAS の状態を調べ直す。 */
     private val network = object : ConnectivityManager.NetworkCallback() {
-        override fun onAvailable(n: Network) = runOnUiThread { model.refreshStatus(force = true) }
+        override fun onAvailable(n: Network) = runOnUiThread { model.refreshStatus(force = true); model.refreshSpeed() }
         override fun onLost(n: Network) = runOnUiThread { model.refreshStatus(force = true) }
     }
 
@@ -41,6 +41,16 @@ class MainActivity : ComponentActivity() {
     private var rescued = false
     private val healthy = android.os.Handler(android.os.Looper.getMainLooper())
     private val markHealthy = Runnable { jp.yaegaki.theta.home.rescue.Rescue.onHomeHealthy(this) }
+
+    /** ホームが前にある間、5 分ごとに回線の速さを確かめる（測るかどうかは設定の間隔で決める）。 */
+    private val speedTick: Runnable = object : Runnable {
+        override fun run() {
+            healthy.removeCallbacks(speedTick)
+        healthy.postDelayed(speedTick, 5 * 60_000L)
+        model.refreshSpeed()
+            healthy.postDelayed(this, 5 * 60_000L)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -102,6 +112,7 @@ class MainActivity : ComponentActivity() {
         model.refreshCaptures()
         model.refreshStatus()
         model.refreshWeather()
+        model.refreshSpeed()
         model.reloadShortcuts()
         model.refreshHomeRole()
         model.checkUpdate()
@@ -111,6 +122,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onPause() {
+        healthy.removeCallbacks(speedTick)
         jp.yaegaki.theta.home.edge.EdgeService.homeShown.value = false
         super.onPause()
     }

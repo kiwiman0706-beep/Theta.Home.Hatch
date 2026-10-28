@@ -205,6 +205,22 @@ fun SettingsPanel(model: HomeModel) {
                 }
                 Note("端の細い線を内側へなぞる（または押す）と、ホームと同じタブと中身（ウィジェット・フォルダ・予定・アプリなど）が出ます。最後に開いていたタブを開いた状態で出ます。外側を押すか「戻る」で閉じ、アプリを開くと自動で閉じます。ホームを開いている間は線を隠します。消されないように常駐の通知が出ます（通知は長押しでしまえます）。右の端は Galaxy のエッジパネルと重なりやすいので、初めは左にしています。")
                 Gap(18.dp)
+                SectionTitle("NETWORK / 回線の速さと再接続", Modifier.padding(horizontal = 10.dp))
+                FlowRow2 {
+                    listOf(0 to "測らない", 15 to "15 分ごと", 30 to "30 分ごと", 60 to "1 時間ごと").forEach { (k, label) ->
+                        PillButton(label, { model.changeSpeedEvery(k) }, primary = model.speedEvery == k)
+                    }
+                }
+                Toggle("モバイルデータのときも測る（1 回 0.5MB）", model.speedOnMobile) { model.changeSpeedOnMobile(it) }
+                val rc = model.reconnectShortcut()
+                Note(
+                    "ホームが前にある間だけ、決めた間隔で速さを測ります（Wi-Fi は 1 回 1MB）。つながらない・とても遅いときは「再接続」が出ます。" +
+                        "Android の決まりで、ほかのアプリはモバイルデータを直接オフ・オンできないため、再接続はインターネットの設定パネル（モバイルデータの切り替え）を出します。" +
+                        "Galaxy のモードとルーチンで「モバイルデータをオフ → 数秒待つ → オン」のルーチンを作り、ホーム画面に追加して置き場所に「再接続ボタン」を選ぶと、再接続でそのルーチンを動かします。" +
+                        (rc?.let { "（今は「${it.label}」）" } ?: ""),
+                )
+                if (rc != null) FlowRow2 { PillButton("再接続のショートカットを外す", { model.removeShortcut(rc.id) }) }
+                Gap(18.dp)
                 SectionTitle("SHORTCUT / ほかのアプリからタブを出す", Modifier.padding(horizontal = 10.dp))
                 Note("「タブを出す」で、端をなぞったときと同じタブを、今のアプリの上に出せます（エッジがオフでも使えます）。Dimple などショートカットを置けるアプリでは、このアプリの「タブを出す」ショートカットを選びます。Galaxy のモードとルーチンでは「アプリを開く」で、アプリの一覧の「タブを出す」を選びます。自動化アプリからは jp.yaegaki.theta.home.SHOW_TABS（アクティビティ）でも呼べます。")
                 Toggle("アプリの一覧に「タブを出す」を出す（モードとルーチン向け）", model.showTabsIcon) { model.changeShowTabsIcon(it) }

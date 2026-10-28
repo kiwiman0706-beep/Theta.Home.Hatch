@@ -113,7 +113,7 @@ fun dockLaunch(model: HomeModel, actions: Actions, item: Any) {
     }
 }
 
-/** ピン留めの 1 つのアイコン。機能はそのアプリのアイコンに、右下のマイクの印（アプリが無ければマイクだけ）。 */
+/** ピン留めの 1 つのアイコン。機能はそのアプリのアイコンに、右下のマイクの印（アプリが無ければマイク、入力はペンだけ）。 */
 @Composable
 fun DockIcon(model: HomeModel, item: Any, size: Dp) {
     val p = LocalPalette.current
@@ -122,7 +122,7 @@ fun DockIcon(model: HomeModel, item: Any, size: Dp) {
         is jp.yaegaki.theta.home.data.PinnedShortcut -> ShortcutIcon(item, size)
         is jp.yaegaki.theta.home.DockAction -> Box(Modifier.size(size)) {
             val app = item.pkg?.let { pkg -> model.apps.firstOrNull { it.packageName == pkg } }
-            if (app != null) AppIcon(app, size) else GlyphIcon(Glyph.MIC, p.accent, size)
+            if (app != null) AppIcon(app, size) else GlyphIcon(if (item.id == "quick") Glyph.PENCIL else Glyph.MIC, p.accent, size)
             if (app != null) Box(
                 Modifier.align(Alignment.BottomEnd).size(size * 0.5f).background(p.accent),
                 contentAlignment = Alignment.Center,
