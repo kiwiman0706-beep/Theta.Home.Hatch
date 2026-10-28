@@ -84,19 +84,34 @@ fun Dashboard(model: HomeModel, openNasSettings: () -> Unit) {
             SearchResults(model)
             return@Column
         }
-        Panel("TODAY", "今日の予定") { TodayEvents(model, max = 8) }
-        Panel("WEATHER", "天気") { WeatherPanel(model) }
+        Panel(model, "TODAY", "予定", folded = {
+            val next = model.nextEvent
+            if (next != null) Text(dayLabel(next.localBegin) + "  " + next.title, color = LocalPalette.current.muted, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }) { TodayEvents(model, max = 12) }
+        Panel(model, "WEATHER", "天気", folded = {
+            val f = model.forecast
+            val warn = model.alerts?.list.orEmpty().joinToString("・") { it.name }
+            if (f != null) Text("${f.temp.roundToInt()}°  ${Weather.label(f.code)}" + (if (warn.isNotEmpty()) "  ⚠ $warn" else ""),
+                color = if (warn.isNotEmpty()) LocalPalette.current.accent else LocalPalette.current.muted, fontSize = 13.sp, maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }) { WeatherPanel(model) }
         StatusStrip(model, openNasSettings)
-        Panel("FILES", "ファイル") { FilesPanel(model) }
-        Panel("DEVICE", "端末") { DevicePanel() }
+        Panel(model, "FILES", "ファイル") { FilesPanel(model) }
+        Panel(model, "DEVICE", "端末") { DevicePanel() }
         Gap(8.dp)
     }
 }
 
-/** 計器の区画：見出し（英字＋日本語）と、四隅のかぎ括弧。POP では角丸の枠に、色の付いた見出しの帯。 */
+/**
+ * 計器の区画：見出し（英字＋日本語）と、四隅のかぎ括弧。POP では角丸の枠に、色の付いた見出しの帯。
+ * 見出しを押すとたたむ（たたんだら folded の 1 行だけ）。たたんだのは覚えておく。
+ */
 @Composable
-private fun Panel(code: String, title: String, content: @Composable () -> Unit) {
+private fun Panel(model: HomeModel, code: String, title: String, folded: (@Composable () -> Unit)? = null, body: @Composable () -> Unit) {
     val p = LocalPalette.current
+    val closed = model.isCollapsed(code)
+    val content: @Composable () -> Unit = { if (closed) folded?.invoke() else body() }
+    val toggle = Modifier.clickable(onClickLabel = if (closed) "広げる" else "たたむ") { model.toggleCollapsed(code) }
     if (p.pop) {
         val shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
         val band = when (code) {
@@ -107,23 +122,26 @@ private fun Panel(code: String, title: String, content: @Composable () -> Unit) 
         }
         Column(Modifier.fillMaxWidth().popShadow(p, shape).clip(shape).background(p.panel).border(lineWidth, p.line, shape)) {
             Row(
-                Modifier.fillMaxWidth().background(band).padding(horizontal = 12.dp, vertical = 8.dp),
+                Modifier.fillMaxWidth().background(band).then(toggle).padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(code, color = if (band == p.accent) p.onAccent else p.fg, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                Text(title, color = if (band == p.accent) p.onAccent else p.fg, fontSize = 12.sp)
+                Text(title, color = if (band == p.accent) p.onAccent else p.fg, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                Text(if (closed) "▸" else "▾", color = if (band == p.accent) p.onAccent else p.fg, fontSize = 12.sp)
             }
+            if (closed && folded == null) return@Column
             Box(Modifier.fillMaxWidth().height(lineWidth).background(p.line))
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
         }
         return
     }
     Column(Modifier.fillMaxWidth().border(1.dp, p.line).corners(p.accent, 8.dp).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(toggle, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("[ $code ]", color = p.accent, fontSize = 11.sp, fontFamily = Hud.mono, letterSpacing = 2.sp)
             Text(title, color = p.muted, fontSize = 11.sp)
             Stripes(Modifier.weight(1f).height(5.dp), color = p.line)
+            Text(if (closed) "▸" else "▾", color = p.accent, fontSize = 11.sp, fontFamily = Hud.mono)
         }
         content()
     }

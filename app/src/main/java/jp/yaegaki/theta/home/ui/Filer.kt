@@ -257,33 +257,80 @@ internal fun EventLine(e: jp.yaegaki.theta.home.data.Event, onClick: () -> Unit)
     }
 }
 
-/** 今日の予定。max を超えた分は「+N 件」（押すとカレンダー）。 */
+/**
+ * 今日から何日分か（設定は見出しの「3D」を押して 1・3・7 日と切り替え）の予定。2 日目からは日付の見出しを付ける。
+ * max を超えた分は「+N 件」（押すとカレンダー）。collapsible なら見出しを押すとたたみ、次の予定だけ 1 行で出す。
+ */
 @Composable
-internal fun TodayEvents(model: HomeModel, max: Int, modifier: Modifier = Modifier) {
+internal fun TodayEvents(model: HomeModel, max: Int, modifier: Modifier = Modifier, collapsible: Boolean = false) {
     val p = LocalPalette.current
     val actions = LocalActions.current
     val calTab = model.tabWith("calendar")
-    val list = model.todayEvents
+    val days = model.homeEvents
+    val count = days.sumOf { it.second.size }
+    val folded = collapsible && model.isCollapsed("TODAY")
     var picking by remember { mutableStateOf(false) }
+    val granted = model.has(Manifest.permission.READ_CALENDAR)
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("TODAY'S_EVENTS", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, letterSpacing = 1.5.sp)
-            Text("%02d".format(list.size), color = p.accent, fontSize = 10.sp, fontFamily = Hud.mono)
-            if (model.has(Manifest.permission.READ_CALENDAR)) Text("CAL ⚙", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono,
-                modifier = Modifier.clickable(onClickLabel = "表示するカレンダー") { picking = true }.padding(horizontal = 6.dp, vertical = 2.dp))
+            Row(
+                (if (collapsible) Modifier.clickable(onClickLabel = if (folded) "予定を広げる" else "予定をたたむ") { model.toggleCollapsed("TODAY") } else Modifier),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (collapsible) Text(if (folded) "▸" else "▾", color = p.accent, fontSize = 11.sp, fontFamily = Hud.mono)
+                Text(if (model.homeDays == 1) "TODAY'S_EVENTS" else "EVENTS", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, letterSpacing = 1.5.sp)
+                Text("%02d".format(count), color = p.accent, fontSize = 10.sp, fontFamily = Hud.mono)
+            }
+            if (granted) {
+                // 日数：押すたびに 1 → 3 → 7 日
+                Text("${model.homeDays}D", color = p.fg, fontSize = 10.sp, fontFamily = Hud.mono,
+                    modifier = Modifier.border(lineWidth, p.line).clickable(onClickLabel = "出す日数を変える") {
+                        model.changeHomeDays(when (model.homeDays) { 1 -> 3; 3 -> 7; else -> 1 })
+                    }.padding(horizontal = 6.dp, vertical = 2.dp))
+                Text("CAL ⚙", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono,
+                    modifier = Modifier.clickable(onClickLabel = "表示するカレンダー") { picking = true }.padding(horizontal = 6.dp, vertical = 2.dp))
+            }
         }
         if (picking) CalendarPicker(model) { picking = false }
         when {
-            !model.has(Manifest.permission.READ_CALENDAR) -> Text("予定の読み取りを許可すると、今日の予定が出ます", color = p.muted, fontSize = 13.sp,
+            !granted -> Text("予定の読み取りを許可すると、今日の予定が出ます", color = p.muted, fontSize = 13.sp,
                 modifier = Modifier.clickable { actions.requestPermissions(arrayOf(Manifest.permission.READ_CALENDAR)) { model.refreshEvents() } })
-            list.isEmpty() -> Text("今日の予定はありません", color = p.muted, fontSize = 13.sp)
+            folded -> {
+                val next = model.nextEvent
+                if (next == null) Text("この先の予定はありません", color = p.muted, fontSize = 13.sp)
+                else Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(dayLabel(next.localBegin), color = p.faint, fontSize = 11.sp, fontFamily = Hud.mono, modifier = Modifier.padding(end = 6.dp))
+                    Box(Modifier.weight(1f)) { EventLine(next) { actions.start(jp.yaegaki.theta.home.data.Calendar.openIntent(next)) } }
+                }
+            }
+            count == 0 -> Text(if (model.homeDays == 1) "今日の予定はありません" else "${model.homeDays} 日のうちに予定はありません", color = p.muted, fontSize = 13.sp)
             else -> {
-                list.take(max).forEach { e -> EventLine(e) { actions.start(jp.yaegaki.theta.home.data.Calendar.openIntent(e)) } }
-                if (list.size > max) Text("+${list.size - max} 件 ›", color = p.accent, fontSize = 12.sp, fontFamily = Hud.mono,
+                var shown = 0
+                days.forEachIndexed { i, (day, list) ->
+                    if (shown >= max) return@forEachIndexed
+                    if (model.homeDays > 1) Text(dayLabel(day), color = if (i == 0) p.accent else p.muted, fontSize = 11.sp, fontFamily = Hud.mono,
+                        letterSpacing = 1.sp, modifier = Modifier.padding(top = if (i == 0) 0.dp else 4.dp))
+                    if (list.isEmpty()) Text("予定なし", color = p.faint, fontSize = 12.sp)
+                    list.take(max - shown).forEach { e -> EventLine(e) { actions.start(jp.yaegaki.theta.home.data.Calendar.openIntent(e)) } }
+                    shown += list.size.coerceAtMost(max - shown)
+                }
+                if (count > shown) Text("+${count - shown} 件 ›", color = p.accent, fontSize = 12.sp, fontFamily = Hud.mono,
                     modifier = Modifier.clickable { calTab?.let { model.toggle(it.id) } }.padding(vertical = 4.dp))
             }
         }
     }
+}
+
+/** 日の見出し：「今日 10/28 水」「明日 10/29 木」「10/30 金」。 */
+internal fun dayLabel(t: Long): String {
+    val today = jp.yaegaki.theta.home.data.Calendar.startOfDay()
+    val day = jp.yaegaki.theta.home.data.Calendar.startOfDay(t)
+    val head = when (day) {
+        today -> "今日 "
+        jp.yaegaki.theta.home.data.Calendar.addDays(today, 1) -> "明日 "
+        else -> ""
+    }
+    return head + SimpleDateFormat("M/d E", Locale.JAPAN).format(Date(day))
 }
 
 @Composable
@@ -305,7 +352,7 @@ private fun FilerHeader(model: HomeModel) {
         }
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             ClockBlock(big = true)
-            TodayEvents(model, max = 3, modifier = Modifier.weight(1f).padding(bottom = 6.dp))
+            TodayEvents(model, max = 5, modifier = Modifier.weight(1f).padding(bottom = 6.dp), collapsible = true)
             Column(Modifier.padding(bottom = 8.dp), horizontalAlignment = Alignment.End) {
                 Text("THETA // HOME.HATCH", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, letterSpacing = 1.sp)
                 Stripes(Modifier.width(96.dp).height(8.dp))

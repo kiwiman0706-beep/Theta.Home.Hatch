@@ -284,6 +284,41 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             return events.filter { it.overlaps(from, to) && it.calendarId !in hiddenHome }.sortedWith(compareBy({ !it.allDay }, { it.localBegin }))
         }
 
+    /** 試験で、見本の予定を入れる。 */
+    @androidx.annotation.VisibleForTesting
+    internal fun setEventsForTest(list: List<Event>) { events = list }
+
+    /** ホームの予定に出す日数（1・3・7）。予定は 7 日分読んでいる。 */
+    var homeDays by mutableStateOf(store.homeDays); private set
+    fun changeHomeDays(v: Int) { homeDays = v; store.homeDays = v }
+
+    /** ホームの予定：今日から homeDays 日分を、日ごとに（予定の無い日は出さない。今日だけはいつも出す）。 */
+    val homeEvents: List<Pair<Long, List<Event>>>
+        get() {
+            val today = Calendar.startOfDay()
+            return (0 until homeDays.coerceIn(1, 7)).mapNotNull { i ->
+                val from = Calendar.addDays(today, i)
+                val to = Calendar.addDays(from, 1)
+                val list = events.filter { it.overlaps(from, to) && it.calendarId !in hiddenHome }.sortedWith(compareBy({ !it.allDay }, { it.localBegin }))
+                if (list.isEmpty() && i > 0) null else from to list
+            }
+        }
+
+    /** 次の予定（まだ終わっていないもの。終日は今日のものだけ）。たたんだときの 1 行に使う。 */
+    val nextEvent: Event?
+        get() {
+            val now = System.currentTimeMillis()
+            return homeEvents.flatMap { it.second }.firstOrNull { if (it.allDay) it.overlaps(Calendar.startOfDay(), Calendar.addDays(Calendar.startOfDay(), 1)) else it.end > now }
+        }
+
+    /** たたんだホームの区画。 */
+    var collapsedPanels by mutableStateOf(store.collapsedPanels); private set
+    fun isCollapsed(code: String) = code in collapsedPanels
+    fun toggleCollapsed(code: String) {
+        collapsedPanels = if (code in collapsedPanels) collapsedPanels - code else collapsedPanels + code
+        store.collapsedPanels = collapsedPanels
+    }
+
     /** 出さないカレンダー：カレンダーのタブ（tab）と今日の予定（home）で別々。 */
     var hiddenTab by mutableStateOf(store.hiddenCalendars("tab")); private set
     var hiddenHome by mutableStateOf(store.hiddenCalendars("home")); private set

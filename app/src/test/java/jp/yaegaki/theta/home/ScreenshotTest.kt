@@ -828,4 +828,27 @@ class ScreenshotTest {
         m.setNicknames(a, "")
         org.junit.Assert.assertTrue(m.nicknamesOf(a).isEmpty())
     }
+
+    /** ホームの予定は 3 日分（日ごとの見出し）。見出しを押すと区画をたたむ（予定は次の 1 件だけ）。 */
+    @Test
+    @Config(qualifiers = "w360dp-h1400dp-xxhdpi")
+    fun dashboardDays() {
+        launch { app ->
+            shadowOf(app).grantPermissions(android.Manifest.permission.READ_CALENDAR)
+            app.store.weatherPlace = jp.yaegaki.theta.home.data.WeatherPlace("東京都 / 東京", 35.68, 139.76)
+            app.store.weatherCache = weatherSample(System.currentTimeMillis())
+        }
+        compose.waitForIdle()
+        val m = model()
+        org.junit.Assert.assertEquals(3, m.homeDays)
+        scenario!!.onActivity { m.setEventsForTest(sampleEvents()) }
+        compose.waitForIdle()
+        compose.onNodeWithText("明日", substring = true).assertExists()
+        shot("dashboard-days")
+        compose.onNodeWithText("[ WEATHER ]").performClick()
+        compose.onNodeWithText("[ TODAY ]").performClick()
+        compose.waitForIdle()
+        org.junit.Assert.assertTrue(m.isCollapsed("TODAY") && m.isCollapsed("WEATHER"))
+        shot("dashboard-folded")
+    }
 }

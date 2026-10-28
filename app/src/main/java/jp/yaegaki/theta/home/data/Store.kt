@@ -548,6 +548,16 @@ class Store(context: Context) {
         get() = if (prefs.contains("quickTargets")) strings("quickTargets") else listOf("line", "mail", "share")
         set(v) = putStrings("quickTargets", v)
 
+    /** ホームの予定に出す日数（今日から。1・3・7）。 */
+    var homeDays: Int
+        get() = prefs.getInt("homeDays", 3)
+        set(v) = prefs.edit().putInt("homeDays", v).apply()
+
+    /** たたんだホームの区画（"TODAY"・"WEATHER"・"FILES"・"DEVICE"）。 */
+    var collapsedPanels: Set<String>
+        get() = strings("collapsedPanels").toSet()
+        set(v) = putStrings("collapsedPanels", v.toList())
+
     /** アプリの呼び名（声で開く・検索で使う）。キーは AppEntry.key、値は呼び名（いくつでも）。 */
     var nicknames: Map<String, List<String>>
         get() = runCatching {
