@@ -24,6 +24,8 @@ data class SavedQuery(
     val shared: Boolean = false,
     val folderId: String = "",
     val folderName: String = "",
+    /** 並び："" は更新した順、"viewed" は自分が最近開いた順（ドライブだけ）。 */
+    val order: String = "",
 ) {
     /** 一覧に出す条件の要約。 */
     fun summary(): String = listOfNotNull(
@@ -34,6 +36,7 @@ data class SavedQuery(
         if (starred) "スター付き" else null,
         if (shared) "共有された" else null,
         folderName.takeIf { folderId.isNotEmpty() }?.let { "場所 $it" },
+        if (order == "viewed") "最近開いた順" else null,
     ).joinToString(" · ").ifEmpty { "すべてのファイル" }
 
     /** NAS の結果を種類で絞る（ドライブは問い合わせの段階で絞る）。 */
@@ -71,7 +74,7 @@ data class SavedQuery(
     fun toJson(): JSONObject = JSONObject()
         .put("id", id).put("name", name).put("source", source).put("kinds", JSONArray(kinds.toList()))
         .put("nameContains", nameContains).put("text", text).put("days", days)
-        .put("starred", starred).put("shared", shared).put("folderId", folderId).put("folderName", folderName)
+        .put("starred", starred).put("shared", shared).put("folderId", folderId).put("folderName", folderName).put("order", order)
 
     companion object {
         /** 仮想フォルダの ID は "q-" で始める（ドライブのフォルダ ID・NAS のパスと混ざらない）。 */
@@ -79,7 +82,7 @@ data class SavedQuery(
 
         val KINDS = listOf(
             "image" to "写真", "video" to "動画", "audio" to "音楽", "pdf" to "PDF",
-            "doc" to "文書", "sheet" to "表", "slide" to "スライド",
+            "doc" to "文書", "sheet" to "表", "slide" to "スライド", "gdocs" to "Google 文書・表・スライド",
         )
         val DAYS = listOf(0 to "いつでも", 1 to "今日", 7 to "7 日以内", 30 to "30 日以内", 365 to "1 年以内")
 
@@ -99,6 +102,11 @@ data class SavedQuery(
                 "mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'",
                 "mimeType = 'application/vnd.ms-excel'",
                 "mimeType = 'text/csv'",
+            ),
+            "gdocs" to listOf(
+                "mimeType = 'application/vnd.google-apps.document'",
+                "mimeType = 'application/vnd.google-apps.spreadsheet'",
+                "mimeType = 'application/vnd.google-apps.presentation'",
             ),
             "slide" to listOf(
                 "mimeType = 'application/vnd.google-apps.presentation'",
@@ -124,6 +132,7 @@ data class SavedQuery(
             shared = o.optBoolean("shared"),
             folderId = o.optString("folderId"),
             folderName = o.optString("folderName"),
+            order = o.optString("order"),
         )
 
         /** 初めて使うときに置いておく、ドライブの仮想フォルダ。消しても戻さない。 */
@@ -132,6 +141,10 @@ data class SavedQuery(
             SavedQuery(PREFIX + "pdf", "PDF", "drive", kinds = setOf("pdf")),
             SavedQuery(PREFIX + "photos", "PHOTOS", "drive", kinds = setOf("image")),
             SavedQuery(PREFIX + "office", "OFFICE", "drive", kinds = setOf("doc", "sheet", "slide")),
+            GOOGLE_DOCS,
         )
+
+        /** Google のドキュメント・スプレッドシート・スライドを、自分が最近開いた順に。タブにも初めから置く。 */
+        val GOOGLE_DOCS = SavedQuery(PREFIX + "gdocs", "GOOGLE DOCS", "drive", kinds = setOf("gdocs"), order = "viewed")
     }
 }

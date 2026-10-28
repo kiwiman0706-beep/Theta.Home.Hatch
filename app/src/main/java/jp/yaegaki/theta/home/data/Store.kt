@@ -227,6 +227,17 @@ class Store(context: Context) {
             prefs.edit().putBoolean("appsTabMoved", true).apply()
             if (list.any { it.kind == TabKind.APPS }) return migratePanels(migrateBoards(list.filter { it.kind != TabKind.APPS }.also(::saveTabs)))
         }
+        // 0.38 で足した DOCS のタブ（Google のドキュメントなど）：前から使っている人にも一度だけ、フォルダのタブの後ろに足す
+        if (!prefs.getBoolean("gdocsTab", false)) {
+            prefs.edit().putBoolean("gdocsTab", true).apply()
+            val ref = GDOCS_TAB.folderUri!!
+            val has = list.any { it.id == GDOCS_TAB.id || it.folderUri == ref } || boards().values.flatten().any { it.ref == ref }
+            if (!has) {
+                val folders = boards().filterValues { items -> items.any { it.type == BoardItem.FOLDER } }.keys
+                val at = (list.indexOfLast { it.kind == TabKind.FOLDER || it.id in folders } + 1).coerceIn(0, list.size)
+                return migratePanels(migrateBoards(list.toMutableList().apply { add(at, GDOCS_TAB) }.also(::saveTabs)))
+            }
+        }
         return migratePanels(migrateBoards(list))
     }
 
@@ -497,6 +508,12 @@ class Store(context: Context) {
             saveQueries(SavedQuery.defaults())
             prefs.edit().putBoolean("queriesSeeded", true).apply()
         }
+        // 0.38 で足した「GOOGLE DOCS」：前から使っている人にも一度だけ足す
+        if (!prefs.getBoolean("gdocsQuery", false)) {
+            prefs.edit().putBoolean("gdocsQuery", true).apply()
+            val now = objects("queries") { SavedQuery.fromJson(it) }
+            if (now.none { it.id == SavedQuery.GOOGLE_DOCS.id }) saveQueries(now + SavedQuery.GOOGLE_DOCS)
+        }
         return objects("queries") { SavedQuery.fromJson(it) }
     }
 
@@ -754,10 +771,14 @@ class Store(context: Context) {
             "Widget" to "WIDGET", "フォルダ" to "FOLDER",
         )
 
+        /** Google のドキュメントなど（最近開いた順）のタブ。ドライブの仮想フォルダ GOOGLE DOCS を開く。 */
+        val GDOCS_TAB = TabSpec("gdocs", TabKind.FOLDER, "DOCS", TabSpec.DRIVE_PREFIX + SavedQuery.GOOGLE_DOCS.id + ":" + SavedQuery.GOOGLE_DOCS.name)
+
         fun defaultTabs(): List<TabSpec> = listOf(
             TabSpec("work", TabKind.FOLDER, "WORK"),
             TabSpec("personal", TabKind.FOLDER, "PRIVATE"),
             TabSpec("photo", TabKind.FOLDER, "PHOTO"),
+            GDOCS_TAB,
             TabSpec("cal", TabKind.CALENDAR, "CALENDAR"),
             TabSpec("mail", TabKind.MAIL, "MAIL"),
             TabSpec("line", TabKind.LINE, "LINE"),

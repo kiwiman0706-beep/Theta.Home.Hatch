@@ -44,9 +44,10 @@ fun QueryDialog(model: HomeModel, initial: SavedQuery, inline: Boolean = false, 
     var starred by remember { mutableStateOf(initial.starred) }
     var shared by remember { mutableStateOf(initial.shared) }
     var folder by remember { mutableStateOf(initial.folderId to initial.folderName) }
+    var order by remember { mutableStateOf(initial.order) }
     val q = initial.copy(
         name = name.trim().ifEmpty { "SEARCH" }, kinds = kinds, nameContains = nameContains, text = text, days = days,
-        starred = starred, shared = shared, folderId = folder.first, folderName = folder.second,
+        starred = starred, shared = shared, folderId = folder.first, folderName = folder.second, order = if (drive) order else "",
     )
 
     @Composable
@@ -65,7 +66,8 @@ fun QueryDialog(model: HomeModel, initial: SavedQuery, inline: Boolean = false, 
                 Field(name, { name = it }, "例 請求書")
                 SectionTitle("種類（選ばなければすべて）")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SavedQuery.KINDS.forEach { (k, label) -> chip(label, k in kinds) { kinds = if (k in kinds) kinds - k else kinds + k } }
+                    // Google のドキュメントなどはドライブにだけある
+                    SavedQuery.KINDS.filter { drive || it.first != "gdocs" }.forEach { (k, label) -> chip(label, k in kinds) { kinds = if (k in kinds) kinds - k else kinds + k } }
                 }
                 SectionTitle("ファイル名に含む")
                 Field(nameContains, { nameContains = it }, "言葉（空ならすべて）")
@@ -82,6 +84,11 @@ fun QueryDialog(model: HomeModel, initial: SavedQuery, inline: Boolean = false, 
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         chip("スター付き", starred) { starred = !starred }
                         chip("共有されたもの", shared) { shared = !shared }
+                    }
+                    SectionTitle("並び")
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        chip("更新した順", order != "viewed") { order = "" }
+                        chip("自分が最近開いた順", order == "viewed") { order = "viewed" }
                     }
                 }
                 SectionTitle("場所")

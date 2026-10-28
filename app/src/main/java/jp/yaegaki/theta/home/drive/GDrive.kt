@@ -152,7 +152,7 @@ class GDrive(context: Context, private val prefs: SharedPreferences) {
         do {
             val url = "$API/files?q=" + enc(query.driveQuery()) +
                 "&pageSize=500&corpora=allDrives&includeItemsFromAllDrives=true&supportsAllDrives=true" +
-                (if (query.text.isBlank()) "&orderBy=" + enc("modifiedTime desc") else "") +
+                (if (query.text.isBlank()) "&orderBy=" + enc(if (query.order == "viewed") "viewedByMeTime desc" else "modifiedTime desc") else "") +
                 "&fields=" + enc("nextPageToken,files(id,name,mimeType,size,modifiedTime,thumbnailLink,webViewLink,shortcutDetails)") +
                 (page?.let { "&pageToken=" + enc(it) } ?: "")
             val o = JSONObject(get(t, url))
@@ -160,7 +160,8 @@ class GDrive(context: Context, private val prefs: SharedPreferences) {
             if (a != null) for (i in 0 until a.length()) out += item(a.getJSONObject(i))
             page = o.optString("nextPageToken").ifEmpty { null }
         } while (page != null && out.size < 500)
-        return out.sortedByDescending { it.modified }
+        // 最近開いた順はドライブの並びのまま（開いた時刻は一覧に要らないので受け取らない）
+        return if (query.order == "viewed" && query.text.isBlank()) out else out.sortedByDescending { it.modified }
     }
 
     /** ファイルを端末へ取得する。Google ドキュメントは取得できない（リンクで開く）。 */

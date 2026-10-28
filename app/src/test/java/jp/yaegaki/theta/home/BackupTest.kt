@@ -56,7 +56,8 @@ class BackupTest {
 
     @Test
     fun oldJapaneseTabNamesBecomeEnglish() {
-        store.prefs.edit().clear().putString("tabs", """[{"id":"work","kind":"FOLDER","label":"仕事","folder":""},{"id":"x","kind":"FOLDER","label":"病院","folder":""}]""").commit()
+        // DOCS のタブを足す移行はここでは見ない
+        store.prefs.edit().clear().putBoolean("gdocsTab", true).putString("tabs", """[{"id":"work","kind":"FOLDER","label":"仕事","folder":""},{"id":"x","kind":"FOLDER","label":"病院","folder":""}]""").commit()
         assertEquals(listOf("WORK", "病院"), Store(app).tabs().map { it.label })
     }
 }

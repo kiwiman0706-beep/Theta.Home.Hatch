@@ -87,6 +87,7 @@ class WidgetTabTest {
         val store = app.store
         store.prefs.edit().clear().commit()
         store.prefs.edit()
+            .putBoolean("gdocsTab", true)
             .putString("tabs", """[{"id":"work","kind":"FOLDER","label":"WORK","folder":"nas:/home"},{"id":"cal","kind":"CALENDAR","label":"予定","folder":""},{"id":"c","kind":"CATEGORY","label":"COM","folder":"cat1"}]""")
             .putString("location", "tab:work")
             .commit()
