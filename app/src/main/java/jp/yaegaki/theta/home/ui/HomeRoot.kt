@@ -208,8 +208,10 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity, edgeExit: (() -> Uni
                         }
                     }
                     // 開いたドロワーは、そのタブの側から出す（設定は START の側）
-                    val from = if (model.settingsOpen) railLeft else model.open?.let { onLeft(it) } ?: railLeft
-                    CompositionLocalProvider(LocalRailLeft provides from) { Overlay(model, layout, available) }
+                    // 閉じるときも出てきた側へしまうよう、最後に開いていた側を覚えておく
+                    var lastFrom by remember { mutableStateOf(railLeft) }
+                    if (model.settingsOpen) lastFrom = railLeft else model.open?.let { lastFrom = onLeft(it) }
+                    CompositionLocalProvider(LocalRailLeft provides lastFrom) { Overlay(model, layout, available) }
                 }
                 if (!railLeft || both) CompositionLocalProvider(LocalRailLeft provides false) { Rail(model, railW, main = !railLeft, filter = if (both) ({ !onLeft(it) }) else null) }
             }

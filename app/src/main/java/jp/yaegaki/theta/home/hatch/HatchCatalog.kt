@@ -19,6 +19,7 @@ data class HatchApp(
 object HatchCatalog {
     val apps = listOf(
         HatchApp("memo", "MM", "Theta Memo Hatch", "付箋の壁のメモ（声・写真・手書き）", "jp.yaegaki.theta.memo", "Theta.Memo.Hatch"),
+        HatchApp("music", "MU", "Theta Music", "NAS の音楽を再生（iPod 風・HUD）", "com.thetahatch.theta_music", "Theta.Music.Hatch"),
         HatchApp("kidshome", "KH", "キッズホーム", "子ども用タブレットのホーム", "com.theta.kidshome", "Theta.KidsHome.Hatch"),
         HatchApp("travel", "TR", "TravelHatch", "旅の計画としおり、思い出", "jp.theta.travelhatch", "Theta.Travel.Hatch"),
         HatchApp("device", "DV", "機器台帳", "PC・電子機器の台帳とラベル", "jp.yaegaki.equipment", "Theta.Device.Hatch"),
