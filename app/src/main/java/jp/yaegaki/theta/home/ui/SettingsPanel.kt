@@ -165,7 +165,7 @@ fun SettingsPanel(model: HomeModel) {
                 if (homeLayout) HomeLayoutDialog(model) { homeLayout = false }
                 Gap(18.dp)
                 SectionTitle("TASKBAR / 画面の下のアプリ", Modifier.padding(horizontal = 10.dp))
-                Note("画面の下に、最近使ったアプリ（下に印）とよく使うアプリを、入るだけ並べます。タブを出しているときも見えます。「使用状況へのアクセス」を許可すると、通知やほかのアプリから開いたものも含めた端末の記録から出します（許可しなければ、このホームから開いた記録から）。")
+                Note("画面の下に、最近使ったアプリ（下に印）とよく使うアプリを、入るだけ並べます。タブを出しているときも、エッジ（ほかのアプリの上に出したタブ）でも見えます。「使用状況へのアクセス」を許可すると、通知やほかのアプリから開いたものも含めた端末の記録から出します（許可しなければ、このホームから開いた記録から）。")
                 Toggle("閉じた画面に出す", model.taskbarNarrow) { model.changeTaskbarNarrow(it) }
                 Toggle("開いた画面に出す（Galaxy のタスクバーと重なるので初めは切っています）", model.taskbarWide) { model.changeTaskbarWide(it) }
                 FlowRow2 {

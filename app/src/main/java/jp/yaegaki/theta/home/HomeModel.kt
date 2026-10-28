@@ -336,7 +336,9 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             return
         }
         io { runCatching { jp.yaegaki.theta.home.data.AppUsage.fromSystem(ctx) }.getOrNull() }.then { r ->
-            if (r != null) { usageRecent = r.first; usageCounts = r.second }
+            // 端末の記録が取れない・空（許可した直後など）なら、このホームから開いた記録のまま
+            if (r != null && r.first.isNotEmpty()) { usageRecent = r.first; usageCounts = r.second }
+            else { usageRecent = store.launchRecent; usageCounts = store.launchCounts }
         }
     }
 

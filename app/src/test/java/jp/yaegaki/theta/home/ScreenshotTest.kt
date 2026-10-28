@@ -1170,4 +1170,19 @@ class ScreenshotTest {
         org.junit.Assert.assertTrue(compose.onAllNodesWithText("PINNED").fetchSemanticsNodes().isNotEmpty())
         compose.onNodeWithText("a.xlsx").assertExists()
     }
+
+    /** エッジ（ほかのアプリの上に出したタブ）でも、下にタスクバー。 */
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-xxhdpi")
+    fun edgeTaskbar() {
+        launch { app -> app.store.launchRecent = listOf("com.example.music", "com.example.chat") }
+        compose.waitForIdle()
+        scenario?.close()
+        scenario = null
+        val edge = ActivityScenario.launch(jp.yaegaki.theta.home.edge.EdgeActivity::class.java)
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("build/screenshots/edge-taskbar.png")
+        compose.onNodeWithContentDescription("Music（最近）").assertExists()
+        edge.close()
+    }
 }

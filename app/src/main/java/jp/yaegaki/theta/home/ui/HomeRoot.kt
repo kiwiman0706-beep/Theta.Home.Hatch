@@ -193,7 +193,7 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity, edgeExit: (() -> Uni
             // START の無い側にタブが 1 つも無ければ、その側の端は出さない
             val both = wantBoth && model.tabs.any { model.shownHere(it.id) && model.tabOnLeft(it.id) != railLeft }
             fun onLeft(id: String) = if (both) model.tabOnLeft(id) else railLeft
-            // 下にタスクバー（最近使ったアプリ・よく使うアプリ）。タブを出しているときも見える
+            // 下にタスクバー（最近使ったアプリ・よく使うアプリ）。タブを出しているときも、エッジ（ほかのアプリの上）でも見える
             Column(Modifier.fillMaxSize()) {
                 Row(Modifier.fillMaxWidth().weight(1f)) {
                     if (railLeft || both) CompositionLocalProvider(LocalRailLeft provides true) { Rail(model, railW, main = railLeft, filter = if (both) ({ onLeft(it) }) else null) }
@@ -219,7 +219,7 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity, edgeExit: (() -> Uni
                     }
                     if (!railLeft || both) CompositionLocalProvider(LocalRailLeft provides false) { Rail(model, railW, main = !railLeft, filter = if (both) ({ !onLeft(it) }) else null) }
                 }
-                if (!edge && model.taskbarHere()) Taskbar(model)
+                if (model.taskbarHere()) Taskbar(model)
             }
             model.importReport?.let { r -> ImportReportDialog(model, r) { model.importReport = null } }
             // 中で開いたファイル（いちばん上に重ねる）

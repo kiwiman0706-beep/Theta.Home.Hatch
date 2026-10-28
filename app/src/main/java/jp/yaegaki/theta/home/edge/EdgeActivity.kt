@@ -77,6 +77,8 @@ class EdgeActivity : ComponentActivity() {
         super.onResume()
         EdgeService.homeShown.value = true
         model.reloadShortcuts()
+        // タスクバーの「最近」を、今まで使っていたアプリまで新しく
+        model.refreshUsage()
     }
 
     override fun onPause() {
