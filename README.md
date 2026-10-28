@@ -8,7 +8,7 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**0.32.0-alpha（versionCode 38）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.33.0-alpha（versionCode 39）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
@@ -81,6 +81,10 @@
 - **区画をたたむ**：ダッシュボードの TODAY・WEATHER・FILES・DEVICE は見出しを押すとたたむ（予定は次の 1 件、天気は気温と天気・警報だけ 1 行で）。広い画面のファイラーの上の予定も、見出しの ▾ でたたむ。
 
 <img src="docs/screenshots/dashboard-days.png" width="200" alt="3 日分の予定"> <img src="docs/screenshots/dashboard-folded.png" width="200" alt="たたんだ区画">
+
+- **通知を条件で絞って出す**：アプリ・含む言葉・除く言葉で決めた条件に合う通知だけを、ホームの予定と天気のあいだ（広い画面では時計の下）に出す。例：LINE の家族だけ、「至急」を含むメールだけ、「配達」を含む通知だけ。合うものが無いときは出さない。設定の NOTICE FILTER か、区画の「FILTER ⚙」、通知の長押し「このアプリの通知をホームに出す…」で作る。「目立たせる」にした条件はアクセントの帯。
+
+<img src="docs/screenshots/notice-filter.png" width="200" alt="条件に合う通知">
 
 - **アプリの呼び名**：アプリの長押し →「呼び名をつける」。声でアプリを開くとき・検索で、その名前でも見つかる（いくつでも、「、」で区切る）。ピン留めの「声でアプリ」からも。
 

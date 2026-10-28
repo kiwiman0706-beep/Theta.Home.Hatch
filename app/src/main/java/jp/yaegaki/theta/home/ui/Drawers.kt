@@ -206,12 +206,14 @@ internal val NOTICE_LEFT = listOf("reply" to "返信", "snooze" to "1 時間後�
  * 長押しで、その通知のボタン（アーカイブ・返信など）も選べる。
  */
 @Composable
-private fun NoticeRow(model: HomeModel, n: Notice, zebra: Int, app: jp.yaegaki.theta.home.data.AppEntry? = null) {
+internal fun NoticeRow(model: HomeModel, n: Notice, zebra: Int, app: jp.yaegaki.theta.home.data.AppEntry? = null) {
     val p = LocalPalette.current
     val actions = LocalActions.current
     val ctx = actions.activity
     var menu by remember(n.key) { mutableStateOf(false) }
     var replying by remember(n.key) { mutableStateOf(false) }
+    var ruleFrom by remember(n.key) { mutableStateOf(false) }
+    if (ruleFrom) NoticeRuleDialog(model, jp.yaegaki.theta.home.notify.NoticeRule(jp.yaegaki.theta.home.data.Store.newId(), "", apps = listOf(n.packageName))) { ruleFrom = false }
     fun open() {
         if (!HatchNotificationListener.open(ctx, n)) ctx.packageManager.getLaunchIntentForPackage(n.packageName)?.let(actions.start)
     }
@@ -246,6 +248,7 @@ private fun NoticeRow(model: HomeModel, n: Notice, zebra: Int, app: jp.yaegaki.t
             if (n.replyAction != null) DropdownMenuItem(text = { Text("返信") }, onClick = { menu = false; replying = true })
             DropdownMenuItem(text = { Text("1 時間後にまた") }, onClick = { menu = false; left("snooze") })
             DropdownMenuItem(text = { Text("消す") }, onClick = { menu = false; HatchNotificationListener.dismiss(n) })
+            DropdownMenuItem(text = { Text("このアプリの通知をホームに出す…") }, onClick = { menu = false; ruleFrom = true })
             // 通知に付いているボタン（返信・既読は上にあるので除く）
             n.actions.filter { it != n.replyAction && it != n.readAction }.forEach { a ->
                 DropdownMenuItem(text = { Text(a.title?.toString() ?: "ボタン") }, onClick = {

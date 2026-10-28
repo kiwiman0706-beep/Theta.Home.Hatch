@@ -284,6 +284,14 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             return events.filter { it.overlaps(from, to) && it.calendarId !in hiddenHome }.sortedWith(compareBy({ !it.allDay }, { it.localBegin }))
         }
 
+    /** ホームの「通知」の区画の条件。 */
+    var noticeRules by mutableStateOf(store.noticeRules); private set
+    fun saveNoticeRule(r: jp.yaegaki.theta.home.notify.NoticeRule) {
+        noticeRules = if (noticeRules.any { it.id == r.id }) noticeRules.map { if (it.id == r.id) r else it } else noticeRules + r
+        store.noticeRules = noticeRules
+    }
+    fun removeNoticeRule(id: String) { noticeRules = noticeRules.filterNot { it.id == id }; store.noticeRules = noticeRules }
+
     /** 試験で、見本の予定を入れる。 */
     @androidx.annotation.VisibleForTesting
     internal fun setEventsForTest(list: List<Event>) { events = list }

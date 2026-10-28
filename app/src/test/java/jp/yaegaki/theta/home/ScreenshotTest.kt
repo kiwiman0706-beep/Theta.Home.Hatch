@@ -851,4 +851,44 @@ class ScreenshotTest {
         org.junit.Assert.assertTrue(m.isCollapsed("TODAY") && m.isCollapsed("WEATHER"))
         shot("dashboard-folded")
     }
+
+    /** 条件に合う通知だけを、ダッシュボードの「通知」に出す。条件が無ければ区画も無い。 */
+    @Test
+    @Config(qualifiers = "w360dp-h1400dp-xxhdpi")
+    fun noticeFilter() {
+        launch { app ->
+            shadowOf(app).grantPermissions(android.Manifest.permission.READ_CALENDAR)
+            val cn = android.content.ComponentName(app, jp.yaegaki.theta.home.notify.HatchNotificationListener::class.java)
+            android.provider.Settings.Secure.putString(app.contentResolver, "enabled_notification_listeners", cn.flattenToString())
+        }
+        compose.waitForIdle()
+        val m = model()
+        val now = System.currentTimeMillis()
+        jp.yaegaki.theta.home.notify.HatchNotificationListener.setForTest(listOf(
+            jp.yaegaki.theta.home.notify.Notice("1", "com.google.android.gm", "【至急】見積もりの件", "本日中にお返事ください", now - 60_000, null),
+            jp.yaegaki.theta.home.notify.Notice("2", "jp.naver.line.android", "母", "今夜ごはんいる？", now - 300_000, null),
+            jp.yaegaki.theta.home.notify.Notice("3", "com.example.shop", "セール開催中", "広告", now - 600_000, null),
+            jp.yaegaki.theta.home.notify.Notice("4", "com.example.delivery", "配達予定のお知らせ", "本日 14〜16 時", now - 900_000, null),
+        ))
+        compose.waitForIdle()
+        compose.onNodeWithText("[ FILES ]").assertExists()
+        compose.onNodeWithText("[ NOTICE ]").assertDoesNotExist()
+        scenario!!.onActivity {
+            m.saveNoticeRule(jp.yaegaki.theta.home.notify.NoticeRule("a", "至急", include = listOf("至急"), alert = true))
+            m.saveNoticeRule(jp.yaegaki.theta.home.notify.NoticeRule("b", "家族", apps = listOf("jp.naver.line.android")))
+            m.saveNoticeRule(jp.yaegaki.theta.home.notify.NoticeRule("c", "配達", include = listOf("配達")))
+        }
+        compose.waitForIdle()
+        compose.onNodeWithText("[ NOTICE ]").assertExists()
+        compose.onNodeWithText("[ FILES ]").assertExists()
+        compose.onNodeWithText("セール開催中").assertDoesNotExist()
+        shot("notice-filter")
+        compose.onNodeWithText("FILTER ⚙").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("[ FILES ]").assertExists()
+        compose.onNodeWithText("閉じる").performClick()
+        compose.waitForIdle()
+        jp.yaegaki.theta.home.notify.HatchNotificationListener.setForTest(emptyList())
+    }
+
 }

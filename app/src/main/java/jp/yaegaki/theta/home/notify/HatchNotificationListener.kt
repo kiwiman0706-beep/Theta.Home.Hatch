@@ -134,6 +134,10 @@ class HatchNotificationListener : NotificationListenerService() {
         }
         val notices: StateFlow<List<Notice>> = state
 
+        /** 試験で、見本の通知を入れる。 */
+        @androidx.annotation.VisibleForTesting
+        internal fun setForTest(list: List<Notice>) { state.value = list }
+
         fun isEnabled(context: Context): Boolean =
             NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
 

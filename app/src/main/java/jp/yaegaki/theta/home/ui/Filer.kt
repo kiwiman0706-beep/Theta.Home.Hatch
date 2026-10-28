@@ -348,8 +348,15 @@ private fun FilerHeader(model: HomeModel) {
                 Stripes(Modifier.width(60.dp).height(8.dp))
             }
             SearchRow(model)
-            return@Column
-        }
+        } else WideHeader(model)
+    }
+}
+
+/** 広い画面のファイラーの上：時計・予定・条件に合う通知・検索。 */
+@Composable
+private fun WideHeader(model: HomeModel) {
+    val p = LocalPalette.current
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             ClockBlock(big = true)
             TodayEvents(model, max = 5, modifier = Modifier.weight(1f).padding(bottom = 6.dp), collapsible = true)
@@ -359,7 +366,26 @@ private fun FilerHeader(model: HomeModel) {
             }
         }
         Ticks(Modifier.fillMaxWidth().height(6.dp))
+        WideNotices(model)
         SearchRow(model)
+    }
+}
+
+/** 条件に合う通知（あるときだけ）。見出しの ▾ でたたむ。 */
+@Composable
+private fun WideNotices(model: HomeModel) {
+    val p = LocalPalette.current
+    val picked = filteredNotices(model)
+    if (picked.isEmpty()) return
+    val folded = model.isCollapsed("NOTICE")
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.clickable(onClickLabel = if (folded) "通知を広げる" else "通知をたたむ") { model.toggleCollapsed("NOTICE") },
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(if (folded) "▸" else "▾", color = p.accent, fontSize = 11.sp, fontFamily = Hud.mono)
+            Text("NOTICE", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, letterSpacing = 1.5.sp)
+            Text("%02d".format(picked.size), color = p.accent, fontSize = 10.sp, fontFamily = Hud.mono)
+        }
+        if (folded) FilteredNoticesFolded(picked) else FilteredNotices(model, picked, max = 3)
     }
 }
 

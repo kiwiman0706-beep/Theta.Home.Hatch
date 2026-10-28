@@ -548,6 +548,11 @@ class Store(context: Context) {
         get() = if (prefs.contains("quickTargets")) strings("quickTargets") else listOf("line", "mail", "share")
         set(v) = putStrings("quickTargets", v)
 
+    /** ホームの「通知」の区画に出す通知の条件。 */
+    var noticeRules: List<jp.yaegaki.theta.home.notify.NoticeRule>
+        get() = objects("noticeRules") { jp.yaegaki.theta.home.notify.NoticeRule.fromJson(it) }
+        set(v) = putObjects("noticeRules", v) { it.toJson() }
+
     /** ホームの予定に出す日数（今日から。1・3・7）。 */
     var homeDays: Int
         get() = prefs.getInt("homeDays", 3)

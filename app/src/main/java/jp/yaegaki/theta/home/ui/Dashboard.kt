@@ -80,26 +80,38 @@ fun Dashboard(model: HomeModel, openNasSettings: () -> Unit) {
         ClockBlock(big = false)
         Ticks(Modifier.fillMaxWidth().height(6.dp))
         SearchRow(model)
-        if (model.query.isNotBlank()) {
-            SearchResults(model)
-            return@Column
-        }
-        Panel(model, "TODAY", "予定", folded = {
-            val next = model.nextEvent
-            if (next != null) Text(dayLabel(next.localBegin) + "  " + next.title, color = LocalPalette.current.muted, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-        }) { TodayEvents(model, max = 12) }
-        Panel(model, "WEATHER", "天気", folded = {
-            val f = model.forecast
-            val warn = model.alerts?.list.orEmpty().joinToString("・") { it.name }
-            if (f != null) Text("${f.temp.roundToInt()}°  ${Weather.label(f.code)}" + (if (warn.isNotEmpty()) "  ⚠ $warn" else ""),
-                color = if (warn.isNotEmpty()) LocalPalette.current.accent else LocalPalette.current.muted, fontSize = 13.sp, maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-        }) { WeatherPanel(model) }
-        StatusStrip(model, openNasSettings)
-        Panel(model, "FILES", "ファイル") { FilesPanel(model) }
-        Panel(model, "DEVICE", "端末") { DevicePanel() }
-        Gap(8.dp)
+        if (model.query.isNotBlank()) SearchResults(model)
+        else DashboardPanels(model, openNasSettings)
     }
+}
+
+@Composable
+private fun DashboardPanels(model: HomeModel, openNasSettings: () -> Unit) {
+    Panel(model, "TODAY", "予定", folded = {
+        val next = model.nextEvent
+        if (next != null) Text(dayLabel(next.localBegin) + "  " + next.title, color = LocalPalette.current.muted, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+    }) { TodayEvents(model, max = 12) }
+    NoticePanel(model)
+    Panel(model, "WEATHER", "天気", folded = {
+        val f = model.forecast
+        val warn = model.alerts?.list.orEmpty().joinToString("・") { it.name }
+        if (f != null) Text("${f.temp.roundToInt()}°  ${Weather.label(f.code)}" + (if (warn.isNotEmpty()) "  ⚠ $warn" else ""),
+            color = if (warn.isNotEmpty()) LocalPalette.current.accent else LocalPalette.current.muted, fontSize = 13.sp, maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+    }) { WeatherPanel(model) }
+    StatusStrip(model, openNasSettings)
+    Panel(model, "FILES", "ファイル") { FilesPanel(model) }
+    Panel(model, "DEVICE", "端末") { DevicePanel() }
+    Gap(8.dp)
+}
+
+/** 条件に合う通知の区画。条件が無い・合う通知が無いときは出さない（通知へのアクセスが無ければ許可を促す）。 */
+@Composable
+private fun NoticePanel(model: HomeModel) {
+    val picked = filteredNotices(model)
+    val enabled = jp.yaegaki.theta.home.notify.HatchNotificationListener.isEnabled(LocalActions.current.activity)
+    if (model.noticeRules.isEmpty() || (picked.isEmpty() && enabled)) return
+    Panel(model, "NOTICE", "通知", folded = { FilteredNoticesFolded(picked) }) { FilteredNotices(model, picked, max = 6) }
 }
 
 /**
@@ -130,9 +142,10 @@ private fun Panel(model: HomeModel, code: String, title: String, folded: (@Compo
                 Text(title, color = if (band == p.accent) p.onAccent else p.fg, fontSize = 12.sp, modifier = Modifier.weight(1f))
                 Text(if (closed) "▸" else "▾", color = if (band == p.accent) p.onAccent else p.fg, fontSize = 12.sp)
             }
-            if (closed && folded == null) return@Column
-            Box(Modifier.fillMaxWidth().height(lineWidth).background(p.line))
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
+            if (!closed || folded != null) {
+                Box(Modifier.fillMaxWidth().height(lineWidth).background(p.line))
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
+            }
         }
         return
     }

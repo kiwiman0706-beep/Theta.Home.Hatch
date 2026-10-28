@@ -247,6 +247,12 @@ fun SettingsPanel(model: HomeModel) {
                     NOTICE_LEFT.forEach { (k, label) -> PillButton("左：$label", { model.changeNoticeLeft(k) }, primary = model.noticeLeft == k) }
                 }
                 Gap(18.dp)
+                SectionTitle("NOTICE FILTER / ホームに出す通知", Modifier.padding(horizontal = 10.dp))
+                Note("アプリ・含む言葉・除く言葉で決めた条件に合う通知だけを、ホームの時計・予定・天気のところに出します（例：LINE の家族のトークだけ、「至急」を含むメールだけ、「配達」を含む通知だけ）。合うものが無いときは隠します。通知を長押しして「ホームに出す」からも作れます。")
+                var rules by remember { mutableStateOf(false) }
+                FlowRow2 { PillButton(if (model.noticeRules.isEmpty()) "＋ 条件を作る" else "条件（${model.noticeRules.size}）", { rules = true }, primary = model.noticeRules.isEmpty()) }
+                if (rules) NoticeRulesDialog(model) { rules = false }
+                Gap(18.dp)
                 SectionTitle("ICON / アプリのアイコン", Modifier.padding(horizontal = 10.dp))
                 Note("世界観をそろえるため、アイコンを 3 色（地・基本・アクセント）に塗れます。色は下の配色で変えられ、型を作り直す必要はありません。Gemini はアイコンの形を整理して 3 色で描き直します（1 アプリ 1 回、自分の API キーで課金。アイコンの画像を Google に送ります）。まだ加工していないアプリは端末内の簡易加工で表示します。")
                 FlowRow2 {
