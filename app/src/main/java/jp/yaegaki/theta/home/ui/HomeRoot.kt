@@ -433,7 +433,7 @@ fun DockDialog(model: HomeModel, onDismiss: () -> Unit) {
     var shortcutsFor by remember { mutableStateOf<jp.yaegaki.theta.home.data.AppEntry?>(null) }
     val scCount = model.favoriteApps.count { it.startsWith("sc:") || it.startsWith("act:") }
     val room = HomeModel.DOCK_MAX - scCount
-    val list = model.apps.filter { q.isBlank() || it.label.contains(q, ignoreCase = true) }.sortedBy { it.key !in chosen }
+    val list = model.apps.filter { model.appMatches(it, q) }.sortedBy { it.key !in chosen }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("ピン留め（${chosen.size + scCount}/${HomeModel.DOCK_MAX}）") },

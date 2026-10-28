@@ -121,20 +121,22 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     fun changeEdgeSide(v: String) { edgeSide = v; store.edgeSide = v; syncEdge() }
     fun changeEdgePos(v: Int) { edgePos = v; store.edgePos = v; syncEdge() }
 
-    /** アプリの一覧の「タブを出す」（モードとルーチンなどから開く入口）を出しているか。 */
-    var showTabsIcon by mutableStateOf(
-        ctx.packageManager.getComponentEnabledSetting(android.content.ComponentName(ctx, "jp.yaegaki.theta.home.ShowTabs")) !=
-            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-    ); private set
+    /** アプリの一覧の「タブを出す」「すぐメモ」（モードとルーチンなどから開く入口）を出しているか。 */
+    private fun aliasOn(name: String) =
+        ctx.packageManager.getComponentEnabledSetting(android.content.ComponentName(ctx, "jp.yaegaki.theta.home.$name")) !=
+            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
 
-    fun changeShowTabsIcon(v: Boolean) {
-        showTabsIcon = v
-        ctx.packageManager.setComponentEnabledSetting(
-            android.content.ComponentName(ctx, "jp.yaegaki.theta.home.ShowTabs"),
-            if (v) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-            android.content.pm.PackageManager.DONT_KILL_APP,
-        )
-    }
+    private fun setAlias(name: String, v: Boolean) = ctx.packageManager.setComponentEnabledSetting(
+        android.content.ComponentName(ctx, "jp.yaegaki.theta.home.$name"),
+        if (v) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+        android.content.pm.PackageManager.DONT_KILL_APP,
+    )
+
+    var showTabsIcon by mutableStateOf(aliasOn("ShowTabs")); private set
+    fun changeShowTabsIcon(v: Boolean) { showTabsIcon = v; setAlias("ShowTabs", v) }
+
+    var showQuickIcon by mutableStateOf(aliasOn("QuickInput")); private set
+    fun changeShowQuickIcon(v: Boolean) { showQuickIcon = v; setAlias("QuickInput", v) }
 
     fun syncEdge() {
         edgeAllowed = android.provider.Settings.canDrawOverlays(ctx)
@@ -156,6 +158,25 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     var noticeOrder by mutableStateOf(store.noticeOrder); private set
     fun changeNoticeOrder(v: String) { noticeOrder = v; store.noticeOrder = v }
+
+    /** アプリの呼び名（声で開く・検索）。 */
+    var nicknames by mutableStateOf(store.nicknames); private set
+
+    fun nicknamesOf(app: AppEntry): List<String> = nicknames[app.key].orEmpty()
+
+    /** 呼び名を決める。「、」「,」・改行で区切っていくつでも。空なら消す。 */
+    fun setNicknames(app: AppEntry, text: String) {
+        val list = text.split(',', '、', '，', '\n').map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        nicknames = (nicknames - app.key).let { if (list.isEmpty()) it else it + (app.key to list) }
+        store.nicknames = nicknames
+    }
+
+    /** アプリの名前と呼び名。 */
+    fun namesOf(app: AppEntry): List<String> = listOf(app.label) + nicknamesOf(app)
+
+    /** 検索の言葉がアプリの名前か呼び名に合うか。 */
+    fun appMatches(app: AppEntry, q: String): Boolean =
+        q.isBlank() || app.label.contains(q, ignoreCase = true) || nicknamesOf(app).any { jp.yaegaki.theta.home.data.VoiceMatch.contains(it, q) }
 
     /** アプリの一覧を開いたら、すぐ音声で聞き取る（一覧の側が始めたら false に戻す）。 */
     var voicePending by mutableStateOf(false)
@@ -1561,6 +1582,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             }
             // 入力：声・文字・写真を入れてから、送り先を選ぶ
             "quick" -> quickOpen = "voice"
+            // 声でアプリを開く（呼び名でも）：すべてのアプリを開いて聞き取る
+            "voice-app" -> openApps(voice = true)
             // MemoHatch：新しい音声メモ（録音から）
             "memo-audio" -> start(Intent("jp.yaegaki.theta.memo.NEW").setPackage(MEMO).putExtra("type", "audio").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
@@ -1865,6 +1888,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         /** ピン留めできる機能。pkg のアプリが入っているときだけ出す（fallback は無くても出す）。 */
         val DOCK_ACTIONS = listOf(
             DockAction("quick", "入力", null, fallback = true),
+            DockAction("voice-app", "声でアプリ", null, fallback = true),
             DockAction("voice", "音声検索", GOOGLE, fallback = true),
             DockAction("memo-audio", "音声メモ", MEMO),
         )

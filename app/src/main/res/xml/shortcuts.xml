@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- アイコンの長押し・ショートカットを置けるアプリ（Dimple・モードとルーチンなど）から「タブを出す」 -->
+<!-- アイコンの長押し・ショートカットを置けるアプリ（Dimple・モードとルーチンなど）から「タブを出す」「声で入力」など -->
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
     <shortcut
         android:enabled="true"
@@ -11,5 +11,56 @@
             android:action="jp.yaegaki.theta.home.SHOW_TABS"
             android:targetClass="jp.yaegaki.theta.home.edge.EdgeActivity"
             android:targetPackage="jp.yaegaki.theta.home" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_quick_voice"
+        android:shortcutId="quick_voice"
+        android:shortcutLongLabel="@string/quick_voice_long"
+        android:shortcutShortLabel="@string/quick_voice">
+        <intent
+            android:action="jp.yaegaki.theta.home.QUICK"
+            android:targetClass="jp.yaegaki.theta.home.edge.EdgeActivity"
+            android:targetPackage="jp.yaegaki.theta.home">
+            <extra android:name="mode" android:value="voice" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_quick"
+        android:shortcutId="quick_text"
+        android:shortcutLongLabel="@string/quick_text_long"
+        android:shortcutShortLabel="@string/quick_text">
+        <intent
+            android:action="jp.yaegaki.theta.home.QUICK"
+            android:targetClass="jp.yaegaki.theta.home.edge.EdgeActivity"
+            android:targetPackage="jp.yaegaki.theta.home">
+            <extra android:name="mode" android:value="text" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_quick_photo"
+        android:shortcutId="quick_photo"
+        android:shortcutLongLabel="@string/quick_photo_long"
+        android:shortcutShortLabel="@string/quick_photo">
+        <intent
+            android:action="jp.yaegaki.theta.home.QUICK"
+            android:targetClass="jp.yaegaki.theta.home.edge.EdgeActivity"
+            android:targetPackage="jp.yaegaki.theta.home">
+            <extra android:name="mode" android:value="photo" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_voice_app"
+        android:shortcutId="voice_app"
+        android:shortcutLongLabel="@string/voice_app_long"
+        android:shortcutShortLabel="@string/voice_app">
+        <intent
+            android:action="jp.yaegaki.theta.home.VOICE_APP"
+            android:targetClass="jp.yaegaki.theta.home.edge.EdgeActivity"
+            android:targetPackage="jp.yaegaki.theta.home">
+        </intent>
     </shortcut>
 </shortcuts>

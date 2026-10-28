@@ -917,7 +917,7 @@ internal fun SearchResults(model: HomeModel) {
     val hits = remember(q, model.apps, model.people, model.recents, model.bookmarks, model.tabs, model.nasState) {
         buildList {
             model.tabs.filter { it.label.contains(q, true) }.forEach { t -> add(Hit("タブ", t.label, t.kind.defaultLabel) { model.query = ""; model.toggle(t.id) }) }
-            model.apps.filter { it.label.contains(q, true) }.take(8).forEach { a -> add(Hit("アプリ", a.label, "") { model.query = ""; actions.start(Apps.launchIntent(a)) }) }
+            model.apps.filter { model.appMatches(it, q) }.take(8).forEach { a -> add(Hit("アプリ", a.label, "") { model.query = ""; actions.start(Apps.launchIntent(a)) }) }
             model.recents.filter { it.name.contains(q, true) }.forEach { r ->
                 add(Hit("ファイル", r.name, r.where) { openFile(model, actions, ViewItem(Uri.parse(r.uri), r.name, r.mime)) })
             }

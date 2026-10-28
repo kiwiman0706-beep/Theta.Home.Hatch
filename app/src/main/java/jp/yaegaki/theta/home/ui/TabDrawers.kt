@@ -387,7 +387,7 @@ fun TabAppsDialog(model: HomeModel, tabId: String, onDismiss: () -> Unit) {
     var chosen by remember { mutableStateOf(model.opts(tabId).apps) }
     var q by remember { mutableStateOf("") }
     var shortcutsFor by remember { mutableStateOf<AppEntry?>(null) }
-    val list = model.apps.filter { q.isBlank() || it.label.contains(q, ignoreCase = true) }
+    val list = model.apps.filter { model.appMatches(it, q) }
         .sortedBy { it.key !in chosen }
     AlertDialog(
         onDismissRequest = onDismiss,

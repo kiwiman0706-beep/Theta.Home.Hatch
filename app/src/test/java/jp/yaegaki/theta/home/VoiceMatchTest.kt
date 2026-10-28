@@ -34,4 +34,11 @@ class VoiceMatchTest {
     fun core() {
         assertEquals("カメラ", VoiceMatch.core("かめら を開いて"))
     }
+
+    @Test
+    fun nickname() {
+        val names = mapOf("MoneyForward ME" to listOf("かけいぼ"), "カメラ" to emptyList())
+        assertEquals("MoneyForward ME", VoiceMatch.pickAny(names.keys.toList(), { listOf(it) + names[it]!! }, listOf("家計簿", "かけいぼ開いて")))
+        assertEquals(true, VoiceMatch.contains("かけいぼ", "カケイ"))
+    }
 }

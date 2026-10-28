@@ -785,4 +785,47 @@ class ScreenshotTest {
         store.favoriteApps = listOf("pkg:a")
         org.junit.Assert.assertEquals(listOf("pkg:a"), store.favoriteApps)
     }
+
+    /** ほかのアプリ（Dimple など）から「文字で入力」：透けた画面で入力だけ開き、送ったら閉じる。 */
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-xxhdpi")
+    fun quickFromShortcut() {
+        launch()
+        compose.waitForIdle()
+        val app = ApplicationProvider.getApplicationContext<HomeApp>()
+        scenario?.close()
+        scenario = null
+        val intent = Intent(jp.yaegaki.theta.home.edge.EdgeActivity.QUICK)
+            .setClassName(app, "jp.yaegaki.theta.home.edge.EdgeActivity")
+            .putExtra(jp.yaegaki.theta.home.edge.EdgeActivity.EXTRA_MODE, "text")
+        val edge = ActivityScenario.launch<jp.yaegaki.theta.home.edge.EdgeActivity>(intent)
+        compose.waitForIdle()
+        org.junit.Assert.assertEquals("text", app.model.quickOpen)
+        compose.onNodeWithText("ここに書く・マイクで話す").performTextInput("あとで送るアイデア")
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("build/screenshots/quick-edge.png")
+        compose.onNodeWithText("メモだけ").performClick()
+        compose.waitForIdle()
+        org.junit.Assert.assertNull(app.model.quickOpen)
+        compose.mainClock.advanceTimeBy(500)
+        // 閉じている（下のアプリへ戻る）
+        var finishing = false
+        runCatching { edge.onActivity { finishing = it.isFinishing } }.onFailure { finishing = true }
+        org.junit.Assert.assertTrue(finishing)
+    }
+
+    /** 呼び名でもアプリが見つかる。 */
+    @Test
+    fun nicknameSearch() {
+        launch()
+        compose.waitForIdle()
+        val m = model()
+        val a = m.apps.first()
+        org.junit.Assert.assertFalse(m.appMatches(a, "ふしぎなよびな"))
+        m.setNicknames(a, "ふしぎなよびな、べつめい")
+        org.junit.Assert.assertTrue(m.appMatches(a, "フシギナ"))
+        org.junit.Assert.assertEquals(listOf("ふしぎなよびな", "べつめい"), m.nicknamesOf(a))
+        m.setNicknames(a, "")
+        org.junit.Assert.assertTrue(m.nicknamesOf(a).isEmpty())
+    }
 }

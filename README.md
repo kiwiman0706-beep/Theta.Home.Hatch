@@ -8,7 +8,7 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**0.30.0-alpha（versionCode 36）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.31.0-alpha（versionCode 37）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
@@ -71,7 +71,13 @@
 
 - **入力**（ピン留めのペンのアイコン）：声・文字・写真で書いて、そのまま **LINE・メール・ほかへ共有・Clip** へ送る。どれを押しても先に **MemoHatch に残す**（入っていなければこのホームの Clip）。「送り先…」で並びと、LINE の決まった宛先（最近の会話から。試しの機能）を選べる。
 
-<img src="docs/screenshots/quick-input.png" width="200" alt="入力"> <img src="docs/screenshots/quick-targets.png" width="200" alt="送り先">
+<img src="docs/screenshots/quick-input.png" width="200" alt="入力"> <img src="docs/screenshots/quick-targets.png" width="200" alt="送り先"> <img src="docs/screenshots/quick-edge.png" width="200" alt="ほかのアプリから入力">
+
+- **思いついたらすぐ入力**：ほかのアプリの上でも、ボタン 1 つで入力の画面を開き、書いて（話して・撮って）から送り先を選ぶ。送ったら元のアプリに戻る。
+  - Dimple などショートカットを置けるアプリ：このアプリのショートカット「声で入力」「文字で入力」「写真で入力」「声でアプリ」
+  - モードとルーチンの「アプリを開く」：アプリの一覧の「すぐメモ」（声から。設定で隠せる）
+  - 自動化アプリ：アクティビティ `jp.yaegaki.theta.home.QUICK`（extra `mode` = `voice`・`text`・`photo`）、`jp.yaegaki.theta.home.VOICE_APP`
+- **アプリの呼び名**：アプリの長押し →「呼び名をつける」。声でアプリを開くとき・検索で、その名前でも見つかる（いくつでも、「、」で区切る）。ピン留めの「声でアプリ」からも。
 
 - **回線の速さ**：上の帯に下りの速さと応答時間（初めは 30 分おき、設定の NETWORK で 15・30・60 分・切る、モバイル回線では測らない設定も）。押すとすぐ測る。つながらない・遅いときは **再接続** のボタン：アプリからはモバイルデータを切り替えられないので、Galaxy のモードとルーチンなどで「モバイルデータを切って入れる」ルーチンを作り、そのショートカットを「再接続ボタン」の置き場に置くとそれを動かす。置いていなければ、Android に「つながらない」と知らせて、インターネットの切り替えパネルを開く。
 

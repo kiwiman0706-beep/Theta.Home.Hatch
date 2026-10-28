@@ -517,8 +517,11 @@ private fun Face(person: jp.yaegaki.theta.home.data.Person, size: androidx.compo
 @Composable
 private fun AppMenu(model: HomeModel, app: jp.yaegaki.theta.home.data.AppEntry, expanded: Boolean, close: () -> Unit, shortcuts: () -> Unit, move: () -> Unit) {
     val actions = LocalActions.current
+    var naming by remember { mutableStateOf(false) }
+    if (naming) NicknameDialog(model, app) { naming = false }
     DropdownMenu(expanded = expanded, onDismissRequest = close) {
         DropdownMenuItem(text = { Text("ショートカット（タブに置く）") }, onClick = { close(); shortcuts() })
+        DropdownMenuItem(text = { Text(model.nicknamesOf(app).let { if (it.isEmpty()) "呼び名をつける（声で開く・検索）" else "呼び名：" + it.joinToString("、") }) }, onClick = { close(); naming = true })
         DropdownMenuItem(text = { Text(if (model.isPinned(app)) "ピン留めを外す" else "ピン留め（端の下・すべてのアプリの上）") }, onClick = { close(); model.toggleDockApp(app) })
         DropdownMenuItem(text = { Text("カテゴリーを変える") }, onClick = { close(); move() })
         DropdownMenuItem(text = { Text("アプリ情報") }, onClick = { actions.start(Apps.infoIntent(app.packageName)); close() })
@@ -529,6 +532,24 @@ private fun AppMenu(model: HomeModel, app: jp.yaegaki.theta.home.data.AppEntry, 
             DropdownMenuItem(text = { Text("アイコンを Gemini で作り直す") }, onClick = { close(); model.clearGeminiIcons(app); model.startGeminiIcons(app) })
         }
     }
+}
+
+/** アプリの呼び名：声で開くときや検索で、アプリの名前の代わりに使える。いくつでも（「、」で区切る）。 */
+@Composable
+private fun NicknameDialog(model: HomeModel, app: jp.yaegaki.theta.home.data.AppEntry, onDismiss: () -> Unit) {
+    var text by remember { mutableStateOf(model.nicknamesOf(app).joinToString("、")) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("「${app.label}」の呼び名") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Note("声で開くとき・検索で、この名前でも見つかります。ひらがなで入れておくと聞き取りと合いやすいです。いくつか付けるときは「、」で区切ります。")
+                Field(text, { text = it }, "例：かけいぼ、おかね")
+            }
+        },
+        confirmButton = { TextButton(onClick = { model.setNicknames(app, text); onDismiss() }) { Text("決める") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("やめる") } },
+    )
 }
 
 @Composable
@@ -597,7 +618,7 @@ private fun AppsDrawer(model: HomeModel, only: String? = null, split: Boolean = 
     // 見せ方（一覧・グリッド・大きさ）は、全体とカテゴリーのタブごとに覚える。カテゴリーのタブは初めからグリッド
     val viewKey = if (only != null) "apps:$only" else "apps"
     val spec = model.viewFor(listOf(viewKey), mostlyMedia = only != null)
-    val visible = model.apps.filter { q.isBlank() || it.label.contains(q, ignoreCase = true) }
+    val visible = model.apps.filter { model.appMatches(it, q) }
     // カテゴリーの並び順で見出しを付ける。未分類は最後
     val groups = (model.categories.map { c -> c.id to c.name } + ("" to "未分類"))
         .filter { (id, _) -> filter == null || filter == id }
@@ -612,7 +633,7 @@ private fun AppsDrawer(model: HomeModel, only: String? = null, split: Boolean = 
     val voice = rememberVoice(
         onPartial = { q = it },
         onFinal = { heard ->
-            val hit = jp.yaegaki.theta.home.data.VoiceMatch.pick(model.apps, { it.label }, heard)
+            val hit = jp.yaegaki.theta.home.data.VoiceMatch.pickAny(model.apps, { model.namesOf(it) }, heard)
             if (hit != null) {
                 actions.toast("「${hit.label}」を開きます")
                 model.close()

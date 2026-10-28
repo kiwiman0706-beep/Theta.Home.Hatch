@@ -548,6 +548,21 @@ class Store(context: Context) {
         get() = if (prefs.contains("quickTargets")) strings("quickTargets") else listOf("line", "mail", "share")
         set(v) = putStrings("quickTargets", v)
 
+    /** アプリの呼び名（声で開く・検索で使う）。キーは AppEntry.key、値は呼び名（いくつでも）。 */
+    var nicknames: Map<String, List<String>>
+        get() = runCatching {
+            val o = JSONObject(prefs.getString("nicknames", "{}") ?: "{}")
+            o.keys().asSequence().associateWith { k ->
+                val a = o.getJSONArray(k)
+                (0 until a.length()).map { a.getString(it) }
+            }.filterValues { it.isNotEmpty() }
+        }.getOrDefault(emptyMap())
+        set(v) {
+            val o = JSONObject()
+            v.filterValues { it.isNotEmpty() }.forEach { (k, list) -> o.put(k, JSONArray(list)) }
+            prefs.edit().putString("nicknames", o.toString()).apply()
+        }
+
     /** 入力したものを、送り先に関わらず MemoHatch にも残す。 */
     var quickMemo: Boolean
         get() = prefs.getBoolean("quickMemo", true)

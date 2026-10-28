@@ -23,9 +23,42 @@ class EdgeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        handle(intent)
         setContent {
             HomeTheme(model.themeMode) {
                 HomeRoot(model, this, edgeExit = ::exit)
+            }
+            // 入力だけのために開いたなら、送った・閉じたらそのまま下のアプリ（送り先）へ戻る
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                androidx.compose.runtime.snapshotFlow { model.quickOpen }.collect { if (it == null && purpose == QUICK) exit() }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handle(intent)
+    }
+
+    /** 何のために開いたか：タブ（null）・入力（QUICK）・声でアプリ（VOICE_APP）。 */
+    private var purpose: String? = null
+
+    private fun handle(intent: Intent?) {
+        val alias = intent?.component?.className.orEmpty()
+        purpose = when {
+            intent?.action == QUICK || alias.endsWith(".QuickInput") -> QUICK
+            intent?.action == VOICE_APP -> VOICE_APP
+            else -> null
+        }
+        when (purpose) {
+            QUICK -> {
+                model.onHome()
+                model.quickOpen = intent?.getStringExtra(EXTRA_MODE)?.takeIf { it in MODES } ?: "voice"
+            }
+            VOICE_APP -> {
+                model.onHome()
+                model.openApps(voice = true)
             }
         }
     }
@@ -40,7 +73,7 @@ class EdgeActivity : ComponentActivity() {
         EdgeService.homeShown.value = true
         model.reloadShortcuts()
         // 開いたら、最後に開いていたタブを出しておく（無ければタブだけ）
-        if (model.open == null && !model.settingsOpen) model.openLast()
+        if (purpose == null && model.open == null && !model.settingsOpen && model.quickOpen == null) model.openLast()
     }
 
     override fun onPause() {
@@ -50,6 +83,12 @@ class EdgeActivity : ComponentActivity() {
 
     override fun onStop() {
         widgets.stop()
+        // 声でアプリを開いたら、開いたアプリへ移るので閉じておく（入力はカメラへ移ることがあるので閉じない）
+        if (purpose == VOICE_APP && !isChangingConfigurations) {
+            purpose = null
+            model.onHome()
+            finish()
+        }
         super.onStop()
     }
 
@@ -59,6 +98,15 @@ class EdgeActivity : ComponentActivity() {
         finish()
         @Suppress("DEPRECATION")
         overridePendingTransition(0, android.R.anim.fade_out)
+    }
+
+    companion object {
+        /** 入力（声・文字・写真 → 送る）を開く。extra "mode" は voice・text・photo（無ければ voice）。 */
+        const val QUICK = "jp.yaegaki.theta.home.QUICK"
+        /** すべてのアプリを開いて、声でアプリを開く（呼び名でも）。 */
+        const val VOICE_APP = "jp.yaegaki.theta.home.VOICE_APP"
+        const val EXTRA_MODE = "mode"
+        private val MODES = setOf("voice", "text", "photo")
     }
 
     @Deprecated("AppWidgetHost の設定画面は requestCode で結果を返す")

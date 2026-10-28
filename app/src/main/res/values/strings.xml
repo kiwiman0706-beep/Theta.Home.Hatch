@@ -5,4 +5,13 @@
     <string name="listener_label">Theta Home Hatch（LINE・メールの通知を表示）</string>
     <string name="show_tabs">タブを出す</string>
     <string name="show_tabs_long">ほかのアプリの上にタブを出す</string>
+    <string name="quick_input">すぐメモ</string>
+    <string name="quick_voice">声で入力</string>
+    <string name="quick_voice_long">声で入力して、送り先を選ぶ</string>
+    <string name="quick_text">文字で入力</string>
+    <string name="quick_text_long">文字で入力して、送り先を選ぶ</string>
+    <string name="quick_photo">写真で入力</string>
+    <string name="quick_photo_long">写真を撮って、送り先を選ぶ</string>
+    <string name="voice_app">声でアプリ</string>
+    <string name="voice_app_long">声でアプリを開く（呼び名でも）</string>
 </resources>

@@ -172,7 +172,30 @@
                 <action android:name="jp.yaegaki.theta.home.SHOW_TABS" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <!-- 入力（声・文字・写真 → 送り先を選ぶ）。extra "mode" に voice・text・photo -->
+            <intent-filter>
+                <action android:name="jp.yaegaki.theta.home.QUICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <!-- 声でアプリを開く（呼び名でも） -->
+            <intent-filter>
+                <action android:name="jp.yaegaki.theta.home.VOICE_APP" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
+
+        <!-- アプリの一覧の「すぐメモ」：入力（声から）をすぐ開く。アプリを開くことしかできないもの向け。設定で隠せる -->
+        <activity-alias
+            android:name=".QuickInput"
+            android:exported="true"
+            android:icon="@drawable/ic_quick"
+            android:label="@string/quick_input"
+            android:targetActivity=".edge.EdgeActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <!-- アプリの一覧の「タブを出す」：アプリを開くことしかできないもの（モードとルーチンなど）向け。設定で隠せる -->
         <activity-alias

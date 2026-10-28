@@ -10,6 +10,12 @@ import java.util.Locale
 object VoiceMatch {
     private val SUFFIXES = listOf("を開いて", "開いて", "をひらいて", "ひらいて", "を起動して", "を起動", "起動して", "起動", "を開く", "開く", "アプリ", "お願い", "して")
 
+    /** 呼び名・検索の言葉が名前に含まれるか（ひらがな・カタカナ・全角半角・大文字小文字の違いは見ない）。 */
+    fun contains(name: String, q: String): Boolean {
+        val b = normalize(q)
+        return b.isEmpty() || normalize(name).contains(b)
+    }
+
     fun normalize(s: String): String {
         val n = Normalizer.normalize(s, Normalizer.Form.NFKC).lowercase(Locale.ROOT)
         val sb = StringBuilder()
@@ -52,9 +58,12 @@ object VoiceMatch {
     /**
      * 聞き取りの候補（よい順）から、開くアプリを 1 つ決める。はっきり 1 つに決まらなければ null。
      */
-    fun <T> pick(items: List<T>, label: (T) -> String, heard: List<String>): T? {
+    fun <T> pick(items: List<T>, label: (T) -> String, heard: List<String>): T? = pickAny(items, { listOf(label(it)) }, heard)
+
+    /** 名前がいくつかあるもの（アプリの名前と、自分で付けた呼び名）から選ぶ。いちばん合う名前で比べる。 */
+    fun <T> pickAny(items: List<T>, names: (T) -> List<String>, heard: List<String>): T? {
         for (h in heard.take(3)) {
-            val scored = items.map { it to score(label(it), h) }.sortedByDescending { it.second }
+            val scored = items.map { it to (names(it).maxOfOrNull { n -> score(n, h) } ?: 0) }.sortedByDescending { it.second }
             val best = scored.firstOrNull() ?: return null
             val second = scored.getOrNull(1)?.second ?: 0
             if (best.second >= 80 && best.second > second) return best.first

@@ -225,6 +225,10 @@ fun SettingsPanel(model: HomeModel) {
                 Note("「タブを出す」で、端をなぞったときと同じタブを、今のアプリの上に出せます（エッジがオフでも使えます）。Dimple などショートカットを置けるアプリでは、このアプリの「タブを出す」ショートカットを選びます。Galaxy のモードとルーチンでは「アプリを開く」で、アプリの一覧の「タブを出す」を選びます。自動化アプリからは jp.yaegaki.theta.home.SHOW_TABS（アクティビティ）でも呼べます。")
                 Toggle("アプリの一覧に「タブを出す」を出す（モードとルーチン向け）", model.showTabsIcon) { model.changeShowTabsIcon(it) }
                 Gap(18.dp)
+                SectionTitle("SHORTCUT / 思いついたらすぐ入力", Modifier.padding(horizontal = 10.dp))
+                Note("ボタン 1 つで入力の画面を開き、書いて（話して・撮って）から送り先を選べます。送るといつも MemoHatch に残ります。Dimple などでは、このアプリのショートカット「声で入力」「文字で入力」「写真で入力」「声でアプリ」を選びます。モードとルーチンの「アプリを開く」では、アプリの一覧の「すぐメモ」（声から）を選びます。自動化アプリからは jp.yaegaki.theta.home.QUICK（extra mode = voice・text・photo）、jp.yaegaki.theta.home.VOICE_APP でも呼べます。")
+                Toggle("アプリの一覧に「すぐメモ」を出す", model.showQuickIcon) { model.changeShowQuickIcon(it) }
+                Gap(18.dp)
                 SectionTitle("ONE UI / Galaxy の見た目を合わせる", Modifier.padding(horizontal = 10.dp))
                 Note("One UI のテーマは自分では配れないので、材料を作ります。壁紙を HUD にすると、One UI が壁紙から色を取って、クイックパネル・設定・キーボードなども黒とオレンジ寄りになります。アイコンは今の 3 色・配色で PNG に書き出し、Good Lock の Theme Park でアプリごとに選べます（手順は README）。")
                 FlowRow2 {

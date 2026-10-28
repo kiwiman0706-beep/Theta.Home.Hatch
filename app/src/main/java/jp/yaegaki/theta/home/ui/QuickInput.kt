@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -90,8 +91,10 @@ private fun QuickBody(model: HomeModel, startMode: String) {
         model.sendQuick(body, uri, target, actions.start)
     }
 
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
     LaunchedEffect(Unit) {
         when (startMode) {
+            "text" -> runCatching { focus.requestFocus() }
             "voice" -> voice.start()
             "photo" -> shoot()
         }
@@ -130,7 +133,7 @@ private fun QuickBody(model: HomeModel, startMode: String) {
                     else -> "ここに書く・マイクで話す"
                 },
                 singleLine = false,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 96.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 96.dp).focusRequester(focus),
             )
             photo?.let { f ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

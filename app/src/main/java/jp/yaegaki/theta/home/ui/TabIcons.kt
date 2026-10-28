@@ -82,7 +82,7 @@ fun TabIconDialog(model: HomeModel, id: String, onDismiss: () -> Unit) {
                 else {
                     Field(q, { q = it }, "名前で絞り込み")
                     Column(Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState())) {
-                        model.apps.filter { q.isBlank() || it.label.contains(q, ignoreCase = true) }.forEachIndexed { zi, app ->
+                        model.apps.filter { model.appMatches(it, q) }.forEachIndexed { zi, app ->
                             RowButton(zebra = zi, onClick = { pick("app:" + app.key) }) {
                                 AppIcon(app, 28.dp)
                                 Text(app.label, color = p.fg, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
