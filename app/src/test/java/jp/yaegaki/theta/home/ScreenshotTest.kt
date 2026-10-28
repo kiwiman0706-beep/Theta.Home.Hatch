@@ -1185,4 +1185,22 @@ class ScreenshotTest {
         compose.onNodeWithContentDescription("Music（最近）").assertExists()
         edge.close()
     }
+
+    /** ショートカットの中継：エッジがオフなら自分でタブ（エッジ）を開き、何も描かずにすぐ消える。入口の名前から開くものを決める。 */
+    @Test
+    fun edgeLauncherForwards() {
+        val app = ApplicationProvider.getApplicationContext<HomeApp>()
+        app.store.edgeOn = false
+        listOf(
+            Intent(jp.yaegaki.theta.home.edge.EdgeLauncher.SHOW_TABS).setClassName(app, "jp.yaegaki.theta.home.edge.EdgeLauncher") to "jp.yaegaki.theta.home.SHOW_TABS",
+            Intent(Intent.ACTION_MAIN).setClassName(app, "jp.yaegaki.theta.home.QuickInput") to jp.yaegaki.theta.home.edge.EdgeActivity.QUICK,
+        ).forEach { (intent, expected) ->
+            val c = org.robolectric.Robolectric.buildActivity(jp.yaegaki.theta.home.edge.EdgeLauncher::class.java, intent).create()
+            val started = shadowOf(c.get()).nextStartedActivity
+            org.junit.Assert.assertEquals("jp.yaegaki.theta.home.edge.EdgeActivity", started.component?.className)
+            org.junit.Assert.assertEquals(expected, started.action)
+            org.junit.Assert.assertTrue(started.flags and Intent.FLAG_ACTIVITY_NEW_TASK != 0)
+            org.junit.Assert.assertTrue(c.get().isFinishing)
+        }
+    }
 }

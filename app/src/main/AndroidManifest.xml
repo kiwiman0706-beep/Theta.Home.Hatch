@@ -188,13 +188,29 @@
             </intent-filter>
         </activity>
 
+        <!-- ショートカット・アプリの一覧からエッジを開くときの中継（何も描かずにすぐ消える。後ろにホームが出ないように） -->
+        <activity
+            android:name=".edge.EdgeLauncher"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:taskAffinity="jp.yaegaki.theta.home.edgelauncher"
+            android:theme="@style/Theme.HomeHatch.Invisible">
+            <intent-filter>
+                <action android:name="jp.yaegaki.theta.home.SHOW_TABS" />
+                <action android:name="jp.yaegaki.theta.home.QUICK" />
+                <action android:name="jp.yaegaki.theta.home.VOICE_APP" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <!-- アプリの一覧の「すぐメモ」：入力（声から）をすぐ開く。アプリを開くことしかできないもの向け。設定で隠せる -->
         <activity-alias
             android:name=".QuickInput"
             android:exported="true"
             android:icon="@drawable/ic_quick"
             android:label="@string/quick_input"
-            android:targetActivity=".edge.EdgeActivity">
+            android:targetActivity=".edge.EdgeLauncher">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -207,7 +223,7 @@
             android:exported="true"
             android:icon="@drawable/ic_tabs"
             android:label="@string/show_tabs"
-            android:targetActivity=".edge.EdgeActivity">
+            android:targetActivity=".edge.EdgeLauncher">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

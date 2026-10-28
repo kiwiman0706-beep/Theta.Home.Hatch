@@ -57,6 +57,18 @@ class EdgeService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // ショートカットからの「開く」：取っ手を押したときと同じく、ここから開く
+        if (intent?.action == ACTION_OPEN) {
+            @Suppress("DEPRECATION")
+            val forward = intent.getParcelableExtra<Intent>(EXTRA_FORWARD)
+            forward?.let { runCatching { startActivity(it) } }
+            if (!store.edgeOn || !Settings.canDrawOverlays(this) || !runCatching { goForeground() }.isSuccess) {
+                stopSelf()
+                return START_NOT_STICKY
+            }
+            refreshHandle()
+            return START_STICKY
+        }
         if (intent?.action == ACTION_STOP) {
             store.edgeOn = false
             stopSelf()
@@ -198,6 +210,8 @@ class EdgeService : Service() {
         private const val NOTIFICATION_ID = 42
         private const val HANDLE_DP = 150
         const val ACTION_STOP = "jp.yaegaki.theta.home.edge.STOP"
+        const val ACTION_OPEN = "jp.yaegaki.theta.home.edge.OPEN"
+        const val EXTRA_FORWARD = "forward"
 
         /** ホーム・エッジを開いている間は取っ手を隠す。見えたとき・裏へ回ったときに変える。 */
         val homeShown = MutableStateFlow(false)
