@@ -164,6 +164,16 @@ fun SettingsPanel(model: HomeModel) {
                 FlowRow2 { PillButton("ホームの並びを変える", { homeLayout = true }, primary = true) }
                 if (homeLayout) HomeLayoutDialog(model) { homeLayout = false }
                 Gap(18.dp)
+                SectionTitle("TASKBAR / 画面の下のアプリ", Modifier.padding(horizontal = 10.dp))
+                Note("画面の下に、最近使ったアプリ（下に印）とよく使うアプリを、入るだけ並べます。タブを出しているときも見えます。「使用状況へのアクセス」を許可すると、通知やほかのアプリから開いたものも含めた端末の記録から出します（許可しなければ、このホームから開いた記録から）。")
+                Toggle("閉じた画面に出す", model.taskbarNarrow) { model.changeTaskbarNarrow(it) }
+                Toggle("開いた画面に出す（Galaxy のタスクバーと重なるので初めは切っています）", model.taskbarWide) { model.changeTaskbarWide(it) }
+                FlowRow2 {
+                    PillButton(if (model.usageAccess) "使用状況へのアクセス：許可済み" else "使用状況へのアクセスを許可", {
+                        actions.start(android.content.Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                    }, primary = !model.usageAccess)
+                }
+                Gap(18.dp)
                 SectionTitle("見た目", Modifier.padding(horizontal = 10.dp))
                 Text("端のタブ", color = p.faint, fontSize = 11.sp, letterSpacing = 1.5.sp, modifier = Modifier.padding(horizontal = 10.dp))
                 FlowRow2 {

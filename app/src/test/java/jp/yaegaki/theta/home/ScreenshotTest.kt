@@ -1114,4 +1114,29 @@ class ScreenshotTest {
         compose.onNodeWithContentDescription("声で探す", substring = true).assertExists()
         shot("search")
     }
+
+    /** 閉じた画面の下のタスクバー：このホームから開いた記録で、最近（印つき）とよく使うもの。タブを出しても見える。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun taskbar() {
+        launch { app ->
+            app.store.launchRecent = listOf("com.example.music", "com.example.chat")
+            app.store.launchCounts = mapOf("com.example.notes" to 9, "com.example.maps" to 4, "com.example.chat" to 3)
+        }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Music（最近）").assertExists()
+        compose.onNodeWithContentDescription("Chat（最近）").assertExists()
+        compose.onNodeWithContentDescription("Notes").assertExists()
+        val m = model()
+        scenario!!.onActivity { m.noteLaunch(jp.yaegaki.theta.home.data.Apps.launchIntent(m.apps.first { it.packageName == "com.example.puzzle" })) }
+        compose.waitForIdle()
+        org.junit.Assert.assertEquals("com.example.puzzle", m.usageRecent.first())
+        compose.onNodeWithContentDescription("CALENDAR", substring = true).performScrollTo().performClick()
+        compose.mainClock.advanceTimeBy(600)
+        compose.onNodeWithContentDescription("Puzzle（最近）").assertExists()
+        shot("taskbar")
+        scenario!!.onActivity { m.changeTaskbarNarrow(false) }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Puzzle（最近）").assertDoesNotExist()
+    }
 }

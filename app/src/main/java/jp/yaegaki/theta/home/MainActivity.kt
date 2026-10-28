@@ -48,6 +48,7 @@ class MainActivity : ComponentActivity() {
             healthy.removeCallbacks(speedTick)
         healthy.postDelayed(speedTick, 5 * 60_000L)
         model.refreshSpeed()
+        model.refreshUsage()
             healthy.postDelayed(this, 5 * 60_000L)
         }
     }

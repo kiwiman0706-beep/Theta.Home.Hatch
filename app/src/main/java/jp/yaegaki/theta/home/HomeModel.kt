@@ -292,6 +292,40 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     }
     fun removeNoticeRule(id: String) { noticeRules = noticeRules.filterNot { it.id == id }; store.noticeRules = noticeRules }
 
+    // ---- タスクバー（画面の下に、最近使ったアプリとよく使うアプリ） ----
+
+    var taskbarNarrow by mutableStateOf(store.taskbarNarrow); private set
+    var taskbarWide by mutableStateOf(store.taskbarWide); private set
+    fun changeTaskbarNarrow(v: Boolean) { taskbarNarrow = v; store.taskbarNarrow = v }
+    fun changeTaskbarWide(v: Boolean) { taskbarWide = v; store.taskbarWide = v }
+    fun taskbarHere() = if (profile == "wide") taskbarWide else taskbarNarrow
+
+    /** 最近（新しいもの先）とよく使うもの。端末の記録か、このホームから開いた記録。 */
+    var usageRecent by mutableStateOf<List<String>>(store.launchRecent); private set
+    var usageCounts by mutableStateOf<Map<String, Int>>(store.launchCounts); private set
+    var usageAccess by mutableStateOf(false); private set
+
+    fun refreshUsage() {
+        usageAccess = jp.yaegaki.theta.home.data.AppUsage.hasAccess(ctx)
+        if (!usageAccess) {
+            usageRecent = store.launchRecent
+            usageCounts = store.launchCounts
+            return
+        }
+        io { runCatching { jp.yaegaki.theta.home.data.AppUsage.fromSystem(ctx) }.getOrNull() }.then { r ->
+            if (r != null) { usageRecent = r.first; usageCounts = r.second }
+        }
+    }
+
+    /** ホームからアプリを開いたら覚えておく（使用状況へのアクセスが無いときのタスクバーに使う）。 */
+    fun noteLaunch(intent: Intent) {
+        val pkg = intent.component?.packageName ?: intent.`package` ?: return
+        if (pkg == ctx.packageName || apps.none { it.packageName == pkg }) return
+        store.launchRecent = listOf(pkg) + store.launchRecent.filter { it != pkg }
+        store.launchCounts = store.launchCounts.toMutableMap().also { it[pkg] = (it[pkg] ?: 0) + 1 }
+        if (!usageAccess) { usageRecent = store.launchRecent; usageCounts = store.launchCounts }
+    }
+
     // ---- Web 検索 ----
 
     /**

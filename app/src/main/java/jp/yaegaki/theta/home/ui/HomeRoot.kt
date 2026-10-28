@@ -39,6 +39,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -191,29 +193,33 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity, edgeExit: (() -> Uni
             // START の無い側にタブが 1 つも無ければ、その側の端は出さない
             val both = wantBoth && model.tabs.any { model.shownHere(it.id) && model.tabOnLeft(it.id) != railLeft }
             fun onLeft(id: String) = if (both) model.tabOnLeft(id) else railLeft
-            Row(Modifier.fillMaxSize()) {
-                if (railLeft || both) CompositionLocalProvider(LocalRailLeft provides true) { Rail(model, railW, main = railLeft, filter = if (both) ({ onLeft(it) }) else null) }
-                Box(Modifier.weight(1f).fillMaxHeight()) {
-                    Row(Modifier.fillMaxSize()) {
-                        CompositionLocalProvider(LocalRailLeft provides true) {
-                            docked.filter { onLeft(it) }.forEach { DockedDrawer(model, it, drawerWidth(model, it, layout, available), available) }
+            // 下にタスクバー（最近使ったアプリ・よく使うアプリ）。タブを出しているときも見える
+            Column(Modifier.fillMaxSize()) {
+                Row(Modifier.fillMaxWidth().weight(1f)) {
+                    if (railLeft || both) CompositionLocalProvider(LocalRailLeft provides true) { Rail(model, railW, main = railLeft, filter = if (both) ({ onLeft(it) }) else null) }
+                    Box(Modifier.weight(1f).fillMaxHeight()) {
+                        Row(Modifier.fillMaxSize()) {
+                            CompositionLocalProvider(LocalRailLeft provides true) {
+                                docked.filter { onLeft(it) }.forEach { DockedDrawer(model, it, drawerWidth(model, it, layout, available), available) }
+                            }
+                            Box(Modifier.weight(1f).fillMaxHeight()) {
+                                // エッジでは背景は透けたまま。押すと閉じる
+                                if (edge) Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClickLabel = "閉じる") { edgeExit?.invoke() })
+                                else Filer(model)
+                            }
+                            CompositionLocalProvider(LocalRailLeft provides false) {
+                                docked.filter { !onLeft(it) }.forEach { DockedDrawer(model, it, drawerWidth(model, it, layout, available), available) }
+                            }
                         }
-                        Box(Modifier.weight(1f).fillMaxHeight()) {
-                            // エッジでは背景は透けたまま。押すと閉じる
-                            if (edge) Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClickLabel = "閉じる") { edgeExit?.invoke() })
-                            else Filer(model)
-                        }
-                        CompositionLocalProvider(LocalRailLeft provides false) {
-                            docked.filter { !onLeft(it) }.forEach { DockedDrawer(model, it, drawerWidth(model, it, layout, available), available) }
-                        }
+                        // 開いたドロワーは、そのタブの側から出す（設定は START の側）
+                        // 閉じるときも出てきた側へしまうよう、最後に開いていた側を覚えておく
+                        var lastFrom by remember { mutableStateOf(railLeft) }
+                        if (model.settingsOpen) lastFrom = railLeft else model.open?.let { lastFrom = onLeft(it) }
+                        CompositionLocalProvider(LocalRailLeft provides lastFrom) { Overlay(model, layout, available) }
                     }
-                    // 開いたドロワーは、そのタブの側から出す（設定は START の側）
-                    // 閉じるときも出てきた側へしまうよう、最後に開いていた側を覚えておく
-                    var lastFrom by remember { mutableStateOf(railLeft) }
-                    if (model.settingsOpen) lastFrom = railLeft else model.open?.let { lastFrom = onLeft(it) }
-                    CompositionLocalProvider(LocalRailLeft provides lastFrom) { Overlay(model, layout, available) }
+                    if (!railLeft || both) CompositionLocalProvider(LocalRailLeft provides false) { Rail(model, railW, main = !railLeft, filter = if (both) ({ !onLeft(it) }) else null) }
                 }
-                if (!railLeft || both) CompositionLocalProvider(LocalRailLeft provides false) { Rail(model, railW, main = !railLeft, filter = if (both) ({ !onLeft(it) }) else null) }
+                if (!edge && model.taskbarHere()) Taskbar(model)
             }
             model.importReport?.let { r -> ImportReportDialog(model, r) { model.importReport = null } }
             // 中で開いたファイル（いちばん上に重ねる）
@@ -398,6 +404,60 @@ private fun Rail(model: HomeModel, width: Dp, main: Boolean = true, filter: ((St
         StartButton(model)
     }
     }
+}
+
+/**
+ * タスクバー：画面の下に、最近使ったアプリ（下に印）と、よく使うアプリ。画面に入るだけ。押すと開く。
+ * 「使用状況へのアクセス」を許可すると、ほかの開き方も含めた端末の記録から。無ければこのホームから開いた記録から。
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun Taskbar(model: HomeModel) {
+    val p = LocalPalette.current
+    val actions = LocalActions.current
+    val ctx = actions.activity
+    // ホームのアプリ（このアプリ・端末のホーム）は出さない
+    val skip = remember {
+        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        runCatching { ctx.packageManager.queryIntentActivities(home, 0).map { it.activityInfo.packageName } }.getOrDefault(emptyList()).toSet() + ctx.packageName
+    }
+    var label by remember { mutableStateOf<String?>(null) }
+    Column(Modifier.fillMaxWidth().background(p.panel)) {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
+        BoxWithConstraints(Modifier.fillMaxWidth().height(50.dp).padding(horizontal = 6.dp), contentAlignment = Alignment.Center) {
+            val cell = 44.dp
+            val total = ((maxWidth - 10.dp) / cell).toInt().coerceAtLeast(1)
+            val known = model.apps.map { it.packageName }.toSet()
+            val (recent, frequent) = jp.yaegaki.theta.home.data.AppUsage.pick(model.usageRecent, model.usageCounts, known, skip, recentMax = (total + 1) / 2, total = total)
+            fun app(pkg: String) = model.apps.firstOrNull { it.packageName == pkg }
+            if (recent.isEmpty() && frequent.isEmpty()) {
+                Text(
+                    "最近使ったアプリをここに出す（使用状況へのアクセスを許可）", color = p.muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.clickable { actions.start(Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
+                )
+            } else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                @Composable
+                fun Cell(pkg: String, running: Boolean) {
+                    val a = app(pkg) ?: return
+                    Box(
+                        Modifier.size(cell).combinedClickable(
+                            onClick = { actions.start(jp.yaegaki.theta.home.data.Apps.launchIntent(a)) },
+                            onLongClick = { label = a.label },
+                            onClickLabel = "開く",
+                        ).semantics { contentDescription = a.label + if (running) "（最近）" else "" },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        AppIcon(a, 30.dp)
+                        if (running) Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp).width(12.dp).height(3.dp).background(p.accent))
+                    }
+                }
+                recent.forEach { Cell(it, running = true) }
+                if (recent.isNotEmpty() && frequent.isNotEmpty()) Box(Modifier.padding(horizontal = 4.dp).width(1.dp).height(24.dp).background(p.line))
+                frequent.forEach { Cell(it, running = false) }
+            }
+        }
+    }
+    label?.let { l -> LaunchedEffect(l) { actions.toast(l); label = null } }
 }
 
 /** 端の下に固定のよく使うアプリ・ショートカット。押すと開く、長押しで並べ替え・外す・選ぶ。 */
@@ -735,6 +795,7 @@ private fun rememberActions(model: HomeModel, activity: ComponentActivity, edgeE
             start = { intent ->
                 try {
                     activity.startActivity(intent)
+                    model.noteLaunch(intent)
                     // エッジから開いたら、エッジは閉じる（開いたアプリを前に）
                     edgeExit?.invoke()
                 } catch (_: ActivityNotFoundException) {

@@ -563,6 +563,31 @@ class Store(context: Context) {
         else objects("noticeRules") { jp.yaegaki.theta.home.notify.NoticeRule.fromJson(it) }
         set(v) = putObjects("noticeRules", v) { it.toJson() }
 
+    /** このホームから開いたアプリ（新しいもの先、30 まで）。タスクバーの「最近」の代わり（使用状況へのアクセスが無いとき）。 */
+    var launchRecent: List<String>
+        get() = strings("launchRecent")
+        set(v) = putStrings("launchRecent", v.take(30))
+
+    /** このホームから開いた回数（パッケージごと）。 */
+    var launchCounts: Map<String, Int>
+        get() = runCatching {
+            val o = JSONObject(prefs.getString("launchCounts", "{}") ?: "{}")
+            o.keys().asSequence().associateWith { o.getInt(it) }
+        }.getOrDefault(emptyMap())
+        set(v) {
+            val o = JSONObject()
+            v.entries.sortedByDescending { it.value }.take(200).forEach { o.put(it.key, it.value) }
+            prefs.edit().putString("launchCounts", o.toString()).apply()
+        }
+
+    /** タスクバーを出す画面：閉じた画面（初めは出す）・開いた画面（Galaxy のタスクバーがあるので初めは出さない）。 */
+    var taskbarNarrow: Boolean
+        get() = prefs.getBoolean("taskbarNarrow", true)
+        set(v) = prefs.edit().putBoolean("taskbarNarrow", v).apply()
+    var taskbarWide: Boolean
+        get() = prefs.getBoolean("taskbarWide", false)
+        set(v) = prefs.edit().putBoolean("taskbarWide", v).apply()
+
     /** 初めの案内（設定の引き継ぎ・アプリの仕分け）を済ませたか。 */
     var welcomed: Boolean
         get() = prefs.getBoolean("welcomed", false)
