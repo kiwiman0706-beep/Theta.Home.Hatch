@@ -65,6 +65,8 @@ import kotlinx.coroutines.withContext
  * ほかは今までどおりほかのアプリで。siblings を渡すと、ポップアップの中で左右にめくって同じフォルダのものを見られる。
  */
 fun openFile(model: HomeModel, actions: Actions, item: ViewItem, siblings: List<ViewItem> = listOf(item)) {
+    // 本（EPUB・CBR・M4B）は DSBooks があればそちらで（取り込んで開く）
+    if (Viewable.isBook(item.name) && model.dsbooksInstalled() && model.openInDsbooks(item.uri, item.name, actions.start)) return
     if (!model.inAppViewer || Viewable.kind(item.name, item.mime) == null) {
         actions.start(Files.openIntent(item.uri, item.mime))
         return
@@ -92,13 +94,16 @@ private fun ViewerBody(model: HomeModel, items: List<ViewItem>, start: Int) {
         Row(Modifier.fillMaxWidth().background(p.panel).padding(start = 14.dp, end = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(current.name, color = p.fg, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             if (items.size > 1) Text("${pager.currentPage + 1}/${items.size}", color = p.faint, fontSize = 11.sp, fontFamily = Hud.mono, modifier = Modifier.padding(horizontal = 6.dp))
+            if (Viewable.kind(current.name, current.mime) in setOf("pdf", "cbz") && model.dsbooksInstalled()) ViewerAction("DSBooks") {
+                if (!model.openInDsbooks(current.uri, current.name, actions.start)) actions.toast("DSBooks を 0.8.7 以降にすると、ここから開けます")
+            }
             ViewerAction("共有") { actions.start(Files.shareIntent(current.uri, current.mime, current.name)) }
             ViewerAction("アプリで開く") { actions.start(Files.openIntent(current.uri, current.mime)) }
             GlyphButton(Glyph.CLOSE, "閉じる", { model.closeViewer() })
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth(), key = { items[it].uri.toString() }) { i ->
-            ViewerPage(items[i], active = pager.currentPage == i)
+            ViewerPage(model, items[i], active = pager.currentPage == i)
         }
     }
 }
@@ -110,11 +115,18 @@ private fun ViewerAction(label: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ViewerPage(item: ViewItem, active: Boolean) {
+private fun ViewerPage(model: HomeModel, item: ViewItem, active: Boolean) {
     when (Viewable.kind(item.name, item.mime)) {
         "image" -> ImagePage(item)
         "video", "audio" -> if (active) MediaPage(item, audio = Viewable.kind(item.name, item.mime) == "audio") else Box(Modifier.fillMaxSize())
-        "pdf" -> Box(Modifier.fillMaxSize().background(LocalPalette.current.bg)) { PdfPages(item.uri) }
+        "pdf" -> Box(Modifier.fillMaxSize().background(LocalPalette.current.bg)) {
+            if (model.pdfPaged) PdfPaged(model, item.uri) else PdfPages(item.uri)
+            PageModeBar(model, paged = model.pdfPaged, canScroll = true, modifier = Modifier.align(Alignment.TopEnd))
+        }
+        "cbz" -> Box(Modifier.fillMaxSize()) {
+            ComicPage(model, item)
+            PageModeBar(model, paged = true, canScroll = false, modifier = Modifier.align(Alignment.TopEnd))
+        }
         "text" -> TextPage(item)
         "csv" -> CsvPage(item)
         "zip" -> ZipPage(item)
@@ -485,4 +497,132 @@ private fun ZipImage(file: java.io.File, path: String, modifier: Modifier) {
         }
     }
     bmp?.let { androidx.compose.foundation.Image(it.asImageBitmap(), null, modifier, contentScale = androidx.compose.ui.layout.ContentScale.Fit) }
+}
+
+// ---- 1 ページずつめくる（PDF・マンガ） ----
+
+/** ページのめくり方：「1 枚ずつ／続けて」（PDF だけ）と「右開き／左開き」。小さく右上に。 */
+@Composable
+private fun PageModeBar(model: HomeModel, paged: Boolean, canScroll: Boolean, modifier: Modifier) {
+    val p = LocalPalette.current
+    @Composable
+    fun chip(label: String, onClick: () -> Unit) {
+        Text(label, color = p.fg, fontSize = 11.sp, fontFamily = Hud.mono, maxLines = 1,
+            modifier = Modifier.background(p.panel.copy(alpha = 0.85f)).border(1.dp, p.line).clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 5.dp))
+    }
+    Row(modifier.padding(6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (canScroll) chip(if (paged) "1枚ずつ" else "続けて") { model.changePdfPaged(!paged) }
+        if (paged) chip(if (model.pagesRtl) "右開き" else "左開き") { model.changePagesRtl(!model.pagesRtl) }
+    }
+}
+
+/**
+ * 1 ページずつめくる。右開きなら右から左へ（マンガ・縦書き）。2 回押すと拡大、拡大中は 1 本指で動かす。
+ * load はページを画面に収まる大きさで読む（w・h は画面の大きさ）。下にページ数。
+ */
+@Composable
+private fun PagedView(count: Int, rtl: Boolean, key: Any, load: suspend (Int, Int, Int) -> android.graphics.Bitmap?) {
+    val p = LocalPalette.current
+    val pager = rememberPagerState { count }
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val w = with(density) { maxWidth.roundToPx() }.coerceIn(200, 2400)
+        val h = with(density) { maxHeight.roundToPx() }.coerceIn(200, 3200)
+        HorizontalPager(pager, Modifier.fillMaxSize(), reverseLayout = rtl, beyondViewportPageCount = 1, key = { "$key/$it" }) { i ->
+            val bmp by produceState<android.graphics.Bitmap?>(null, key, i, w, h) { value = load(i, w, h) }
+            var scale by remember(i) { mutableFloatStateOf(1f) }
+            var offset by remember(i) { mutableStateOf(Offset.Zero) }
+            val state = rememberTransformableState { zoom, pan, _ ->
+                scale = (scale * zoom).coerceIn(1f, 6f)
+                offset = if (scale == 1f) Offset.Zero else offset + pan * scale
+            }
+            Box(
+                Modifier.fillMaxSize()
+                    .transformable(state, canPan = { scale > 1f })
+                    .pointerInput(i) { detectTapGestures(onDoubleTap = { if (scale > 1f) { scale = 1f; offset = Offset.Zero } else scale = 2.5f }) },
+                contentAlignment = Alignment.Center,
+            ) {
+                val b = bmp
+                if (b == null) Text("${i + 1}", color = Color(0xFF777777), fontSize = 14.sp, fontFamily = Hud.mono)
+                else androidx.compose.foundation.Image(
+                    b.asImageBitmap(), "ページ ${i + 1}",
+                    Modifier.fillMaxSize().graphicsLayer { scaleX = scale; scaleY = scale; translationX = offset.x; translationY = offset.y },
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                )
+            }
+        }
+        Text("${pager.currentPage + 1} / $count", color = p.fg, fontSize = 11.sp, fontFamily = Hud.mono,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(8.dp).background(p.panel.copy(alpha = 0.8f)).padding(horizontal = 8.dp, vertical = 3.dp))
+    }
+}
+
+/** PDF を 1 ページずつ。PdfRenderer は同時に 1 ページしか描けないので順番に。 */
+@Composable
+private fun PdfPaged(model: HomeModel, uri: android.net.Uri) {
+    val ctx = LocalActions.current.activity
+    val lock = remember { kotlinx.coroutines.sync.Mutex() }
+    val renderer by produceState<android.graphics.pdf.PdfRenderer?>(null, uri) {
+        val r = withContext(Dispatchers.IO) { runCatching { ctx.contentResolver.openFileDescriptor(uri, "r")?.let { fd -> android.graphics.pdf.PdfRenderer(fd) } }.getOrNull() }
+        value = r
+        awaitDispose { r?.let { runCatching { it.close() } } }
+    }
+    val r = renderer
+    if (r == null) Message("PDF を開いています…")
+    else PagedView(r.pageCount, model.pagesRtl, uri) { i, w, h ->
+        withContext(Dispatchers.IO) {
+            lock.lock()
+            try {
+                runCatching {
+                    r.openPage(i).use { pg ->
+                        // 画面に収まる大きさの 1.5 倍で描く（拡大しても読めるように）
+                        val fit = minOf(w.toFloat() / pg.width, h.toFloat() / pg.height) * 1.5f
+                        val bw = (pg.width * fit).toInt().coerceIn(1, 3000)
+                        val bh = (pg.height * fit).toInt().coerceIn(1, 4000)
+                        android.graphics.Bitmap.createBitmap(bw, bh, android.graphics.Bitmap.Config.ARGB_8888).also { b ->
+                            b.eraseColor(android.graphics.Color.WHITE)
+                            pg.render(b, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        }
+                    }
+                }.getOrNull()
+            } finally { lock.unlock() }
+        }
+    }
+}
+
+/** マンガ（CBZ）：zip の中の画像を名前順（数字は数として）に 1 ページずつ。 */
+@Composable
+private fun ComicPage(model: HomeModel, item: ViewItem) {
+    val ctx = LocalActions.current.activity
+    val book by produceState<Result<Pair<java.io.File, List<String>>>?>(null, item.uri) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                val f = jp.yaegaki.theta.home.data.Office.copyToCache(ctx, item.uri)
+                val names = java.util.zip.ZipFile(f).use { z -> z.entries().asSequence().filter { !it.isDirectory }.map { it.name }.toList() }
+                f to Viewable.comicPages(names)
+            }
+        }
+    }
+    val r = book
+    when {
+        r == null -> Message("読み込み中…")
+        r.isFailure -> Message("読めませんでした。上の「アプリで開く」から。")
+        r.getOrThrow().second.isEmpty() -> Message("画像が入っていません")
+        else -> {
+            val (file, pages) = r.getOrThrow()
+            PagedView(pages.size, model.pagesRtl, item.uri) { i, w, h ->
+                withContext(Dispatchers.IO) {
+                    runCatching {
+                        java.util.zip.ZipFile(file).use { z ->
+                            val e = z.getEntry(pages[i]) ?: return@use null
+                            val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                            z.getInputStream(e).use { android.graphics.BitmapFactory.decodeStream(it, null, bounds) }
+                            var sample = 1
+                            while (bounds.outWidth / (sample * 2) >= w && bounds.outHeight / (sample * 2) >= h) sample *= 2
+                            z.getInputStream(e).use { android.graphics.BitmapFactory.decodeStream(it, null, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }) }
+                        }
+                    }.getOrNull()
+                }
+            }
+        }
+    }
 }

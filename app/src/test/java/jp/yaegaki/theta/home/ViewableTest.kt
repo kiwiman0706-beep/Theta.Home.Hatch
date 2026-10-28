@@ -36,4 +36,14 @@ class ViewableTest {
         val cut = "あいう".toByteArray(Charsets.UTF_8).let { it.copyOf(it.size - 1) }
         assertEquals("あい", Viewable.decode(cut, truncated = true))
     }
+
+    @Test
+    fun comic() {
+        assertEquals("cbz", Viewable.kind("巻1.cbz", null))
+        assertEquals(true, Viewable.isBook("本.EPUB"))
+        assertEquals(false, Viewable.isBook("本.pdf"))
+        assertEquals("application/vnd.comicbook-rar", Viewable.bookMime("a.cbr"))
+        val pages = Viewable.comicPages(listOf("vol/p10.jpg", "vol/p2.jpg", "__MACOSX/vol/._p1.jpg", "vol/.hidden.png", "vol/info.txt", "vol/p1.JPG", "vol/p01b.png"))
+        assertEquals(listOf("vol/p1.JPG", "vol/p01b.png", "vol/p2.jpg", "vol/p10.jpg"), pages)
+    }
 }

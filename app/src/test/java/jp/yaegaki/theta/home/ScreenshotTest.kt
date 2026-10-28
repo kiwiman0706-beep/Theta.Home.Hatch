@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -891,4 +892,33 @@ class ScreenshotTest {
         jp.yaegaki.theta.home.notify.HatchNotificationListener.setForTest(emptyList())
     }
 
+
+    /** マンガ（CBZ）は中で 1 ページずつ（右開き）。 */
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-xxhdpi")
+    fun viewerComic() {
+        launch()
+        compose.waitForIdle()
+        val app = ApplicationProvider.getApplicationContext<HomeApp>()
+        val cbz = java.io.File(app.filesDir, "サンプル 1巻.cbz")
+        java.util.zip.ZipOutputStream(cbz.outputStream()).use { z ->
+            listOf(0xFF2A4A6A, 0xFF6A2A4A, 0xFF4A6A2A).forEachIndexed { i, c ->
+                val bmp = android.graphics.Bitmap.createBitmap(600, 900, android.graphics.Bitmap.Config.ARGB_8888)
+                android.graphics.Canvas(bmp).apply {
+                    drawColor(c.toInt())
+                    drawText("PAGE ${i + 1}", 120f, 450f, android.graphics.Paint().apply { color = android.graphics.Color.WHITE; textSize = 90f })
+                }
+                z.putNextEntry(java.util.zip.ZipEntry("p${i + 1}.png"))
+                bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, z)
+                z.closeEntry()
+            }
+        }
+        scenario!!.onActivity { model().openViewer(listOf(jp.yaegaki.theta.home.data.ViewItem(android.net.Uri.fromFile(cbz), cbz.name, null)), 0) }
+        compose.mainClock.autoAdvance = true
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("読み込み中…").fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(10_000) { compose.onAllNodesWithContentDescription("ページ 1").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("1 / 3").assertExists()
+        compose.onNodeWithText("右開き").assertExists()
+        shot("viewer-comic")
+    }
 }

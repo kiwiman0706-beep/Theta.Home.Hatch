@@ -8,7 +8,7 @@ data class ViewItem(val uri: Uri, val name: String, val mime: String?)
 
 /**
  * ホームの中（ポップアップ）で開ける形式か。種類は "image"・"video"・"audio"・"pdf"・"text"・"csv"・"zip"・
- * "docx"・"xlsx"・"pptx"（中身のかんたんなプレビュー）、開けなければ null。
+ * "docx"・"xlsx"・"pptx"（中身のかんたんなプレビュー）・"cbz"（マンガ）、開けなければ null。
  * 拡張子を先に見る（SAF の MIME は application/octet-stream のことがあるので）。
  */
 object Viewable {
@@ -23,6 +23,56 @@ object Viewable {
     private val CSV = setOf("csv", "tsv")
     private val ZIP = setOf("zip", "jar")
 
+    /** DSBooks（本のアプリ）が入っていれば、そちらで開くもの。 */
+    val BOOK = setOf("epub", "cbr", "m4b")
+
+    /** 本として DSBooks に渡すときの MIME。 */
+    fun bookMime(name: String): String? = when (name.substringAfterLast('.', "").lowercase(Locale.ROOT)) {
+        "epub" -> "application/epub+zip"
+        "cbr" -> "application/vnd.comicbook-rar"
+        "cbz" -> "application/vnd.comicbook+zip"
+        "m4b" -> "audio/mp4"
+        "pdf" -> "application/pdf"
+        else -> null
+    }
+
+    fun isBook(name: String) = name.substringAfterLast('.', "").lowercase(Locale.ROOT) in BOOK
+
+    private val PAGE_IMAGE = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "avif", "heic")
+
+    /** マンガ（CBZ）のページ：画像だけを、数字を数として比べた名前順に（「2」は「10」より前）。__MACOSX や隠しファイルは除く。 */
+    fun comicPages(names: List<String>): List<String> = names
+        .filter { n ->
+            val base = n.substringAfterLast('/')
+            !n.startsWith("__MACOSX") && !base.startsWith(".") && base.substringAfterLast('.', "").lowercase(Locale.ROOT) in PAGE_IMAGE
+        }
+        .sortedWith { a, b -> naturalCompare(a, b) }
+
+    /** 数字の並びを数として比べる名前の比較。 */
+    fun naturalCompare(a: String, b: String): Int {
+        var i = 0
+        var j = 0
+        while (i < a.length && j < b.length) {
+            val ca = a[i]
+            val cb = b[j]
+            if (ca.isDigit() && cb.isDigit()) {
+                var ei = i; while (ei < a.length && a[ei].isDigit()) ei++
+                var ej = j; while (ej < b.length && b[ej].isDigit()) ej++
+                val na = a.substring(i, ei).trimStart('0')
+                val nb = b.substring(j, ej).trimStart('0')
+                if (na.length != nb.length) return na.length - nb.length
+                val c = na.compareTo(nb)
+                if (c != 0) return c
+                i = ei; j = ej
+            } else {
+                val c = ca.lowercaseChar().compareTo(cb.lowercaseChar())
+                if (c != 0) return c
+                i++; j++
+            }
+        }
+        return (a.length - i) - (b.length - j)
+    }
+
     fun kind(name: String, mime: String?): String? {
         val ext = name.substringAfterLast('.', "").lowercase(Locale.ROOT)
         val m = mime?.lowercase(Locale.ROOT).orEmpty()
@@ -33,6 +83,7 @@ object Viewable {
             ext == "pdf" -> "pdf"
             ext in CSV -> "csv"
             ext in ZIP -> "zip"
+            ext == "cbz" -> "cbz"
             ext in TEXT -> "text"
             ext == "docx" -> "docx"
             ext == "xlsx" || ext == "xlsm" -> "xlsx"

@@ -26,6 +26,8 @@
         tools:ignore="ProtectedPermissions" />
 
     <queries>
+        <!-- 本（EPUB・CBR・M4B）を DSBooks で開く -->
+        <package android:name="jp.shinwakai.dsbooks.preview" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />

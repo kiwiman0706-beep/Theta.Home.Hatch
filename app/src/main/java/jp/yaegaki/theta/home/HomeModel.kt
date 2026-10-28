@@ -292,6 +292,25 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     }
     fun removeNoticeRule(id: String) { noticeRules = noticeRules.filterNot { it.id == id }; store.noticeRules = noticeRules }
 
+    // ---- 中で開く：ページのめくり方・本は DSBooks で ----
+
+    var pdfPaged by mutableStateOf(store.pdfPaged); private set
+    fun changePdfPaged(v: Boolean) { pdfPaged = v; store.pdfPaged = v }
+    var pagesRtl by mutableStateOf(store.pagesRtl); private set
+    fun changePagesRtl(v: Boolean) { pagesRtl = v; store.pagesRtl = v }
+
+    fun dsbooksInstalled() = apps.any { it.packageName == DSBOOKS }
+
+    /** DSBooks で開く（取り込んでから開く。0.8.7 から）。開けなければ false。 */
+    fun openInDsbooks(uri: Uri, name: String, start: (Intent) -> Unit): Boolean {
+        val mime = jp.yaegaki.theta.home.data.Viewable.bookMime(name) ?: return false
+        val i = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime).setPackage(DSBOOKS)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (i.resolveActivity(ctx.packageManager) == null) return false
+        start(i)
+        return true
+    }
+
     /** 試験で、見本の予定を入れる。 */
     @androidx.annotation.VisibleForTesting
     internal fun setEventsForTest(list: List<Event>) { events = list }
@@ -1925,6 +1944,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         const val APPS_ID = "@apps"
 
         const val GOOGLE = "com.google.android.googlequicksearchbox"
+        const val DSBOOKS = "jp.shinwakai.dsbooks.preview"
         const val MEMO = "jp.yaegaki.theta.memo"
         const val LINE = "jp.naver.line.android"
 

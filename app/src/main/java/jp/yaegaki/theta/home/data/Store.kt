@@ -553,6 +553,16 @@ class Store(context: Context) {
         get() = objects("noticeRules") { jp.yaegaki.theta.home.notify.NoticeRule.fromJson(it) }
         set(v) = putObjects("noticeRules", v) { it.toJson() }
 
+    /** 中で開いた PDF を 1 ページずつめくる（false なら縦に続けて）。 */
+    var pdfPaged: Boolean
+        get() = prefs.getBoolean("pdfPaged", false)
+        set(v) = prefs.edit().putBoolean("pdfPaged", v).apply()
+
+    /** 1 ページずつめくるとき右開き（マンガ・縦書きの本）。 */
+    var pagesRtl: Boolean
+        get() = prefs.getBoolean("pagesRtl", true)
+        set(v) = prefs.edit().putBoolean("pagesRtl", v).apply()
+
     /** ホームの予定に出す日数（今日から。1・3・7）。 */
     var homeDays: Int
         get() = prefs.getInt("homeDays", 3)
