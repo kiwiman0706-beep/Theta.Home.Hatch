@@ -192,7 +192,7 @@ fun Field(
             ) {
                 leading?.invoke()
                 Box(Modifier.weight(1f)) {
-                    if (value.isEmpty()) Text(placeholder, color = p.faint, fontSize = 15.sp)
+                    if (value.isEmpty()) Text(placeholder, color = p.faint, fontSize = 15.sp, maxLines = if (singleLine) 1 else Int.MAX_VALUE, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     inner()
                 }
                 trailing?.invoke()

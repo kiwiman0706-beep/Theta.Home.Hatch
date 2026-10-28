@@ -356,7 +356,7 @@ internal fun SearchRow(model: HomeModel, leading: (@Composable () -> Unit)? = nu
         val actions = LocalActions.current
         val voice = rememberVoice(onPartial = { model.query = it }, onFinal = { model.query = it.first() })
         Field(
-            model.query, { model.query = it }, "SEARCH  検索", Modifier.weight(1f).focusRequester(focus),
+            model.query, { model.query = it }, "検索", Modifier.weight(1f).focusRequester(focus),
             leading = { GlyphIcon(Glyph.SEARCH, p.accent) },
             trailing = {
                 Row(Modifier.padding(start = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {

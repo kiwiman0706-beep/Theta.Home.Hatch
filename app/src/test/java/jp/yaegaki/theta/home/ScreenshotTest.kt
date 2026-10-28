@@ -1099,7 +1099,7 @@ class ScreenshotTest {
         launch()
         compose.waitForIdle()
         val m = model()
-        val box = compose.onNodeWithText("SEARCH  検索")
+        val box = compose.onNodeWithText("検索")
         box.performClick()
         box.performTextInput("C")
         compose.waitForIdle()
