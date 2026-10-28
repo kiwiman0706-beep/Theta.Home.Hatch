@@ -8,7 +8,7 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**0.35.1-alpha（versionCode 43）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.36.0-alpha（versionCode 44）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
@@ -48,9 +48,20 @@
 
 ## 見た目
 
-計器盤（HUD）風：黒地にオレンジ 1 色、細い線、四角い角。見出し・時計は Oswald、ラベル・数字は等幅の Share Tech Mono（同梱、SIL Open Font License、[docs/licenses](docs/licenses)）。日本語は端末の書体。テーマはダーク・ライト・**POP（カラフル）**・**ALERT（警報画面）**・**SCI-FI（操作卓）**・端末に合わせるから選べる（設定 → THEME）。POP はクリームの地にコーラル・イエロー・ミント、角丸と影、ゴシック体。ALERT は黒地に橙の文字と警告の赤・正常の緑、太い警告の帯と走査線。SCI-FI は黒に近い青緑の地に方眼、黄・水色・緑。
+計器盤（HUD）風：黒地にオレンジ 1 色、細い線、四角い角。見出し・時計は Oswald、ラベル・数字は等幅の Share Tech Mono（同梱、SIL Open Font License、[docs/licenses](docs/licenses)）。日本語は端末の書体。テーマはダーク・ライト・**POP（カラフル）**・**ALERT（警報画面）**・**SCI-FI（操作卓）**・**TERMINAL**・**BRAUN**・**SOFT**・**WINDOW**・**LCD**・端末に合わせるから選べる（設定 → THEME）。POP はクリームの地にコーラル・イエロー・ミント、角丸と影、ゴシック体。ALERT は黒地に橙の文字と警告の赤・正常の緑、太い警告の帯と走査線。SCI-FI は黒に近い青緑の地に方眼、黄・水色・緑。
 
 <img src="docs/screenshots/alert-main.png" width="320" alt="ALERT"> <img src="docs/screenshots/scifi-main.png" width="320" alt="SCI-FI"> <img src="docs/screenshots/alert-cover.png" width="160" alt="ALERT（閉じた画面）"> <img src="docs/screenshots/scifi-cover.png" width="160" alt="SCI-FI（閉じた画面）">
+
+色だけでなく作りも変わるテーマ（0.36）：
+- **TERMINAL**：緑の端末。黒地に蛍光の緑、見出しは反転した帯、文字は全部等幅、背景に流れる文字の列
+- **BRAUN**：白い家電。めくり時計と丸い日付の文字盤、浮き出た角丸の台、オレンジ 1 色、丸いアイコン
+- **SOFT**：やわらかい浮き出し。線を使わず影で台が浮く、大きな角丸、淡いオレンジ・青・緑
+- **WINDOW**：昔のパソコンの窓。水色の地に白い方眼、区画はオレンジのタイトルバーに「_ □ ×」の窓、太い線と影
+- **LCD**：液晶ゲーム機。くすんだ黄緑の地に濃い緑の太い線、全部等幅、液晶の数字の時計
+
+アイコンを Gemini で描き直すときも、テーマに合わせて描き方を変える（計器盤のステンシル・ドット絵・丸くかわいい・細い線の家電ふう）。
+
+<img src="docs/screenshots/themes-more.png" width="800" alt="TERMINAL・BRAUN・SOFT・WINDOW・LCD">
 
 端のタブには**印（アイコン）**が付く。中身から自動（フォルダ・予定・メール・LINE・人…、カテゴリーはいちばん前のアプリ）で、タブの長押し →「印（アイコン）を変える」で記号・アプリのアイコン・出さないも選べる。
 

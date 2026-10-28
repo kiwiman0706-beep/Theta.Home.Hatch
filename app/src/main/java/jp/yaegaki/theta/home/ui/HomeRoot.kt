@@ -182,7 +182,7 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity, edgeExit: (() -> Uni
         LaunchedEffect(w >= 600.dp) { model.changeProfile(if (w >= 600.dp) "wide" else "narrow") }
         val available = w - railW
         CompositionLocalProvider(
-            LocalActions provides actions, LocalLayout provides layout, LocalIconLook provides IconLook(model.iconMode, model.iconVersion, model.iconColors),
+            LocalActions provides actions, LocalLayout provides layout, LocalIconLook provides IconLook(model.iconMode, model.iconVersion, model.iconColors, jp.yaegaki.theta.home.data.IconStyle.family(model.themeMode)),
             LocalRailLeft provides railLeft, LocalEdgeExit provides edgeExit,
         ) {
             val docked = model.docked.takeLast(layout.maxDocked)
@@ -523,7 +523,7 @@ private fun RailTab(model: HomeModel, reorder: ReorderState, id: String, label: 
     val activeBg = if (p.pop) groupColor else p.accent
     val onActive = if (p.pop && group != 0) p.fg else p.onAccent
     val tabShape = if (p.pop) {
-        if (left) RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp) else RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp)
+        if (left) RoundedCornerShape(topEnd = p.radius, bottomEnd = p.radius) else RoundedCornerShape(topStart = p.radius, bottomStart = p.radius)
     } else RoundedCornerShape(0.dp)
     var menu by remember(id) { mutableStateOf(false) }
     var renaming by remember(id) { mutableStateOf(false) }

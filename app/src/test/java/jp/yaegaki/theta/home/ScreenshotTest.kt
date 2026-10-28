@@ -1021,4 +1021,74 @@ class ScreenshotTest {
         org.junit.Assert.assertNull(m.open)
         edge.close()
     }
+
+    @Test
+    @Config(qualifiers = "w904dp-h1104dp-xhdpi")
+    fun termMain() = themeShots("term")
+
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun termCover() {
+        launch("term") { app ->
+            app.store.weatherPlace = jp.yaegaki.theta.home.data.WeatherPlace("東京都 / 東京", 35.68, 139.76)
+            app.store.weatherCache = weatherSample(System.currentTimeMillis())
+        }
+        shot("term-cover")
+    }
+
+    @Test
+    @Config(qualifiers = "w904dp-h1104dp-xhdpi")
+    fun braunMain() = themeShots("braun")
+
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun braunCover() {
+        launch("braun") { app ->
+            app.store.weatherPlace = jp.yaegaki.theta.home.data.WeatherPlace("東京都 / 東京", 35.68, 139.76)
+            app.store.weatherCache = weatherSample(System.currentTimeMillis())
+        }
+        shot("braun-cover")
+    }
+
+    @Test
+    @Config(qualifiers = "w904dp-h1104dp-xhdpi")
+    fun softMain() = themeShots("soft")
+
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun softCover() {
+        launch("soft") { app ->
+            app.store.weatherPlace = jp.yaegaki.theta.home.data.WeatherPlace("東京都 / 東京", 35.68, 139.76)
+            app.store.weatherCache = weatherSample(System.currentTimeMillis())
+        }
+        shot("soft-cover")
+    }
+
+    @Test
+    @Config(qualifiers = "w904dp-h1104dp-xhdpi")
+    fun windowMain() = themeShots("window")
+
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun windowCover() {
+        launch("window") { app ->
+            app.store.weatherPlace = jp.yaegaki.theta.home.data.WeatherPlace("東京都 / 東京", 35.68, 139.76)
+            app.store.weatherCache = weatherSample(System.currentTimeMillis())
+        }
+        shot("window-cover")
+    }
+
+    @Test
+    @Config(qualifiers = "w904dp-h1104dp-xhdpi")
+    fun lcdMain() = themeShots("lcd")
+
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun lcdCover() {
+        launch("lcd") { app ->
+            app.store.weatherPlace = jp.yaegaki.theta.home.data.WeatherPlace("東京都 / 東京", 35.68, 139.76)
+            app.store.weatherCache = weatherSample(System.currentTimeMillis())
+        }
+        shot("lcd-cover")
+    }
 }

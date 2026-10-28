@@ -21,8 +21,8 @@ android {
         applicationId = "jp.yaegaki.theta.home"
         minSdk = 29
         targetSdk = 35
-        versionCode = 43
-        versionName = "0.35.1-alpha"
+        versionCode = 44
+        versionName = "0.36.0-alpha"
     }
 
     signingConfigs {

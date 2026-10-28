@@ -1516,7 +1516,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
                         val original = Apps.icon(ctx, app, size) ?: return@runCatching
                         val out = when (mode) {
                             jp.yaegaki.theta.home.data.IconStyle.LOCAL, jp.yaegaki.theta.home.data.IconStyle.GEMINI -> {
-                                val mask = (if (mode == jp.yaegaki.theta.home.data.IconStyle.GEMINI) jp.yaegaki.theta.home.data.IconStyle.cached(ctx, app.key) else null)
+                                val mask = (if (mode == jp.yaegaki.theta.home.data.IconStyle.GEMINI) jp.yaegaki.theta.home.data.IconStyle.cached(ctx, app.key, iconFamily()) else null)
                                     ?: jp.yaegaki.theta.home.data.IconStyle.localMask(original)
                                 jp.yaegaki.theta.home.data.HudArt.paintMask(mask, size, plate, base, accent)
                             }
@@ -1535,7 +1535,10 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     private fun androidx.compose.ui.graphics.Color.toArgbInt(): Int = android.graphics.Color.argb((alpha * 255).toInt(), (red * 255).toInt(), (green * 255).toInt(), (blue * 255).toInt())
 
     /** Gemini で加工済みのアプリの数。 */
-    fun geminiDone(): Int = apps.count { jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, it.key).exists() }
+    fun geminiDone(): Int = apps.count { jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, it.key, iconFamily()).exists() }
+
+    /** 今のテーマのアイコンの型の作り（Gemini に頼む描き方と保存場所）。 */
+    fun iconFamily(): String = jp.yaegaki.theta.home.data.IconStyle.family(themeMode)
 
     /** 0.15 までの 2 色の型だけがあるアプリの数（3 色で作り直せる）。 */
     fun geminiLegacy(): Int = apps.count { !jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, it.key).exists() && jp.yaegaki.theta.home.data.IconStyle.legacyFile(ctx, it.key).exists() }
@@ -1547,9 +1550,10 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         if (key.isEmpty()) {
             (ctx as HomeApp).toast("先に Gemini の API キーを入れてください"); return
         }
+        val family = iconFamily()
         val targets = only?.let { listOf(it) } ?: apps.filter {
-            val done = jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, it.key).exists()
-            val legacy = jp.yaegaki.theta.home.data.IconStyle.legacyFile(ctx, it.key).exists()
+            val done = jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, it.key, family).exists()
+            val legacy = family == jp.yaegaki.theta.home.data.IconStyle.FAMILY_HUD && jp.yaegaki.theta.home.data.IconStyle.legacyFile(ctx, it.key).exists()
             // ふだんは型の無いものだけ。upgrade なら 2 色の型しか無いものを 3 色で作り直す
             !done && (if (upgrade) legacy else !legacy)
         }
@@ -1564,8 +1568,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
                 val r = runCatching {
                     withContext(Dispatchers.IO) {
                         val icon = Apps.icon(ctx, app, 192) ?: error("アイコンを読めません")
-                        val mask = jp.yaegaki.theta.home.data.IconStyle.geminiMask(key, store.geminiModel, icon)
-                        jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, app.key).outputStream().use { mask.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                        val mask = jp.yaegaki.theta.home.data.IconStyle.geminiMask(key, store.geminiModel, icon, family)
+                        jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, app.key, family).outputStream().use { mask.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
                     }
                 }
                 r.onFailure { failed++; lastError = "${app.label}：${it.message}" }
@@ -1585,11 +1589,12 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     /** Gemini の型を消して、簡易加工の表示に戻す。app を渡せばそのアプリだけ。 */
     fun clearGeminiIcons(app: AppEntry? = null) {
         if (app != null) {
-            jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, app.key).delete()
-            jp.yaegaki.theta.home.data.IconStyle.legacyFile(ctx, app.key).delete()
+            // そのアプリは、今の作りの型だけ作り直す（hud なら前の 2 色の型も）
+            jp.yaegaki.theta.home.data.IconStyle.cacheFile(ctx, app.key, iconFamily()).delete()
+            if (iconFamily() == jp.yaegaki.theta.home.data.IconStyle.FAMILY_HUD) jp.yaegaki.theta.home.data.IconStyle.legacyFile(ctx, app.key).delete()
         } else {
             File(ctx.filesDir, "icons").listFiles()?.forEach { it.delete() }
-            File(ctx.filesDir, "icons3").listFiles()?.forEach { it.delete() }
+            jp.yaegaki.theta.home.data.IconStyle.FAMILIES.forEach { f -> File(ctx.filesDir, jp.yaegaki.theta.home.data.IconStyle.dirOf(f)).listFiles()?.forEach { it.delete() } }
         }
         iconVersion++
     }

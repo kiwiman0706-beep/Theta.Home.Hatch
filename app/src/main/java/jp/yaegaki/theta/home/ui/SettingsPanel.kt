@@ -175,7 +175,11 @@ fun SettingsPanel(model: HomeModel) {
                 Note("両側のときは、カテゴリー（アプリ）のタブが START と反対側、ほかのタブが START の側に出ます。タブの長押し「右側へ移す」「左側へ移す」で 1 つずつ変えられます。")
                 Text("THEME", color = p.faint, fontSize = 11.sp, letterSpacing = 1.5.sp, modifier = Modifier.padding(horizontal = 10.dp))
                 FlowRow2 {
-                    listOf("dark" to "ダーク", "light" to "ライト", "pop" to "POP（カラフル）", "alert" to "ALERT（警報画面）", "scifi" to "SCI-FI（操作卓）", "system" to "端末に合わせる").forEach { (mode, label) ->
+                    listOf(
+                        "dark" to "ダーク", "light" to "ライト", "pop" to "POP（カラフル）", "alert" to "ALERT（警報画面）", "scifi" to "SCI-FI（操作卓）",
+                        "term" to "TERMINAL（緑の端末）", "braun" to "BRAUN（白い家電）", "soft" to "SOFT（浮き出し）", "window" to "WINDOW（昔のパソコン）",
+                        "lcd" to "LCD（液晶ゲーム機）", "system" to "端末に合わせる",
+                    ).forEach { (mode, label) ->
                         PillButton(label, { model.changeTheme(mode) }, primary = model.themeMode == mode)
                     }
                 }
@@ -283,6 +287,12 @@ fun SettingsPanel(model: HomeModel) {
                         Readout("MODEL", model.geminiModel)
                         Readout("DONE", "%03d / %03d".format(model.geminiDone(), model.apps.size))
                     }
+                    Note("描き方はテーマに合わせて変えます（今は「" + when (model.iconFamily()) {
+                        IconStyle.FAMILY_PIXEL -> "ドット絵（TERMINAL・LCD）"
+                        IconStyle.FAMILY_ROUND -> "丸くかわいい（POP・SOFT・WINDOW）"
+                        IconStyle.FAMILY_LINE -> "細い線の家電ふう（BRAUN）"
+                        else -> "計器盤のステンシル（ダーク・ライト・ALERT・SCI-FI）"
+                    } + "」）。描き方ごとに 1 回ずつ作り、テーマを戻せば前に作ったものを使います。まだ作っていない描き方では、計器盤のものを代わりに出します。")
                     if (job != null) {
                         Column(Modifier.padding(horizontal = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Box(Modifier.fillMaxWidth().height(8.dp).border(1.dp, p.line)) {

@@ -35,14 +35,41 @@ object IconStyle {
     private val FALLBACK_MODELS = listOf("gemini-3.1-flash-image", "gemini-2.5-flash-image")
     private const val SIZE = 192
 
-    private const val PROMPT =
-        "Redraw this app icon as a minimal three-tone stencil for a dark sci-fi HUD launcher. " +
-            "Output a square 1:1 image using ONLY three flat colors: pure white (#FFFFFF) for the background, " +
+    /** 型の作り（テーマの作りごと）。hud は前からのもので、保存場所も前のまま。 */
+    const val FAMILY_HUD = "hud"
+    const val FAMILY_PIXEL = "pixel"
+    const val FAMILY_ROUND = "round"
+    const val FAMILY_LINE = "line"
+
+    /** テーマの名前から、アイコンの型の作りを決める。 */
+    fun family(theme: String): String = when (theme) {
+        "term", "lcd" -> FAMILY_PIXEL
+        "pop", "soft", "window" -> FAMILY_ROUND
+        "braun" -> FAMILY_LINE
+        else -> FAMILY_HUD
+    }
+
+    private const val COLORS =
+        "Output a square 1:1 image using ONLY three flat colors: pure white (#FFFFFF) for the background, " +
             "pure black (#000000) for the main symbol, and pure red (#FF0000) for one small accent part " +
             "(for example a dot, an inner detail or a highlight that was a different color in the original). " +
             "Keep the recognizable silhouette or logo shape of the original so people can still tell which app it is. " +
-            "Remove gradients, shadows, textures and small text. Use bold, clean, flat shapes, centered with some margin. " +
+            "Remove gradients, shadows, textures and small text. Centered with some margin. " +
             "No border, no frame, no extra elements, no other colors."
+
+    private val PROMPTS = mapOf(
+        FAMILY_HUD to "Redraw this app icon as a minimal three-tone stencil for a dark sci-fi HUD launcher. " +
+            "Use bold, clean, flat geometric shapes with straight edges and sharp corners, like a cockpit instrument label. " + COLORS,
+        FAMILY_PIXEL to "Redraw this app icon as 1-bit style pixel art for a retro green-screen terminal and a handheld LCD game console. " +
+            "Use a coarse grid of about 20 x 20 big square pixels, hard stair-stepped edges, no anti-aliasing, no curves smoother than the pixel grid. " +
+            "Think of an 8-bit computer or an old pocket game. " + COLORS,
+        FAMILY_ROUND to "Redraw this app icon as a cute, friendly sticker-style symbol for a pastel, soft and playful launcher. " +
+            "Use chunky rounded shapes with soft round corners and a thick, even outline, simple and bubbly like a kawaii icon set. " + COLORS,
+        FAMILY_LINE to "Redraw this app icon as a calm, minimal functionalist symbol in the spirit of 1960s German product design (Dieter Rams). " +
+            "Use simple circles, rounded rectangles and thin even strokes with generous negative space, precise and quiet, no decoration. " + COLORS,
+    )
+
+    private fun promptFor(family: String) = PROMPTS[family] ?: PROMPTS.getValue(FAMILY_HUD)
 
     private val BG = Color.BLACK
     private val BASE = Color.RED
@@ -50,15 +77,20 @@ object IconStyle {
 
     private fun hash(appKey: String) = MessageDigest.getInstance("SHA-1").digest(appKey.toByteArray()).joinToString("") { "%02x".format(it) }
 
-    /** Gemini で作った 3 色の型の保存場所。アプリごとに 1 枚。 */
-    fun cacheFile(context: Context, appKey: String): File =
-        File(File(context.filesDir, "icons3").apply { mkdirs() }, hash(appKey) + ".png")
+    /** Gemini で作った 3 色の型の保存場所。アプリごと・作りごとに 1 枚（hud は前からの場所）。 */
+    fun cacheFile(context: Context, appKey: String, family: String = FAMILY_HUD): File =
+        File(File(context.filesDir, dirOf(family)).apply { mkdirs() }, hash(appKey) + ".png")
+
+    fun dirOf(family: String) = if (family == FAMILY_HUD) "icons3" else "icons3-$family"
+
+    val FAMILIES = listOf(FAMILY_HUD, FAMILY_PIXEL, FAMILY_ROUND, FAMILY_LINE)
 
     /** 0.15 までの 2 色の型（白地に黒）。 */
     fun legacyFile(context: Context, appKey: String): File = File(File(context.filesDir, "icons"), hash(appKey) + ".png")
 
-    /** Gemini の型。3 色が無ければ前の 2 色の型を基本だけの型にして使う。 */
-    fun cached(context: Context, appKey: String): Bitmap? {
+    /** Gemini の型。その作りのものが無ければ hud の型、それも無ければ前の 2 色の型を基本だけの型にして使う。 */
+    fun cached(context: Context, appKey: String, family: String = FAMILY_HUD): Bitmap? {
+        if (family != FAMILY_HUD) cacheFile(context, appKey, family).takeIf { it.exists() }?.let { f -> BitmapFactory.decodeFile(f.path)?.let { return it } }
         cacheFile(context, appKey).takeIf { it.exists() }?.let { f -> BitmapFactory.decodeFile(f.path)?.let { return it } }
         val old = legacyFile(context, appKey).takeIf { it.exists() }?.let { BitmapFactory.decodeFile(it.path) } ?: return null
         return fromLegacy(old)
@@ -152,11 +184,11 @@ object IconStyle {
     }
 
     /** Gemini に型を描き直してもらう。通信するのでメインスレッドでは呼ばない。 */
-    fun geminiMask(apiKey: String, model: String, icon: Bitmap): Bitmap {
+    fun geminiMask(apiKey: String, model: String, icon: Bitmap, family: String = FAMILY_HUD): Bitmap {
         val png = ByteArrayOutputStream().also { onWhite(icon, SIZE).compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()
         val body = JSONObject()
             .put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", JSONArray()
-                .put(JSONObject().put("text", PROMPT))
+                .put(JSONObject().put("text", promptFor(family)))
                 .put(JSONObject().put("inline_data", JSONObject().put("mime_type", "image/png").put("data", Base64.encodeToString(png, Base64.NO_WRAP)))))))
             .put("generationConfig", JSONObject().put("responseModalities", JSONArray().put("TEXT").put("IMAGE")))
             .toString()

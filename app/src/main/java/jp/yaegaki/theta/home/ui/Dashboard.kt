@@ -156,13 +156,26 @@ private fun SectionView(model: HomeModel, s: HomeSection, filerHeight: Dp, openN
 @Composable
 private fun FilerSection(model: HomeModel, modifier: Modifier, openNasSettings: () -> Unit, openDriveSettings: () -> Unit) {
     val p = LocalPalette.current
-    Column(modifier.border(1.dp, p.line).padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("[ FILER ]", color = p.accent, fontSize = 11.sp, fontFamily = Hud.mono, letterSpacing = 2.sp)
-            Text("ファイラー", color = p.muted, fontSize = 11.sp)
-            Stripes(Modifier.weight(1f).height(5.dp), color = p.line)
+    // 枠は作りに合わせる（ほかの区画と同じ見た目の見出し）
+    val shape = if (p.pop) androidx.compose.foundation.shape.RoundedCornerShape(p.radius) else androidx.compose.ui.graphics.RectangleShape
+    val framed = when (p.style) {
+        "soft", "braun" -> modifier.popShadow(p, shape).clip(shape).background(p.panel)
+        "window", "pop" -> modifier.popShadow(p, shape).clip(shape).background(p.panel).border(lineWidth, p.line, shape)
+        "lcd" -> modifier.border(2.dp, p.line).background(p.panel)
+        else -> modifier.border(1.dp, p.line)
+    }
+    Column(framed) {
+        when (p.style) {
+            "window" -> WindowBar("Files")
+            "term" -> Text("FILER  ファイラー", color = p.bg, fontSize = 13.sp, fontFamily = Hud.mono, modifier = Modifier.fillMaxWidth().background(p.fg).padding(horizontal = 10.dp, vertical = 4.dp))
+            "hud" -> Row(Modifier.padding(start = 10.dp, end = 10.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("[ FILER ]", color = p.accent, fontSize = 11.sp, fontFamily = Hud.mono, letterSpacing = 2.sp)
+                Text("ファイラー", color = p.muted, fontSize = 11.sp)
+                Stripes(Modifier.weight(1f).height(5.dp), color = p.line)
+            }
+            else -> Text(if (p.style == "braun") "FILER" else "ファイラー", color = p.faint, fontSize = 12.sp, modifier = Modifier.padding(start = 14.dp, top = 12.dp))
         }
-        FilerBody(model, Modifier.weight(1f).fillMaxWidth(), openNasSettings, openDriveSettings)
+        FilerBody(model, Modifier.weight(1f).fillMaxWidth().padding(10.dp), openNasSettings, openDriveSettings)
     }
 }
 
@@ -183,41 +196,15 @@ private fun NoticePanel(model: HomeModel) {
 private fun Panel(model: HomeModel, code: String, title: String, folded: (@Composable () -> Unit)? = null, body: @Composable () -> Unit) {
     val p = LocalPalette.current
     val closed = model.isCollapsed(code)
-    val content: @Composable () -> Unit = { if (closed) folded?.invoke() else body() }
     val toggle = Modifier.clickable(onClickLabel = if (closed) "広げる" else "たたむ") { model.toggleCollapsed(code) }
-    if (p.pop) {
-        val shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
-        val band = when (code) {
-            "TODAY" -> p.accent
-            "WEATHER" -> p.accent3
-            "FILES" -> p.accent2
-            else -> p.raised
-        }
-        Column(Modifier.fillMaxWidth().popShadow(p, shape).clip(shape).background(p.panel).border(lineWidth, p.line, shape)) {
-            Row(
-                Modifier.fillMaxWidth().background(band).then(toggle).padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(code, color = if (band == p.accent) p.onAccent else p.fg, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                Text(title, color = if (band == p.accent) p.onAccent else p.fg, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                Text(if (closed) "▸" else "▾", color = if (band == p.accent) p.onAccent else p.fg, fontSize = 12.sp)
-            }
-            if (!closed || folded != null) {
-                Box(Modifier.fillMaxWidth().height(lineWidth).background(p.line))
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
-            }
-        }
-        return
+    val band = when (code) {
+        "TODAY" -> p.accent
+        "WEATHER" -> p.accent3
+        "FILES" -> p.accent2
+        else -> p.raised
     }
-    Column(Modifier.fillMaxWidth().border(1.dp, p.line).corners(p.accent, 8.dp).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(toggle, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("[ $code ]", color = p.accent, fontSize = 11.sp, fontFamily = Hud.mono, letterSpacing = 2.sp)
-            Text(title, color = p.muted, fontSize = 11.sp)
-            Stripes(Modifier.weight(1f).height(5.dp), color = p.line)
-            Text(if (closed) "▸" else "▾", color = p.accent, fontSize = 11.sp, fontFamily = Hud.mono)
-        }
-        content()
+    SectionFrame(code, title, toggle, if (closed) "▸" else "▾", band, showBody = !closed || folded != null) {
+        if (closed) folded?.invoke() else body()
     }
 }
 

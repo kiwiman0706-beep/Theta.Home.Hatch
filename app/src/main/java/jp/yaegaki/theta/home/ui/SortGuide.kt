@@ -1,5 +1,7 @@
 package jp.yaegaki.theta.home.ui
 
+import androidx.compose.ui.draw.clip
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -246,7 +248,7 @@ fun ChoiceButton(text: String, selected: Boolean, suggested: Boolean = false, on
 }
 
 /** アイコンの見せ方（設定の ICON）。version は型を作り直したときに増え、描き直しのきっかけになる。 */
-data class IconLook(val mode: String, val version: Int, val colors: String = "hud")
+data class IconLook(val mode: String, val version: Int, val colors: String = "hud", val family: String = IconStyle.FAMILY_HUD)
 
 /** アイコンの 3 色（地・基本・アクセント）を、配色の設定とテーマから決める。 */
 fun iconTriple(p: Palette, spec: String): Triple<androidx.compose.ui.graphics.Color, androidx.compose.ui.graphics.Color, androidx.compose.ui.graphics.Color> = when {
@@ -290,7 +292,7 @@ fun LookIcon(key: String, label: String, size: Dp, load: () -> android.graphics.
         value = withContext(Dispatchers.IO) {
             val original = load() ?: return@withContext null
             when (look.mode) {
-                IconStyle.GEMINI -> IconStyle.cached(ctx, key) ?: IconStyle.localMaskCached(key, original)
+                IconStyle.GEMINI -> IconStyle.cached(ctx, key, look.family) ?: IconStyle.localMaskCached(key, original)
                 IconStyle.LOCAL -> IconStyle.localMaskCached(key, original)
                 else -> original
             }
@@ -304,7 +306,13 @@ fun LookIcon(key: String, label: String, size: Dp, load: () -> android.graphics.
         }
     }
     val inset = if (look.mode == IconStyle.LOCAL || look.mode == IconStyle.GEMINI) 0.dp else 8.dp
-    Box(Modifier.size(size).border(1.dp, p.line), contentAlignment = Alignment.Center) {
+    // 台の形は作りに合わせる（角丸・丸）
+    val tile: androidx.compose.ui.graphics.Shape = when (p.iconShape) {
+        "circle" -> androidx.compose.foundation.shape.CircleShape
+        "round" -> androidx.compose.foundation.shape.RoundedCornerShape(size * 0.24f)
+        else -> androidx.compose.ui.graphics.RectangleShape
+    }
+    Box(Modifier.size(size).clip(tile).border(if (p.style == "lcd") 2.dp else 1.dp, p.line, tile), contentAlignment = Alignment.Center) {
         icon?.let { Image(it.asImageBitmap(), contentDescription = null, colorFilter = filter, modifier = Modifier.size(size - inset)) }
             ?: Text(label.take(1), color = p.fg, fontSize = (size.value * 0.4f).sp)
     }

@@ -1,5 +1,11 @@
 package jp.yaegaki.theta.home.ui
 
+import androidx.compose.ui.text.font.FontFamily
+
+import androidx.compose.ui.geometry.Offset
+
+import androidx.compose.ui.draw.drawBehind
+
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -208,6 +214,19 @@ internal fun ClockBlock(big: Boolean) {
         }
     }
     val d = Date(now)
+    when (p.style) {
+        "braun" -> BraunClock(d, big)
+        "term" -> TermClock(d, big)
+        "lcd" -> LcdClock(d, big)
+        "soft" -> SoftClock(d, big)
+        "window" -> WindowClock(d, big)
+        else -> HudClock(d, big)
+    }
+}
+
+@Composable
+private fun HudClock(d: Date, big: Boolean) {
+    val p = LocalPalette.current
     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -222,6 +241,105 @@ internal fun ClockBlock(big: Boolean) {
         Column(Modifier.padding(bottom = 8.dp)) {
             Text(SimpleDateFormat("yyyy.MM.dd", Locale.US).format(d), color = p.fg, fontSize = 14.sp, fontFamily = Hud.mono)
             Text(SimpleDateFormat("EEE", Locale.US).format(d).uppercase(Locale.US) + " / " + SimpleDateFormat("E曜日", Locale.JAPAN).format(d), color = p.accent, fontSize = 12.sp, fontFamily = Hud.mono)
+        }
+    }
+}
+
+private fun weekdayJa(d: Date) = SimpleDateFormat("E曜日", Locale.JAPAN).format(d)
+
+/** BRAUN：めくり時計（暗い 2 枚の板）と、丸い日付の文字盤。 */
+@Composable
+private fun BraunClock(d: Date, big: Boolean) {
+    val p = LocalPalette.current
+    val tile = if (big) 96.dp else 76.dp
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(
+            Modifier.popShadow(p, RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)).background(p.raised).padding(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            listOf(SimpleDateFormat("HH", Locale.US).format(d), SimpleDateFormat("mm", Locale.US).format(d)).forEach { t ->
+                Box(
+                    Modifier.size(tile, tile * 1.15f).clip(RoundedCornerShape(10.dp)).background(Color(0xFF2E2E2E))
+                        .drawBehind { drawLine(Color.Black.copy(alpha = 0.6f), Offset(0f, size.height / 2), Offset(size.width, size.height / 2), 2.dp.toPx()) },
+                    contentAlignment = Alignment.Center,
+                ) { Text(t, color = Color(0xFFF2F0EA), fontSize = if (big) 60.sp else 46.sp, fontWeight = FontWeight.Normal, fontFamily = FontFamily.SansSerif) }
+            }
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(
+                Modifier.size(if (big) 76.dp else 64.dp).popShadow(p, androidx.compose.foundation.shape.CircleShape)
+                    .clip(androidx.compose.foundation.shape.CircleShape).background(p.panel).border(4.dp, p.raised, androidx.compose.foundation.shape.CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(SimpleDateFormat("d", Locale.US).format(d), color = p.fg, fontSize = 22.sp, lineHeight = 24.sp)
+                    Text(SimpleDateFormat("MMM", Locale.US).format(d).uppercase(Locale.US), color = p.fg, fontSize = 11.sp, lineHeight = 12.sp)
+                }
+            }
+            Text(SimpleDateFormat("EEE", Locale.US).format(d).uppercase(Locale.US), color = p.accent, fontSize = 12.sp, letterSpacing = 1.sp)
+        }
+    }
+}
+
+/** TERMINAL：反転した帯の日付と、大きな等幅の時刻。 */
+@Composable
+private fun TermClock(d: Date, big: Boolean) {
+    val p = LocalPalette.current
+    Column(Modifier.fillMaxWidth().border(1.dp, p.line)) {
+        Text(
+            SimpleDateFormat("EEE MM.dd", Locale.US).format(d).uppercase(Locale.US) + "  " + weekdayJa(d),
+            color = p.bg, fontSize = 13.sp, fontFamily = Hud.mono, modifier = Modifier.fillMaxWidth().background(p.fg).padding(horizontal = 10.dp, vertical = 4.dp),
+        )
+        Row(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.Bottom) {
+            Text(SimpleDateFormat("HH:mm", Locale.US).format(d), color = p.accent, fontFamily = Hud.mono, fontSize = if (big) 84.sp else 64.sp, lineHeight = if (big) 88.sp else 68.sp)
+            Spacer(Modifier.weight(1f))
+            Text(SimpleDateFormat("yyyy", Locale.US).format(d), color = p.muted, fontFamily = Hud.mono, fontSize = 14.sp, modifier = Modifier.padding(bottom = 10.dp))
+        }
+    }
+}
+
+/** LCD：太い線の箱に液晶の数字。 */
+@Composable
+private fun LcdClock(d: Date, big: Boolean) {
+    val p = LocalPalette.current
+    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(Modifier.border(3.dp, p.line).background(p.raised).padding(horizontal = 12.dp, vertical = 2.dp)) {
+            Text(SimpleDateFormat("HH:mm", Locale.US).format(d), color = p.fg, fontFamily = Hud.mono, fontSize = if (big) 72.sp else 54.sp, lineHeight = if (big) 76.sp else 58.sp)
+        }
+        Column(Modifier.padding(bottom = 6.dp)) {
+            Text(SimpleDateFormat("yyyy.MM.dd", Locale.US).format(d), color = p.fg, fontSize = 14.sp, fontFamily = Hud.mono)
+            Text(SimpleDateFormat("EEE", Locale.US).format(d).uppercase(Locale.US) + " " + weekdayJa(d), color = p.muted, fontSize = 13.sp, fontFamily = Hud.mono)
+        }
+    }
+}
+
+/** SOFT：浮き出た角丸の台に、太い数字と日付。 */
+@Composable
+private fun SoftClock(d: Date, big: Boolean) {
+    val p = LocalPalette.current
+    val shape = RoundedCornerShape(p.radius)
+    Column(
+        Modifier.popShadow(p, shape).clip(shape).background(p.panel).padding(horizontal = 22.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(SimpleDateFormat("HH:mm", Locale.US).format(d), color = p.fg, fontSize = if (big) 64.sp else 50.sp, fontWeight = FontWeight.Bold, lineHeight = if (big) 68.sp else 54.sp, letterSpacing = 2.sp)
+        Text(SimpleDateFormat("yyyy-MM-dd  EEE", Locale.US).format(d) + "  " + weekdayJa(d), color = p.muted, fontSize = 14.sp)
+    }
+}
+
+/** WINDOW：「時計」の窓。 */
+@Composable
+private fun WindowClock(d: Date, big: Boolean) {
+    val p = LocalPalette.current
+    val shape = RoundedCornerShape(p.radius)
+    Column(Modifier.fillMaxWidth().popShadow(p, shape).clip(shape).background(p.panel).border(lineWidth, p.line, shape)) {
+        WindowBar("Clock.exe")
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text(SimpleDateFormat("HH:mm", Locale.US).format(d), color = p.fg, fontSize = if (big) 64.sp else 48.sp, fontWeight = FontWeight.Bold, lineHeight = if (big) 68.sp else 52.sp)
+            Column(Modifier.padding(bottom = 8.dp)) {
+                Text(SimpleDateFormat("yyyy.MM.dd", Locale.US).format(d), color = p.fg, fontSize = 14.sp)
+                Text(SimpleDateFormat("EEE", Locale.US).format(d).uppercase(Locale.US) + " / " + weekdayJa(d), color = p.widget, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

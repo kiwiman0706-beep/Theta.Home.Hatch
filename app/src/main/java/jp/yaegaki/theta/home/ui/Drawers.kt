@@ -108,14 +108,18 @@ fun DrawerFrame(model: HomeModel, id: String, docked: Boolean) {
         // 見出しの上の警告の帯（ALERT は太く）
         Stripes(Modifier.fillMaxWidth().height(p.hazard), color = p.group(group))
         // 見出しは 1 行：[ 種類 ] // 番号  名前  （編集）（ピン）（閉じる）
+        // 見出しの帯：TERMINAL は反転、WINDOW はタイトルバーの色
+        val headBg = when (p.style) { "term" -> p.fg; "window" -> p.accent; else -> androidx.compose.ui.graphics.Color.Transparent }
+        val headFg = when (p.style) { "term" -> p.bg; "window" -> p.onAccent; else -> p.fg }
+        val kickColor = if (p.style == "term" || p.style == "window") headFg else p.group(group)
         Row(
-            Modifier.fillMaxWidth().padding(start = 14.dp, end = 2.dp),
+            Modifier.fillMaxWidth().background(headBg).padding(start = 14.dp, end = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            model.tabIcon(t)?.let { TabIconView(model, it, p.group(group), 16.dp) }
-            Text("[$kicker]·$code", color = p.group(group), fontSize = 10.sp, letterSpacing = 1.sp, fontFamily = Hud.mono)
-            Text(title, color = p.fg, fontSize = 18.sp, fontFamily = Hud.display, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            model.tabIcon(t)?.let { TabIconView(model, it, kickColor, 16.dp) }
+            if (p.style != "soft" && p.style != "braun") Text("[$kicker]·$code", color = kickColor, fontSize = 10.sp, letterSpacing = 1.sp, fontFamily = Hud.mono)
+            Text(title, color = headFg, fontSize = 18.sp, fontFamily = Hud.display, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             // カテゴリーのタブも、アプリの上にウィジェットなどを置ける
             if (board || t.kind == TabKind.CATEGORY) GlyphButton(Glyph.GEAR, if (editing) "編集を終える" else "高さ・並び・足す", { editing = !editing }, filled = editing)
             if (docked) {
