@@ -73,6 +73,22 @@ data class RecentFile(val uri: String, val name: String, val mime: String?, val 
 data class Bookmark(val id: String, val name: String, val url: String)
 
 /**
+ * ピン留めしたファイル。source は "local"（ref＝content:// の URI）・"nas"（ref＝NAS のパス）・"drive"（ref＝ドライブのファイル ID、link＝開くリンク）。
+ * id は一覧の行のキー（同じファイルを二重に留めない）。where はどこにあったか（見出し・タブの名前）。
+ */
+data class PinnedFile(val id: String, val name: String, val source: String, val ref: String, val mime: String?, val link: String? = null, val where: String = "") {
+    fun toJson(): JSONObject = JSONObject().put("id", id).put("name", name).put("source", source).put("ref", ref)
+        .put("mime", mime ?: "").put("link", link ?: "").put("where", where)
+
+    companion object {
+        fun fromJson(o: JSONObject) = PinnedFile(
+            o.getString("id"), o.getString("name"), o.getString("source"), o.getString("ref"),
+            o.optString("mime").ifEmpty { null }, o.optString("link").ifEmpty { null }, o.optString("where"),
+        )
+    }
+}
+
+/**
  * ふつうのタブ（BOARD）に置くもの 1 つ。type は WIDGET（ref＝ウィジェットの id）・FOLDER（ref＝フォルダのタブと同じ書き方）・
  * FILE（ref＝content:// の URI）・WEB（ref＝URL）。half なら幅半分（となりの半分と横に並ぶ）。h は画面ごとの高さ（dp）。
  */
@@ -610,11 +626,24 @@ class Store(context: Context) {
         get() = prefs.getBoolean("welcomed", false)
         set(v) = prefs.edit().putBoolean("welcomed", v).apply()
 
+    /** ピン留めしたファイル（並べた順）。 */
+    var pinnedFiles: List<PinnedFile>
+        get() = objects("pinnedFiles") { PinnedFile.fromJson(it) }
+        set(v) = putObjects("pinnedFiles", v) { it.toJson() }
+
     /** ホームの区画の並び・出す画面・列（開いた画面の 2 列のどちら）。無い区画は初めの並びで後ろに足す。 */
     var homeSections: List<HomeSection>
         get() {
             val saved = objects("homeSections") { HomeSection.fromJson(it) }.filter { s -> HomeSection.DEFAULTS.any { it.id == s.id } }.distinctBy { it.id }
-            return saved + HomeSection.DEFAULTS.filter { d -> saved.none { it.id == d.id } }
+            if (saved.isEmpty()) return HomeSection.DEFAULTS
+            // 後から足した区画は、初めの並びで前にある区画の後ろに入れる
+            val out = saved.toMutableList()
+            HomeSection.DEFAULTS.forEachIndexed { i, d ->
+                if (out.any { it.id == d.id }) return@forEachIndexed
+                val before = HomeSection.DEFAULTS.take(i).lastOrNull { b -> out.any { it.id == b.id } }
+                out.add(before?.let { b -> out.indexOfFirst { it.id == b.id } + 1 } ?: 0, d)
+            }
+            return out
         }
         set(v) = putObjects("homeSections", v) { it.toJson() }
 
@@ -807,6 +836,7 @@ data class HomeSection(val id: String, val narrow: Boolean = true, val wide: Boo
         const val SEARCH = "search"
         const val TODAY = "today"
         const val NOTICE = "notice"
+        const val PINS = "pins"
         const val WEATHER = "weather"
         const val STATUS = "status"
         const val FILES = "files"
@@ -819,6 +849,7 @@ data class HomeSection(val id: String, val narrow: Boolean = true, val wide: Boo
             HomeSection(SEARCH),
             HomeSection(TODAY),
             HomeSection(NOTICE),
+            HomeSection(PINS),
             HomeSection(WEATHER),
             HomeSection(STATUS),
             HomeSection(FILES, narrow = true, wide = false),
@@ -827,7 +858,7 @@ data class HomeSection(val id: String, val narrow: Boolean = true, val wide: Boo
         )
 
         val LABELS = mapOf(
-            CLOCK to "時計", SEARCH to "検索", TODAY to "予定", NOTICE to "通知", WEATHER to "天気",
+            CLOCK to "時計", SEARCH to "検索", TODAY to "予定", NOTICE to "通知", PINS to "ピン留めのファイル", WEATHER to "天気",
             STATUS to "つながり（ネット・NAS など）", FILES to "ファイルへの入口", FILER to "ファイラー", DEVICE to "端末（電池・容量）",
         )
     }

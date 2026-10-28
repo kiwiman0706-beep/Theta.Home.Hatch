@@ -942,7 +942,7 @@ class ScreenshotTest {
         val m = model()
         org.junit.Assert.assertEquals(jp.yaegaki.theta.home.data.HomeSection.DEFAULTS.map { it.id }, m.homeSections.map { it.id })
         scenario!!.onActivity {
-            m.moveSection("weather", -3)
+            m.moveSection("weather", -4)
             m.moveSection("weather", -1)
             m.updateSection(m.homeSections.first { it.id == "device" }.copy(narrow = false))
         }
@@ -1138,5 +1138,36 @@ class ScreenshotTest {
         scenario!!.onActivity { m.changeTaskbarNarrow(false) }
         compose.waitForIdle()
         compose.onNodeWithContentDescription("Puzzle（最近）").assertDoesNotExist()
+    }
+
+    /** ファイルのピン留め：長押し →「ピン留め」でホームの区画とファイラーの「ピン留め」に並ぶ。 */
+    @Test
+    @Config(qualifiers = "w360dp-h1400dp-xxhdpi")
+    fun pinnedFiles() {
+        launch()
+        compose.waitForIdle()
+        val m = model()
+        compose.onNodeWithText("[ PINNED ]").assertDoesNotExist()
+        val app = ApplicationProvider.getApplicationContext<HomeApp>()
+        val f = java.io.File(app.filesDir, "見積書.pdf").apply { writeText("x") }
+        scenario!!.onActivity {
+            m.togglePinFile(jp.yaegaki.theta.home.data.PinnedFile("a", f.name, "local", android.net.Uri.fromFile(f).toString(), "application/pdf", where = "WORK"))
+            m.togglePinFile(jp.yaegaki.theta.home.data.PinnedFile("drive:1", "週報", "drive", "1", "application/vnd.google-apps.document", "https://docs.google.com/document/d/1", "DRIVE"))
+            m.togglePinFile(jp.yaegaki.theta.home.data.PinnedFile("nas:/home/a.xlsx", "a.xlsx", "nas", "/home/a.xlsx", null, where = "NAS"))
+        }
+        compose.waitForIdle()
+        compose.onNodeWithText("[ PINNED ]").assertExists()
+        compose.onNodeWithText("週報").assertExists()
+        shot("pinned-files")
+        // 保存して読み直しても同じ・二重に留めない
+        org.junit.Assert.assertEquals(m.pinnedFiles, jp.yaegaki.theta.home.data.Store(m.getApplication()).pinnedFiles)
+        scenario!!.onActivity { m.movePinnedFile("nas:/home/a.xlsx", -2); m.togglePinFile(m.pinnedFiles.first { it.id == "a" }) }
+        org.junit.Assert.assertEquals(listOf("nas:/home/a.xlsx", "drive:1"), m.pinnedFiles.map { it.id })
+        // ファイラーの「ピン留め」
+        scenario!!.onActivity { m.showPinned() }
+        compose.waitForIdle()
+        org.junit.Assert.assertEquals("pinned", m.location)
+        org.junit.Assert.assertTrue(compose.onAllNodesWithText("PINNED").fetchSemanticsNodes().isNotEmpty())
+        compose.onNodeWithText("a.xlsx").assertExists()
     }
 }

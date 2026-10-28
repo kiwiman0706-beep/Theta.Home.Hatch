@@ -137,6 +137,7 @@ private fun SectionView(model: HomeModel, s: HomeSection, filerHeight: Dp, openN
             if (next != null) Text(dayLabel(next.localBegin) + "  " + next.title, color = LocalPalette.current.muted, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }) { TodayEvents(model, max = 12) }
         HomeSection.NOTICE -> NoticePanel(model)
+        HomeSection.PINS -> PinsPanel(model)
         HomeSection.WEATHER -> Panel(model, "WEATHER", "天気", folded = {
             val f = model.forecast
             val warn = model.alerts?.list.orEmpty().joinToString("・") { it.name }
@@ -175,6 +176,29 @@ private fun FilerSection(model: HomeModel, modifier: Modifier, openNasSettings: 
             else -> Text(if (p.style == "braun") "FILER" else "ファイラー", color = p.faint, fontSize = 12.sp, modifier = Modifier.padding(start = 14.dp, top = 12.dp))
         }
         FilerBody(model, Modifier.weight(1f).fillMaxWidth().padding(10.dp), openNasSettings, openDriveSettings)
+    }
+}
+
+/** ピン留めしたファイルの区画。留めたものが無ければ出さない。押すと開く。 */
+@Composable
+private fun PinsPanel(model: HomeModel) {
+    val pins = model.pinnedFiles
+    if (pins.isEmpty()) return
+    val p = LocalPalette.current
+    val actions = LocalActions.current
+    Panel(model, "PINNED", "ピン留めのファイル", folded = {
+        Text(pins.joinToString("・") { it.name }, color = p.muted, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+    }) {
+        Column {
+            pins.take(8).forEachIndexed { i, f ->
+                RowButton(zebra = i, onClick = { openPinned(model, actions, f) }, onLongClick = { model.togglePinFile(f) }, label = "開く（長押しで外す）") {
+                    Badge(f.name.substringAfterLast('.', if (f.source == "drive") "DOC" else "FILE").uppercase(java.util.Locale.ROOT).take(4))
+                    TwoLines(f.name, listOf(when (f.source) { "nas" -> "NAS"; "drive" -> "DRIVE"; else -> "" }, f.where).filter { it.isNotEmpty() }.distinct().joinToString(" · ").ifEmpty { null }, Modifier.weight(1f))
+                }
+            }
+            if (pins.size > 8) Text("ほか ${pins.size - 8} 件 ›", color = p.accent, fontSize = 12.sp, fontFamily = Hud.mono,
+                modifier = Modifier.clickable { model.showPinned() }.padding(vertical = 6.dp))
+        }
     }
 }
 

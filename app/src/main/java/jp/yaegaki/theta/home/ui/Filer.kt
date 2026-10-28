@@ -124,6 +124,32 @@ private fun Nas.Item.row() = Row("nas:$path", name, dir, size, modified, if (dir
 
 private fun GDrive.Item.row() = Row("drive:$id", name, isDir, size, modified, mime, drive = this)
 
+/** 一覧の行から、ピン留めの記録を作る（フォルダは留めない）。 */
+internal fun Row.toPin(where: String): jp.yaegaki.theta.home.data.PinnedFile? = when {
+    isDir -> null
+    entry != null -> jp.yaegaki.theta.home.data.PinnedFile(key, name, "local", entry.uri.toString(), mime, where = where)
+    nas != null -> jp.yaegaki.theta.home.data.PinnedFile(key, name, "nas", nas.path, mime, where = where)
+    drive != null -> jp.yaegaki.theta.home.data.PinnedFile(key, name, "drive", drive.id, mime, drive.link, where)
+    else -> null
+}
+
+/** ピン留めの記録から、一覧の行を作る（開き方は元の場所と同じ）。 */
+internal fun jp.yaegaki.theta.home.data.PinnedFile.toRow(): Row = when (source) {
+    "nas" -> Nas.Item().also { it.name = name; it.path = ref }.row().copy(key = id, note = where)
+    "drive" -> GDrive.Item(ref, name, mime ?: "", 0, 0, null, link).row().copy(key = id, note = where)
+    else -> Entry(Uri.parse(ref), name, mime, false, 0, 0).row().copy(key = id, note = where)
+}
+
+/** ピン留めしたファイルを開く：端末のものは中で、NAS は取得してから、ドライブは Google のアプリかリンク・取得して。 */
+internal fun openPinned(model: HomeModel, actions: Actions, f: jp.yaegaki.theta.home.data.PinnedFile) {
+    val r = f.toRow()
+    when {
+        r.entry != null -> openFile(model, actions, ViewItem(r.entry.uri, r.name, r.mime))
+        r.nas != null -> model.fetchNas(r.nas) { file -> openFile(model, actions, ViewItem(Files.localUri(actions.activity, file), r.name, r.mime)) }
+        r.drive != null -> openDriveItem(model, actions, r.drive)
+    }
+}
+
 /**
  * 背景（デスクトップ）のファイラー。スマホでもファイルの置き場をホームにする。
  * 上：時計・今日の予定・検索、ネットワーク・Tailscale・NAS の状態。下：場所（フォルダのタブ・NAS・最近）とファイルの一覧。
@@ -190,6 +216,7 @@ private fun FilerFooter(model: HomeModel) {
     val (where, count) = when {
         loc == "nas" -> "NAS" + model.nasState.path.ifEmpty { "/" } to model.nasState.entries.size
         loc == "recent" -> "RECENT" to model.recents.size
+        loc == "pinned" -> "PINNED" to model.pinnedFiles.size
         tab != null -> tab.label to (model.folders[tab.id]?.entries?.size ?: 0)
         else -> "----" to 0
     }
@@ -601,6 +628,7 @@ private fun Places(model: HomeModel, modifier: Modifier, openNasSettings: () -> 
         PlaceButton(++n, "NAS", if (model.nas.configured()) "SHARED" else "未登録", model.location == "nas" && model.nasTab == null) {
             if (model.nas.configured()) model.openNas("") else openNasSettings()
         }
+        PlaceButton(++n, "ピン留め", "PINNED", model.location == "pinned") { model.showPinned() }
         PlaceButton(++n, "最近", "RECENT", model.location == "recent") { model.showRecent() }
         Gap(10.dp)
         Note("ここで選ぶと背景に出します。端のフォルダのタブは、ドロワーの中で開きます。")
@@ -646,6 +674,7 @@ internal fun PlaceChips(model: HomeModel, inFiler: Boolean = false) {
         else model.folderTabs().forEach { t -> chip(t.label, model.open == t.id) { model.openTab(t.id) } }
         chip("NAS", model.location == "nas" && model.nasTab == null) { model.openNas("") }
         chip("DRIVE", model.location == "drive" && model.driveTab == null) { model.openDrive(listOf(GDrive.ROOT to "DRIVE")) }
+        chip("ピン留め", model.location == "pinned") { model.showPinned() }
         chip("最近", model.location == "recent") { model.showRecent() }
     }
 }
@@ -692,6 +721,32 @@ internal fun FolderView(
     }
 
     when {
+        loc == "pinned" -> {
+            val pins = model.pinnedFiles
+            Listing(
+                model = model,
+                viewKeys = listOf("pinned"),
+                crumbs = listOf("PINNED"),
+                onCrumb = {},
+                canUp = false,
+                onUp = {},
+                rows = pins.map { it.toRow() },
+                loading = false,
+                error = null,
+                onRetry = {},
+                preview = preview,
+                selected = selected,
+                onTap = { r -> if (preview) onSelect(r) else pins.firstOrNull { it.id == r.key }?.let { openPinned(model, actions, it) } },
+                onOpen = { r -> pins.firstOrNull { it.id == r.key }?.let { openPinned(model, actions, it) } },
+                onShare = ::share,
+                extraMenu = { r, close ->
+                    val i = pins.indexOfFirst { it.id == r.key }
+                    if (i > 0) DropdownMenuItem(text = { Text("▲ 上へ") }, onClick = { close(); model.movePinnedFile(r.key, -1) })
+                    if (i in 0 until pins.lastIndex) DropdownMenuItem(text = { Text("▼ 下へ") }, onClick = { close(); model.movePinnedFile(r.key, 1) })
+                },
+                empty = "ファイルを長押し →「ピン留め」で、ここといつものホームに並びます（端末・NAS・ドライブのどれでも）",
+            )
+        }
         loc == "recent" -> {
             val rows = model.recents.map { r ->
                 val e = Entry(Uri.parse(r.uri), r.name, r.mime, false, 0, r.time)
@@ -938,6 +993,9 @@ private fun Listing(
                         if (!r.isDir) {
                             DropdownMenuItem(text = { Text("開く") }, onClick = { close(); onOpen(r) })
                             DropdownMenuItem(text = { Text("共有") }, onClick = { close(); onShare(r) })
+                            r.toPin(crumbs.firstOrNull().orEmpty())?.let { pin ->
+                                DropdownMenuItem(text = { Text(if (model.isPinnedFile(pin.id)) "ピン留めを外す" else "ピン留め（ホームにいつも出す）") }, onClick = { close(); model.togglePinFile(pin) })
+                            }
                             r.entry?.let { e ->
                                 DropdownMenuItem(text = { Text("アプリを選んで開く") }, onClick = { close(); actions.start(Intent.createChooser(Files.openIntent(e.uri, e.mime), "開く")) })
                             }

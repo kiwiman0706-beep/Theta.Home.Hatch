@@ -292,6 +292,29 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     }
     fun removeNoticeRule(id: String) { noticeRules = noticeRules.filterNot { it.id == id }; store.noticeRules = noticeRules }
 
+    // ---- ピン留めしたファイル ----
+
+    var pinnedFiles by mutableStateOf(store.pinnedFiles); private set
+    fun isPinnedFile(id: String) = pinnedFiles.any { it.id == id }
+    fun togglePinFile(f: jp.yaegaki.theta.home.data.PinnedFile) {
+        pinnedFiles = if (isPinnedFile(f.id)) pinnedFiles.filterNot { it.id == f.id } else pinnedFiles + f
+        store.pinnedFiles = pinnedFiles
+        (ctx as HomeApp).toast(if (isPinnedFile(f.id)) "「${f.name}」をピン留めしました" else "ピン留めを外しました")
+    }
+    fun movePinnedFile(id: String, delta: Int) {
+        val i = pinnedFiles.indexOfFirst { it.id == id }
+        val j = i + delta
+        if (i < 0 || j !in pinnedFiles.indices) return
+        pinnedFiles = pinnedFiles.toMutableList().also { it.add(j, it.removeAt(i)) }
+        store.pinnedFiles = pinnedFiles
+    }
+
+    fun showPinned() {
+        open = null
+        filerOpen = true
+        moveTo("pinned")
+    }
+
     // ---- タスクバー（画面の下に、最近使ったアプリとよく使うアプリ） ----
 
     var taskbarNarrow by mutableStateOf(store.taskbarNarrow); private set
@@ -1702,6 +1725,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         bookmarks = store.bookmarks()
         folderViews = store.folderViews()
         queries = store.queries()
+        pinnedFiles = store.pinnedFiles
+        homeSections = store.homeSections
         appOrder = store.appOrder()
         tabOpts = store.tabOpts()
         shortcuts = store.shortcuts()
