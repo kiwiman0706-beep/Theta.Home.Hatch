@@ -47,6 +47,8 @@ class ScreenshotTest {
         val app = ApplicationProvider.getApplicationContext<HomeApp>()
         // 前のテストの設定（テーマ・カテゴリー）を持ち越さない
         app.store.prefs.edit().clear().commit()
+        // 初めの案内はそれだけの試験で見る
+        app.store.welcomed = true
         jp.yaegaki.theta.home.rescue.Rescue.reset(app)
         app.store.themeMode = theme
         app.store.iconMode = iconMode
@@ -929,5 +931,94 @@ class ScreenshotTest {
         compose.onNodeWithText("1 / 3").assertExists()
         compose.onNodeWithText("右開き").assertExists()
         shot("viewer-comic")
+    }
+
+    /** ホームの並び：順番・出す画面・列を変える。並びの画面も。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun homeLayout() {
+        launch()
+        compose.waitForIdle()
+        val m = model()
+        org.junit.Assert.assertEquals(jp.yaegaki.theta.home.data.HomeSection.DEFAULTS.map { it.id }, m.homeSections.map { it.id })
+        scenario!!.onActivity {
+            m.moveSection("weather", -3)
+            m.moveSection("weather", -1)
+            m.updateSection(m.homeSections.first { it.id == "device" }.copy(narrow = false))
+        }
+        compose.waitForIdle()
+        org.junit.Assert.assertEquals("weather", m.homeSections[0].id)
+        compose.onNodeWithText("[ DEVICE ]").assertDoesNotExist()
+        compose.onNodeWithText("[ WEATHER ]").assertExists()
+        // 保存したものを読み直しても同じ
+        org.junit.Assert.assertEquals(m.homeSections, jp.yaegaki.theta.home.data.Store(m.getApplication()).homeSections)
+        scenario!!.onActivity { m.settingsOpen = true }
+        compose.waitForIdle()
+        compose.onNodeWithText("ホームの並びを変える").performScrollTo().performClick()
+        compose.waitForIdle()
+        shot("home-layout")
+    }
+
+    /** 開いた画面では両側にタブ：カテゴリーは START と反対側（左）、ほかは右。長押しで反対側へ。閉じた画面では片側。 */
+    @Test
+    @Config(qualifiers = "w904dp-h1100dp-xhdpi")
+    fun railsBoth() {
+        launch()
+        compose.waitForIdle()
+        val m = model()
+        scenario!!.onActivity {
+            val c = m.addCategory("ツール")
+            m.apps.forEach { a -> m.assign(a, c) }
+            m.addCategoryTab(c)
+        }
+        compose.waitForIdle()
+        val tools = m.tabs.first { it.label == "ツール" }.id
+        val work = m.tabs.first { it.kind == jp.yaegaki.theta.home.data.TabKind.BOARD }.id
+        org.junit.Assert.assertTrue(m.railsBoth())
+        org.junit.Assert.assertTrue(m.tabOnLeft(tools))
+        org.junit.Assert.assertFalse(m.tabOnLeft(work))
+        compose.onNodeWithContentDescription("ツール").performClick()
+        compose.mainClock.advanceTimeBy(600)
+        shot("rails-both")
+        scenario!!.onActivity { m.close(); m.flipTabSide(work) }
+        org.junit.Assert.assertTrue(m.tabOnLeft(work))
+        scenario!!.onActivity { m.changeRailMode("one") }
+        org.junit.Assert.assertFalse(m.tabOnLeft(tools))
+    }
+
+    /** 初めて入れたとき：設定を引き継ぐか → 引き継がないならアプリを仕分けするか。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun welcome() {
+        launch { app -> app.store.welcomed = false }
+        compose.waitForIdle()
+        val m = model()
+        if (!m.welcome) return // この環境で「新しく入れた」と分からないときは見ない
+        compose.onNodeWithText("Theta Home Hatch へようこそ").assertExists()
+        shot("welcome")
+        compose.onNodeWithText("新しく始める").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("アプリを仕分けしますか？").assertExists()
+        compose.onNodeWithText("あとで").performClick()
+        compose.waitForIdle()
+        org.junit.Assert.assertFalse(m.welcome)
+        org.junit.Assert.assertTrue(jp.yaegaki.theta.home.data.Store(m.getApplication()).welcomed)
+    }
+
+    /** 端から出したときはタブだけ（前に開いていたドロワーは閉じる）。 */
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-xxhdpi")
+    fun edgeTabsOnly() {
+        launch()
+        compose.waitForIdle()
+        val m = model()
+        scenario!!.onActivity { m.toggle(m.tabs.first().id) }
+        org.junit.Assert.assertNotNull(m.open)
+        scenario?.close()
+        scenario = null
+        val edge = ActivityScenario.launch(jp.yaegaki.theta.home.edge.EdgeActivity::class.java)
+        compose.waitForIdle()
+        org.junit.Assert.assertNull(m.open)
+        edge.close()
     }
 }

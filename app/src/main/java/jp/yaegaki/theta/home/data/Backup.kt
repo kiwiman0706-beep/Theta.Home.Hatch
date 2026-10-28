@@ -38,6 +38,7 @@ object Backup {
             .put("device", Build.MANUFACTURER + " " + Build.MODEL)
             .put("tabs", JSONArray(store.prefs.getString("tabs", null) ?: tabsJson(Store.defaultTabs())))
             .put("railLeft", store.railLeft)
+            .put("railMode", store.railMode)
             .put("theme", store.themeMode)
             .put("monoIcons", store.monoIcons)
             .put("iconMode", store.iconMode)
@@ -83,6 +84,7 @@ object Backup {
         val e = store.prefs.edit()
         o.optJSONArray("tabs")?.let { e.putString("tabs", it.toString()) }
         e.putBoolean("railLeft", o.optBoolean("railLeft", store.railLeft))
+        e.putString("railMode", o.optString("railMode", store.railMode))
         e.putString("theme", o.optString("theme", store.themeMode))
         e.putBoolean("monoIcons", o.optBoolean("monoIcons", store.monoIcons))
         if (o.has("iconMode")) e.putString("iconMode", o.optString("iconMode"))

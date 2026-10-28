@@ -138,7 +138,7 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity, edgeExit: (() -> Uni
         model.location == "drive" && model.driveState.stack.size > 1 ||
         here != null && (model.folders[here.id]?.stack?.size ?: 0) > 1
     // 狭い画面では、いちばん上のフォルダで戻るとファイラーを閉じてダッシュボードへ
-    val closeFiler = model.filerOpen && model.profile == "narrow"
+    val closeFiler = model.filerOpen && !model.filerOnHome()
     BackHandler(enabled = model.open != null || model.settingsOpen || model.query.isNotEmpty() || canGoUp || closeFiler) {
         when {
             model.settingsOpen -> model.settingsOpen = false
@@ -186,26 +186,39 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity, edgeExit: (() -> Uni
             LocalRailLeft provides railLeft, LocalEdgeExit provides edgeExit,
         ) {
             val docked = model.docked.takeLast(layout.maxDocked)
+            // 両側のときは、タブごとに決めた側へ（エッジは片側だけ）
+            val wantBoth = !edge && model.railsBoth()
+            // START の無い側にタブが 1 つも無ければ、その側の端は出さない
+            val both = wantBoth && model.tabs.any { model.shownHere(it.id) && model.tabOnLeft(it.id) != railLeft }
+            fun onLeft(id: String) = if (both) model.tabOnLeft(id) else railLeft
             Row(Modifier.fillMaxSize()) {
-                if (railLeft) Rail(model, railW)
+                if (railLeft || both) CompositionLocalProvider(LocalRailLeft provides true) { Rail(model, railW, main = railLeft, filter = if (both) ({ onLeft(it) }) else null) }
                 Box(Modifier.weight(1f).fillMaxHeight()) {
                     Row(Modifier.fillMaxSize()) {
-                        if (railLeft) docked.forEach { DockedDrawer(model, it, drawerWidth(model, it, layout, available), available) }
+                        CompositionLocalProvider(LocalRailLeft provides true) {
+                            docked.filter { onLeft(it) }.forEach { DockedDrawer(model, it, drawerWidth(model, it, layout, available), available) }
+                        }
                         Box(Modifier.weight(1f).fillMaxHeight()) {
                             // エッジでは背景は透けたまま。押すと閉じる
                             if (edge) Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClickLabel = "閉じる") { edgeExit?.invoke() })
                             else Filer(model)
                         }
-                        if (!railLeft) docked.forEach { DockedDrawer(model, it, drawerWidth(model, it, layout, available), available) }
+                        CompositionLocalProvider(LocalRailLeft provides false) {
+                            docked.filter { !onLeft(it) }.forEach { DockedDrawer(model, it, drawerWidth(model, it, layout, available), available) }
+                        }
                     }
-                    Overlay(model, layout, available)
+                    // 開いたドロワーは、そのタブの側から出す（設定は START の側）
+                    val from = if (model.settingsOpen) railLeft else model.open?.let { onLeft(it) } ?: railLeft
+                    CompositionLocalProvider(LocalRailLeft provides from) { Overlay(model, layout, available) }
                 }
-                if (!railLeft) Rail(model, railW)
+                if (!railLeft || both) CompositionLocalProvider(LocalRailLeft provides false) { Rail(model, railW, main = !railLeft, filter = if (both) ({ !onLeft(it) }) else null) }
             }
             model.importReport?.let { r -> ImportReportDialog(model, r) { model.importReport = null } }
             // 中で開いたファイル（いちばん上に重ねる）
             ViewerOverlay(model)
             QuickInput(model)
+            // 初めて入れたときの案内（エッジでは出さない）
+            if (!edge) WelcomeDialog(model)
         }
     }
 }
@@ -329,7 +342,7 @@ private fun Overlay(model: HomeModel, layout: Layout, available: Dp) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun Rail(model: HomeModel, width: Dp) {
+private fun Rail(model: HomeModel, width: Dp, main: Boolean = true, filter: ((String) -> Boolean)? = null) {
     val p = LocalPalette.current
     val density = LocalDensity.current
     val left = LocalRailLeft.current
@@ -356,7 +369,7 @@ private fun Rail(model: HomeModel, width: Dp) {
         var lastGroup = -1
         val reorder = rememberReorderState()
         // この画面（閉じた／開いた）では出さないタブは飛ばす
-        model.tabs.filter { model.shownHere(it.id) }.forEach { t ->
+        model.tabs.filter { model.shownHere(it.id) && (filter == null || filter(it.id)) }.forEach { t ->
             val group = model.groupOf(t)
             if (lastGroup != -1 && group != lastGroup) Spacer(Modifier.height(12.dp))
             lastGroup = group
@@ -364,7 +377,7 @@ private fun Rail(model: HomeModel, width: Dp) {
         }
         var adding by remember { mutableStateOf(false) }
         var addingWidget by remember { mutableStateOf(false) }
-        Box(
+        if (main) Box(
             Modifier
                 .width(40.dp)
                 .height(44.dp)
@@ -377,9 +390,11 @@ private fun Rail(model: HomeModel, width: Dp) {
         if (adding) AddTabDialog(model, onWidget = { adding = false; addingWidget = true }) { adding = false }
         if (addingWidget) AddWidgetDialog(model) { addingWidget = false }
     }
-    // よく使うアプリ・ショートカット：タブをスクロールしても隠れない、START の上
-    RailDock(model)
-    StartButton(model)
+    // よく使うアプリ・ショートカット：タブをスクロールしても隠れない、START の上（START の側だけ）
+    if (main) {
+        RailDock(model)
+        StartButton(model)
+    }
     }
 }
 
@@ -581,6 +596,7 @@ private fun TabMenu(model: HomeModel, id: String, expanded: Boolean, close: () -
                 if (!model.shownHere(id)) actions.toast("この画面では隠しました（「＋」から戻せます）")
             })
         }
+        if (model.railsBoth() && LocalEdgeExit.current == null) DropdownMenuItem(text = { Text(if (model.tabOnLeft(id)) "右側へ移す" else "左側へ移す") }, onClick = { close(); model.flipTabSide(id) })
         if (model.tabWidth(id) != null) DropdownMenuItem(text = { Text("幅を元に戻す（この画面）") }, onClick = { close(); model.setTabWidth(id, null) })
         DropdownMenuItem(text = { Text("このタブを外す") }, onClick = {
             close()

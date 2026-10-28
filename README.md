@@ -8,13 +8,23 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**0.34.1-alpha（versionCode 41）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**0.35.0-alpha（versionCode 42）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
-| Fold5 メイン：背景のファイラー | Hatch のドロワー | カバー画面 | タブレット |
+| Fold5 メイン（2 列・両側のタブ） | 両側のタブ | カバー画面 | タブレット |
 | --- | --- | --- | --- |
-| ![](docs/screenshots/fold5-main-filer.png) | ![](docs/screenshots/fold5-main-hatch.png) | ![](docs/screenshots/fold5-cover-filer.png) | ![](docs/screenshots/tablet-home.png) |
+| ![](docs/screenshots/fold5-main-filer.png) | ![](docs/screenshots/rails-both.png) | ![](docs/screenshots/dashboard-narrow.png) | ![](docs/screenshots/tablet-home.png) |
+
+## ホームとタブ
+
+- **ホーム**（タブではないところ）は区画の並び：時計・検索・予定・通知・天気・つながり・ファイルへの入口・**ファイラー**・端末。設定 →「HOME / ホームの並び」で、順番（▲▼）、**閉じた画面・開いた画面で出すか**（「閉」「開」）、**2 列のときの左右**を決める。開いた画面・タブレットでは 2 列（初めは左に時計・予定など、右にファイラー）。閉じた画面ではファイラーの代わりに「ファイルへの入口」。
+- **タブ**はフォルダ・アプリ（ランチャー）・ウィジェットなどをポップアップで出すもの。フォルダのタブはタブ（ドロワー）の中で開く。ホームの「ファイルへの入口」のフォルダも、タブで開く。
+- **タブの位置**：設定 →「見た目」で「開いた画面だけ両側」（初め）・「いつも片側」・「いつも両側」。両側のときは、カテゴリー（アプリ）のタブが START と反対側、ほかが START の側。タブの長押し「右側へ移す」「左側へ移す」で 1 つずつ変えられる。
+- **初めて入れたとき**：前の設定を読み込むか → 読み込まないならアプリを仕分けするかを聞く。
+- **Hatch のアプリ**：設定のいちばん下「HATCH / Theta Hatch シリーズ」から、ほかの Hatch のアプリを入れる・更新する・開く。
+
+<img src="docs/screenshots/home-layout.png" width="200" alt="ホームの並び"> <img src="docs/screenshots/welcome.png" width="200" alt="初めの案内">
 
 ## 狭い画面のダッシュボード・カレンダー
 

@@ -125,41 +125,48 @@ private fun GDrive.Item.row() = Row("drive:$id", name, isDir, size, modified, mi
  */
 @Composable
 fun Filer(model: HomeModel) {
-    val layout = LocalLayout.current
     var nasDialog by remember { mutableStateOf(false) }
     var driveDialog by remember { mutableStateOf(false) }
-    // 狭い画面の背景はダッシュボード。ファイラーはフォルダのタブ・場所を押したときだけ
-    if (layout.compact && !model.filerOpen) {
-        Dashboard(model, openNasSettings = { nasDialog = true })
-        if (nasDialog) NasDialog(model) { nasDialog = false }
-        return
-    }
+    // ホームは区画の並び。ファイラーが区画として出ていないときに場所を押したら、ファイラーを全面で開く
+    if (model.filerOpen && !model.filerOnHome()) FilerPage(model, { nasDialog = true }, { driveDialog = true })
+    else HomeBoard(model, openNasSettings = { nasDialog = true }, openDriveSettings = { driveDialog = true })
+    if (nasDialog) NasDialog(model) { nasDialog = false }
+    if (driveDialog) DriveDialog(model) { driveDialog = false }
+}
+
+/** ファイラーを全面で：閉じる・検索・つながり・場所とフォルダ。戻る（いちばん上で）か × でホームへ。 */
+@Composable
+private fun FilerPage(model: HomeModel, openNasSettings: () -> Unit, openDriveSettings: () -> Unit) {
+    val layout = LocalLayout.current
     Column(Modifier.fillMaxSize().padding(horizontal = if (layout.compact) 14.dp else 28.dp, vertical = 12.dp)) {
         FilerHeader(model)
         Gap(8.dp)
-        StatusStrip(model) { nasDialog = true }
+        StatusStrip(model, openNasSettings)
         Gap(10.dp)
-        if (model.query.isNotBlank()) {
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) { SearchResults(model) }
-        } else {
-            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-                val showPlaces = maxWidth >= 560.dp
-                val showPreview = maxWidth >= 860.dp
-                var selected by remember(model.location) { mutableStateOf<Row?>(null) }
-                Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    if (showPlaces) Places(model, Modifier.width(176.dp).fillMaxHeight()) { nasDialog = true }
-                    Column(Modifier.weight(1f).fillMaxHeight()) {
-                        if (!showPlaces) PlaceChips(model)
-                        FolderView(model, preview = showPreview, selected = selected, onSelect = { selected = it }, openNasSettings = { nasDialog = true }, openDriveSettings = { driveDialog = true })
-                    }
-                    if (showPreview) Preview(model, selected, Modifier.width(300.dp).fillMaxHeight())
+        if (model.query.isNotBlank()) Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) { SearchResults(model) }
+        else FilerBody(model, Modifier.weight(1f), openNasSettings, openDriveSettings)
+    }
+}
+
+/** ファイラーの中身：場所の一覧（広いとき）・フォルダ・プレビュー（とても広いとき）・下の帯。ホームの区画にもなる。 */
+@Composable
+internal fun FilerBody(model: HomeModel, modifier: Modifier, openNasSettings: () -> Unit, openDriveSettings: () -> Unit) {
+    Column(modifier) {
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            val showPlaces = maxWidth >= 560.dp
+            val showPreview = maxWidth >= 860.dp
+            var selected by remember(model.location) { mutableStateOf<Row?>(null) }
+            Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                if (showPlaces) Places(model, Modifier.width(176.dp).fillMaxHeight(), openNasSettings)
+                Column(Modifier.weight(1f).fillMaxHeight()) {
+                    if (!showPlaces) PlaceChips(model, inFiler = true)
+                    FolderView(model, preview = showPreview, selected = selected, onSelect = { selected = it }, openNasSettings = openNasSettings, openDriveSettings = openDriveSettings)
                 }
+                if (showPreview) Preview(model, selected, Modifier.width(300.dp).fillMaxHeight())
             }
         }
         FilerFooter(model)
     }
-    if (nasDialog) NasDialog(model) { nasDialog = false }
-    if (driveDialog) DriveDialog(model) { driveDialog = false }
 }
 
 /** ドライブのファイルを開く。Google ドキュメントなどはリンクで（ドキュメントのアプリかブラウザが開く）、ほかは取得してから。 */
@@ -336,56 +343,16 @@ internal fun dayLabel(t: Long): String {
 @Composable
 private fun FilerHeader(model: HomeModel) {
     val p = LocalPalette.current
-    val layout = LocalLayout.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (layout.compact) {
-            // 狭い画面のファイラーは、ダッシュボードの上に開くもの。戻るでダッシュボードへ
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                GlyphButton(Glyph.CLOSE, "ファイラーを閉じる", { model.filerOpen = false })
-                Text("FILER", color = p.fg, fontSize = 26.sp, fontFamily = Hud.display)
-                Text("// FILES", color = p.faint, fontSize = 11.sp, fontFamily = Hud.mono, letterSpacing = 2.sp)
-                Spacer(Modifier.weight(1f))
-                Stripes(Modifier.width(60.dp).height(8.dp))
-            }
-            SearchRow(model)
-        } else WideHeader(model)
-    }
-}
-
-/** 広い画面のファイラーの上：時計・予定・条件に合う通知・検索。 */
-@Composable
-private fun WideHeader(model: HomeModel) {
-    val p = LocalPalette.current
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-            ClockBlock(big = true)
-            TodayEvents(model, max = 5, modifier = Modifier.weight(1f).padding(bottom = 6.dp), collapsible = true)
-            Column(Modifier.padding(bottom = 8.dp), horizontalAlignment = Alignment.End) {
-                Text("THETA // HOME.HATCH", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, letterSpacing = 1.sp)
-                Stripes(Modifier.width(96.dp).height(8.dp))
-            }
+        // 全面のファイラーは、ホームの上に開くもの。× か戻るでホームへ
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            GlyphButton(Glyph.CLOSE, "ファイラーを閉じる", { model.filerOpen = false })
+            Text("FILER", color = p.fg, fontSize = 26.sp, fontFamily = Hud.display)
+            Text("// FILES", color = p.faint, fontSize = 11.sp, fontFamily = Hud.mono, letterSpacing = 2.sp)
+            Spacer(Modifier.weight(1f))
+            Stripes(Modifier.width(60.dp).height(8.dp))
         }
-        Ticks(Modifier.fillMaxWidth().height(6.dp))
-        WideNotices(model)
         SearchRow(model)
-    }
-}
-
-/** 条件に合う通知（あるときだけ）。見出しの ▾ でたたむ。 */
-@Composable
-private fun WideNotices(model: HomeModel) {
-    val p = LocalPalette.current
-    val picked = filteredNotices(model)
-    if (picked.isEmpty()) return
-    val folded = model.isCollapsed("NOTICE")
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(Modifier.clickable(onClickLabel = if (folded) "通知を広げる" else "通知をたたむ") { model.toggleCollapsed("NOTICE") },
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(if (folded) "▸" else "▾", color = p.accent, fontSize = 11.sp, fontFamily = Hud.mono)
-            Text("NOTICE", color = p.faint, fontSize = 10.sp, fontFamily = Hud.mono, letterSpacing = 1.5.sp)
-            Text("%02d".format(picked.size), color = p.accent, fontSize = 10.sp, fontFamily = Hud.mono)
-        }
-        if (folded) FilteredNoticesFolded(picked) else FilteredNotices(model, picked, max = 3)
     }
 }
 
@@ -521,7 +488,7 @@ private fun PlaceButton(index: Int, title: String, sub: String, active: Boolean,
 }
 
 @Composable
-internal fun PlaceChips(model: HomeModel) {
+internal fun PlaceChips(model: HomeModel, inFiler: Boolean = false) {
     val p = LocalPalette.current
     Row(Modifier.horizontalScroll(rememberScrollState()).padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         @Composable
@@ -532,7 +499,9 @@ internal fun PlaceChips(model: HomeModel) {
                     .padding(horizontal = 14.dp, vertical = 8.dp),
             )
         }
-        model.folderPlaces().forEach { t -> chip(t.label, isActive(model, t)) { model.showFolder(t) } }
+        // ホームの入口では、フォルダのタブはタブとして開く（ファイラーの中では、ファイラーの場所を切り替える）
+        if (inFiler) model.folderPlaces().forEach { t -> chip(t.label, isActive(model, t)) { model.showFolder(t) } }
+        else model.folderTabs().forEach { t -> chip(t.label, model.open == t.id) { model.openTab(t.id) } }
         chip("NAS", model.location == "nas" && model.nasTab == null) { model.openNas("") }
         chip("DRIVE", model.location == "drive" && model.driveTab == null) { model.openDrive(listOf(GDrive.ROOT to "DRIVE")) }
         chip("最近", model.location == "recent") { model.showRecent() }

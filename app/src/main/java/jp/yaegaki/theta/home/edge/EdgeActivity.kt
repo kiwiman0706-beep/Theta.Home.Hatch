@@ -14,7 +14,7 @@ import jp.yaegaki.theta.home.ui.HomeTheme
 /**
  * エッジ：ほかのアプリの上に重ねる、透けた画面。端のタブとドロワーはホームと同じもの（同じ HomeModel）で、
  * ウィジェット・フォルダ・予定なども出る。背景のファイラーは出さず、外側を押す・戻るで閉じる。
- * 自分のタスク（最近の一覧には出さない）で開くので、閉じると下のアプリに戻る。
+ * 自分のタスク（最近の一覧には出さない）で開くので、閉じると下のアプリに戻る。開いたときはタブだけ（ドロワーは押してから）。
  */
 class EdgeActivity : ComponentActivity() {
     private val model: HomeModel get() = (application as HomeApp).model
@@ -60,6 +60,11 @@ class EdgeActivity : ComponentActivity() {
                 model.onHome()
                 model.openApps(voice = true)
             }
+            // 端から出したときは、タブだけ（前に開いていたドロワーは閉じておく）
+            else -> {
+                model.close()
+                model.settingsOpen = false
+            }
         }
     }
 
@@ -72,8 +77,6 @@ class EdgeActivity : ComponentActivity() {
         super.onResume()
         EdgeService.homeShown.value = true
         model.reloadShortcuts()
-        // 開いたら、最後に開いていたタブを出しておく（無ければタブだけ）
-        if (purpose == null && model.open == null && !model.settingsOpen && model.quickOpen == null) model.openLast()
     }
 
     override fun onPause() {

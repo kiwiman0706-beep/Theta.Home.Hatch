@@ -50,10 +50,14 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import jp.yaegaki.theta.home.HomeModel
+import jp.yaegaki.theta.home.data.HomeSection
+import androidx.compose.runtime.key
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.foundation.layout.BoxWithConstraints
 import jp.yaegaki.theta.home.data.Files
 import jp.yaegaki.theta.home.data.Weather
 import jp.yaegaki.theta.home.data.WeatherPlace
@@ -67,42 +71,99 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * 狭い画面（Fold5 のカバー・Titan など）の背景。ファイラーの代わりに、今日の予定・天気・つながり・端末・ファイルへの入口を並べる。
- * ファイラーはフォルダのタブか「FILES」の場所を押すと開く。
+ * ホーム（タブではないところ）：時計・検索・予定・通知・天気・つながり・ファイル・ファイラー・端末を、決めた順に並べる。
+ * 区画ごとに、閉じた画面・開いた画面で出すかを決められる。開いた画面・横長では 2 列（区画ごとに左右を決める）。
+ * 並べ方は設定の「HOME / ホームの並び」で。
  */
 @Composable
-fun Dashboard(model: HomeModel, openNasSettings: () -> Unit) {
+fun HomeBoard(model: HomeModel, openNasSettings: () -> Unit, openDriveSettings: () -> Unit) {
     LaunchedEffect(model.weatherPlace) { model.refreshWeather() }
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        ClockBlock(big = false)
-        Ticks(Modifier.fillMaxWidth().height(6.dp))
-        SearchRow(model)
-        if (model.query.isNotBlank()) SearchResults(model)
-        else DashboardPanels(model, openNasSettings)
+    val sections = model.sectionsHere()
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val twoCols = model.profile == "wide" && model.homeTwoColumns && maxWidth >= 640.dp
+        val left = sections.filter { !twoCols || it.col == 0 }
+        val right = if (twoCols) sections.filter { it.col == 1 } else emptyList()
+        when {
+            // 探している間は、検索までの区画と結果だけ（1 列）
+            model.query.isNotBlank() -> Column(
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                val upto = sections.indexOfFirst { it.id == HomeSection.SEARCH }
+                sections.take(upto + 1).filter { it.id != HomeSection.FILER }.forEach { s ->
+                    key(s.id) { SectionView(model, s, 0.dp, openNasSettings, openDriveSettings) }
+                }
+                if (upto < 0) SearchRow(model)
+                SearchResults(model)
+            }
+            left.isNotEmpty() && right.isNotEmpty() -> Row(Modifier.fillMaxSize()) {
+                SectionColumn(model, left, Modifier.weight(1f).fillMaxHeight(), openNasSettings, openDriveSettings)
+                SectionColumn(model, right, Modifier.weight(1f).fillMaxHeight(), openNasSettings, openDriveSettings)
+            }
+            else -> SectionColumn(model, left + right, Modifier.fillMaxSize(), openNasSettings, openDriveSettings)
+        }
+    }
+}
+
+/** 1 列ぶん。ファイラーだけの列はファイラーが全体を使う。ほかは縦にスクロールし、ファイラーは列の高さぶん。 */
+@Composable
+private fun SectionColumn(model: HomeModel, list: List<HomeSection>, modifier: Modifier, openNasSettings: () -> Unit, openDriveSettings: () -> Unit) {
+    BoxWithConstraints(modifier) {
+        val filerHeight = (maxHeight - 24.dp).coerceAtLeast(320.dp)
+        if (list.size == 1 && list[0].id == HomeSection.FILER) {
+            FilerSection(model, Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 12.dp), openNasSettings, openDriveSettings)
+        } else {
+            Column(
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                list.forEach { s -> key(s.id) { SectionView(model, s, filerHeight, openNasSettings, openDriveSettings) } }
+                if (list.isEmpty()) Note("ホームに出す区画がありません。設定の「HOME / ホームの並び」で選べます。")
+                Gap(8.dp)
+            }
+        }
     }
 }
 
 @Composable
-private fun DashboardPanels(model: HomeModel, openNasSettings: () -> Unit) {
-    Panel(model, "TODAY", "予定", folded = {
-        val next = model.nextEvent
-        if (next != null) Text(dayLabel(next.localBegin) + "  " + next.title, color = LocalPalette.current.muted, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-    }) { TodayEvents(model, max = 12) }
-    NoticePanel(model)
-    Panel(model, "WEATHER", "天気", folded = {
-        val f = model.forecast
-        val warn = model.alerts?.list.orEmpty().joinToString("・") { it.name }
-        if (f != null) Text("${f.temp.roundToInt()}°  ${Weather.label(f.code)}" + (if (warn.isNotEmpty()) "  ⚠ $warn" else ""),
-            color = if (warn.isNotEmpty()) LocalPalette.current.accent else LocalPalette.current.muted, fontSize = 13.sp, maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-    }) { WeatherPanel(model) }
-    StatusStrip(model, openNasSettings)
-    Panel(model, "FILES", "ファイル") { FilesPanel(model) }
-    Panel(model, "DEVICE", "端末") { DevicePanel() }
-    Gap(8.dp)
+private fun SectionView(model: HomeModel, s: HomeSection, filerHeight: Dp, openNasSettings: () -> Unit, openDriveSettings: () -> Unit) {
+    when (s.id) {
+        HomeSection.CLOCK -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            ClockBlock(big = model.profile == "wide")
+            Ticks(Modifier.fillMaxWidth().height(6.dp))
+        }
+        HomeSection.SEARCH -> SearchRow(model)
+        HomeSection.TODAY -> Panel(model, "TODAY", "予定", folded = {
+            val next = model.nextEvent
+            if (next != null) Text(dayLabel(next.localBegin) + "  " + next.title, color = LocalPalette.current.muted, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }) { TodayEvents(model, max = 12) }
+        HomeSection.NOTICE -> NoticePanel(model)
+        HomeSection.WEATHER -> Panel(model, "WEATHER", "天気", folded = {
+            val f = model.forecast
+            val warn = model.alerts?.list.orEmpty().joinToString("・") { it.name }
+            if (f != null) Text("${f.temp.roundToInt()}°  ${Weather.label(f.code)}" + (if (warn.isNotEmpty()) "  ⚠ $warn" else ""),
+                color = if (warn.isNotEmpty()) LocalPalette.current.accent else LocalPalette.current.muted, fontSize = 13.sp, maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }) { WeatherPanel(model) }
+        HomeSection.STATUS -> StatusStrip(model, openNasSettings)
+        HomeSection.FILES -> Panel(model, "FILES", "ファイル") { FilesPanel(model) }
+        HomeSection.FILER -> FilerSection(model, Modifier.fillMaxWidth().height(filerHeight), openNasSettings, openDriveSettings)
+        HomeSection.DEVICE -> Panel(model, "DEVICE", "端末") { DevicePanel() }
+    }
+}
+
+/** ホームの区画としてのファイラー：枠の中に場所・フォルダ・下の帯。 */
+@Composable
+private fun FilerSection(model: HomeModel, modifier: Modifier, openNasSettings: () -> Unit, openDriveSettings: () -> Unit) {
+    val p = LocalPalette.current
+    Column(modifier.border(1.dp, p.line).padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("[ FILER ]", color = p.accent, fontSize = 11.sp, fontFamily = Hud.mono, letterSpacing = 2.sp)
+            Text("ファイラー", color = p.muted, fontSize = 11.sp)
+            Stripes(Modifier.weight(1f).height(5.dp), color = p.line)
+        }
+        FilerBody(model, Modifier.weight(1f).fillMaxWidth(), openNasSettings, openDriveSettings)
+    }
 }
 
 /** 条件に合う通知の区画。条件が無い・合う通知が無いときは出さない（通知へのアクセスが無ければ許可を促す）。 */
@@ -347,7 +408,7 @@ private fun FilesPanel(model: HomeModel) {
     val actions = LocalActions.current
     PlaceChips(model)
     val recent = model.recents.take(3)
-    if (recent.isEmpty()) Text("フォルダのタブか、上の場所を押すとファイラーが開きます", color = p.muted, fontSize = 12.sp)
+    if (recent.isEmpty()) Text("フォルダはタブで開きます（NAS・DRIVE・最近はファイラーで）", color = p.muted, fontSize = 12.sp)
     recent.forEach { r ->
         Row(
             Modifier.fillMaxWidth().clickable { openFile(model, actions, jp.yaegaki.theta.home.data.ViewItem(Uri.parse(r.uri), r.name, r.mime)) }.padding(vertical = 4.dp),

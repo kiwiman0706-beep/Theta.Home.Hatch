@@ -152,10 +152,12 @@ data class TabOpts(
     val apps: List<String> = emptyList(),
     val split: Boolean = false,
     val icon: String = "",
+    /** 両側にタブを出すときの側（"left"・"right"）。空なら中身で決める（カテゴリーは START と反対側、ほかは START の側）。 */
+    val side: String = "",
 ) {
     fun shownOn(profile: String) = show == "both" || show == profile
 
-    fun toJson(): JSONObject = JSONObject().put("show", show).put("split", split).put("icon", icon)
+    fun toJson(): JSONObject = JSONObject().put("show", show).put("split", split).put("icon", icon).put("side", side)
         .put("apps", JSONArray(apps)).put("width", JSONObject(width.mapValues { it.value }))
 
     companion object {
@@ -165,6 +167,7 @@ data class TabOpts(
             apps = o.optJSONArray("apps")?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty(),
             split = o.optBoolean("split", false),
             icon = o.optString("icon", ""),
+            side = o.optString("side", ""),
         )
     }
 }
@@ -300,6 +303,11 @@ class Store(context: Context) {
         }
         prefs.edit().putString("tabs", a.toString()).apply()
     }
+
+    /** 端のタブの出し方："auto"（開いた画面だけ両側）・"one"（いつも片側）・"both"（いつも両側）。 */
+    var railMode: String
+        get() = prefs.getString("railMode", "auto") ?: "auto"
+        set(v) = prefs.edit().putString("railMode", v).apply()
 
     var railLeft: Boolean
         get() = prefs.getBoolean("railLeft", false)
@@ -555,6 +563,24 @@ class Store(context: Context) {
         else objects("noticeRules") { jp.yaegaki.theta.home.notify.NoticeRule.fromJson(it) }
         set(v) = putObjects("noticeRules", v) { it.toJson() }
 
+    /** 初めの案内（設定の引き継ぎ・アプリの仕分け）を済ませたか。 */
+    var welcomed: Boolean
+        get() = prefs.getBoolean("welcomed", false)
+        set(v) = prefs.edit().putBoolean("welcomed", v).apply()
+
+    /** ホームの区画の並び・出す画面・列（開いた画面の 2 列のどちら）。無い区画は初めの並びで後ろに足す。 */
+    var homeSections: List<HomeSection>
+        get() {
+            val saved = objects("homeSections") { HomeSection.fromJson(it) }.filter { s -> HomeSection.DEFAULTS.any { it.id == s.id } }.distinctBy { it.id }
+            return saved + HomeSection.DEFAULTS.filter { d -> saved.none { it.id == d.id } }
+        }
+        set(v) = putObjects("homeSections", v) { it.toJson() }
+
+    /** 開いた画面・横長では 2 列に並べる。 */
+    var homeTwoColumns: Boolean
+        get() = prefs.getBoolean("homeTwoColumns", true)
+        set(v) = prefs.edit().putBoolean("homeTwoColumns", v).apply()
+
     /** 中で開いた PDF を 1 ページずつめくる（false なら縦に続けて）。 */
     var pdfPaged: Boolean
         get() = prefs.getBoolean("pdfPaged", false)
@@ -715,6 +741,48 @@ class Store(context: Context) {
             TabSpec("clip", TabKind.CLIP, "CLIP"),
             TabSpec("capture", TabKind.CAPTURE, "CAPTURE"),
             TabSpec("hatch", TabKind.HATCH, "HATCH"),
+        )
+    }
+}
+
+/**
+ * ホーム（タブではないところ）の区画 1 つ。narrow は閉じた画面（幅 600dp 未満）、wide は開いた画面・タブレットで出すか。
+ * col は 2 列のときの列（0＝左、1＝右）。
+ */
+data class HomeSection(val id: String, val narrow: Boolean = true, val wide: Boolean = true, val col: Int = 0) {
+    fun shownOn(profile: String) = if (profile == "wide") wide else narrow
+
+    fun toJson(): JSONObject = JSONObject().put("id", id).put("narrow", narrow).put("wide", wide).put("col", col)
+
+    companion object {
+        fun fromJson(o: JSONObject) = HomeSection(o.getString("id"), o.optBoolean("narrow", true), o.optBoolean("wide", true), o.optInt("col", 0))
+
+        const val CLOCK = "clock"
+        const val SEARCH = "search"
+        const val TODAY = "today"
+        const val NOTICE = "notice"
+        const val WEATHER = "weather"
+        const val STATUS = "status"
+        const val FILES = "files"
+        const val FILER = "filer"
+        const val DEVICE = "device"
+
+        /** 初めの並び。開いた画面では左に時計・予定など、右にファイラー。閉じた画面ではファイラーの代わりにファイルへの入口。 */
+        val DEFAULTS = listOf(
+            HomeSection(CLOCK),
+            HomeSection(SEARCH),
+            HomeSection(TODAY),
+            HomeSection(NOTICE),
+            HomeSection(WEATHER),
+            HomeSection(STATUS),
+            HomeSection(FILES, narrow = true, wide = false),
+            HomeSection(FILER, narrow = false, wide = true, col = 1),
+            HomeSection(DEVICE),
+        )
+
+        val LABELS = mapOf(
+            CLOCK to "時計", SEARCH to "検索", TODAY to "予定", NOTICE to "通知", WEATHER to "天気",
+            STATUS to "つながり（ネット・NAS など）", FILES to "ファイルへの入口", FILER to "ファイラー", DEVICE to "端末（電池・容量）",
         )
     }
 }

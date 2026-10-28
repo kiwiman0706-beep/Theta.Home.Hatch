@@ -292,6 +292,42 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     }
     fun removeNoticeRule(id: String) { noticeRules = noticeRules.filterNot { it.id == id }; store.noticeRules = noticeRules }
 
+    // ---- 初めの案内 ----
+
+    /** 新しく入れたときだけ出す（更新して入れ直したときは出さない）。 */
+    var welcome by mutableStateOf(!store.welcomed && freshInstall()); private set
+    fun finishWelcome() { welcome = false; store.welcomed = true }
+
+    private fun freshInstall(): Boolean = runCatching {
+        val info = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
+        info.firstInstallTime == info.lastUpdateTime
+    }.getOrDefault(false)
+
+    // ---- ホームの区画 ----
+
+    var homeSections by mutableStateOf(store.homeSections); private set
+    var homeTwoColumns by mutableStateOf(store.homeTwoColumns); private set
+    fun changeHomeTwoColumns(v: Boolean) { homeTwoColumns = v; store.homeTwoColumns = v }
+
+    private fun saveSections(list: List<jp.yaegaki.theta.home.data.HomeSection>) { homeSections = list; store.homeSections = list }
+
+    fun updateSection(s: jp.yaegaki.theta.home.data.HomeSection) = saveSections(homeSections.map { if (it.id == s.id) s else it })
+
+    fun moveSection(id: String, delta: Int) {
+        val i = homeSections.indexOfFirst { it.id == id }
+        val j = i + delta
+        if (i < 0 || j !in homeSections.indices) return
+        saveSections(homeSections.toMutableList().also { it.add(j, it.removeAt(i)) })
+    }
+
+    fun resetSections() = saveSections(jp.yaegaki.theta.home.data.HomeSection.DEFAULTS)
+
+    /** この画面で出す区画。 */
+    fun sectionsHere(): List<jp.yaegaki.theta.home.data.HomeSection> = homeSections.filter { it.shownOn(profile) }
+
+    /** ファイラーが区画としてホームに出ているか（出ていなければ、場所を押したときに全面で開く）。 */
+    fun filerOnHome() = sectionsHere().any { it.id == jp.yaegaki.theta.home.data.HomeSection.FILER }
+
     // ---- 中で開く：ページのめくり方・本は DSBooks で ----
 
     var pdfPaged by mutableStateOf(store.pdfPaged); private set
@@ -488,6 +524,12 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     fun close() {
         open = null
+    }
+
+    /** タブを開く（開いていれば何もしない）。並べて出しているタブはそのまま。 */
+    fun openTab(id: String) {
+        if (id in docked || open == id) return
+        toggle(id)
     }
 
     /** ピン留め：重ねていたドロワーを横に並べる。maxDocked を超えたら古い方から閉じる。 */
@@ -1172,6 +1214,27 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     fun setTabSplit(id: String, split: Boolean) = editOpts(id) { it.copy(split = split) }
 
+    // ---- 端のタブを片側・両側に ----
+
+    var railMode by mutableStateOf(store.railMode); private set
+    fun changeRailMode(v: String) { railMode = v; store.railMode = v }
+
+    /** この画面で両側にタブを出すか。 */
+    fun railsBoth(): Boolean = railMode == "both" || railMode == "auto" && profile == "wide"
+
+    /** そのタブを左側に出すか（片側のときは START の側）。 */
+    fun tabOnLeft(id: String?): Boolean {
+        if (id == null || !railsBoth()) return railLeft
+        return when (opts(id).side) {
+            "left" -> true
+            "right" -> false
+            else -> if (tab(id)?.kind == TabKind.CATEGORY) !railLeft else railLeft
+        }
+    }
+
+    /** 両側のとき、反対側へ移す。 */
+    fun flipTabSide(id: String) { val left = tabOnLeft(id); editOpts(id) { it.copy(side = if (left) "right" else "left") } }
+
     /** ショートカットの置き場所のキー。カテゴリーのタブはカテゴリーの id、ほかのタブは "tab:<id>"。 */
     fun placeOf(id: String): String = tab(id)?.takeIf { it.kind == TabKind.CATEGORY }?.folderUri ?: "tab:$id"
 
@@ -1565,6 +1628,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     fun reloadFromStore() {
         tabs = store.tabs()
         railLeft = store.railLeft
+        railMode = store.railMode
         themeMode = store.themeMode
         monoIcons = store.monoIcons
         iconMode = store.iconMode

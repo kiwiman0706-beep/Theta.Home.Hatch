@@ -18,6 +18,8 @@ data class HatchApp(
 
 object HatchCatalog {
     val apps = listOf(
+        HatchApp("memo", "MM", "Theta Memo Hatch", "付箋の壁のメモ（声・写真・手書き）", "jp.yaegaki.theta.memo", "Theta.Memo.Hatch"),
+        HatchApp("kidshome", "KH", "キッズホーム", "子ども用タブレットのホーム", "com.theta.kidshome", "Theta.KidsHome.Hatch"),
         HatchApp("travel", "TR", "TravelHatch", "旅の計画としおり、思い出", "jp.theta.travelhatch", "Theta.Travel.Hatch"),
         HatchApp("device", "DV", "機器台帳", "PC・電子機器の台帳とラベル", "jp.yaegaki.equipment", "Theta.Device.Hatch"),
         HatchApp("item", "IT", "おもいでクローゼット", "持ち物と思い出", "jp.omoide.closet", "Theta.Item.Hatch"),
@@ -29,5 +31,6 @@ object HatchCatalog {
         HatchApp("dsbooks", "DB", "DSBooks", "NAS の本棚", "jp.shinwakai.dsbooks.preview", null),
         HatchApp("meishi", "MC", "Theta Meishi Hatch", "名刺管理", "jp.yaegaki.meishiclaude", null),
         HatchApp("desk", "DH", "DeskHatch", "PC 用ランチャーバー（Windows・Mac）", null, "deskhatch"),
+        HatchApp("hitsudan", "HD", "Theta Hitsudan Hatch", "診察室の筆談・翻訳表示（PC で動かす）", null, "Theta.Hitsudan.Hatch"),
     )
 }

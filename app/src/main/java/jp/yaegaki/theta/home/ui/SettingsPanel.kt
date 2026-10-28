@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -157,8 +158,21 @@ fun SettingsPanel(model: HomeModel) {
                     PillButton("設定を読み込む", { importConfirm = true })
                 }
                 Gap(18.dp)
+                SectionTitle("HOME / ホームの並び", Modifier.padding(horizontal = 10.dp))
+                Note("タブではないところ（時計・予定・通知・天気・つながり・ファイラーなど）の順番、閉じた画面・開いた画面で出すか、開いた画面の 2 列のどちらに置くかを決めます。")
+                var homeLayout by remember { mutableStateOf(false) }
+                FlowRow2 { PillButton("ホームの並びを変える", { homeLayout = true }, primary = true) }
+                if (homeLayout) HomeLayoutDialog(model) { homeLayout = false }
+                Gap(18.dp)
                 SectionTitle("見た目", Modifier.padding(horizontal = 10.dp))
-                Toggle("タブを左端に置く", model.railLeft) { model.changeRailLeft(it) }
+                Text("端のタブ", color = p.faint, fontSize = 11.sp, letterSpacing = 1.5.sp, modifier = Modifier.padding(horizontal = 10.dp))
+                FlowRow2 {
+                    listOf("auto" to "開いた画面だけ両側", "one" to "いつも片側", "both" to "いつも両側").forEach { (k, label) ->
+                        PillButton(label, { model.changeRailMode(k) }, primary = model.railMode == k)
+                    }
+                }
+                Toggle("START（すべてのアプリ）を左端に置く", model.railLeft) { model.changeRailLeft(it) }
+                Note("両側のときは、カテゴリー（アプリ）のタブが START と反対側、ほかのタブが START の側に出ます。タブの長押し「右側へ移す」「左側へ移す」で 1 つずつ変えられます。")
                 Text("THEME", color = p.faint, fontSize = 11.sp, letterSpacing = 1.5.sp, modifier = Modifier.padding(horizontal = 10.dp))
                 FlowRow2 {
                     listOf("dark" to "ダーク", "light" to "ライト", "pop" to "POP（カラフル）", "alert" to "ALERT（警報画面）", "scifi" to "SCI-FI（操作卓）", "system" to "端末に合わせる").forEach { (mode, label) ->
@@ -343,6 +357,20 @@ fun SettingsPanel(model: HomeModel) {
                 Note("物理キーボード：Alt＋1〜9 でフォルダを置いたタブ、Alt＋C 予定・M メール・L LINE・P 人・A アプリ・B 栞・X Clip・R 記録・H Hatch。ホームで文字を打つとすぐ検索、Esc で閉じる。")
                 Note("タブは端のタブの下の「＋」でも足せます（ふつうのタブ・アプリのカテゴリー）。ふつうのタブには、歯車からウィジェット・フォルダ・ページ・予定などを好きな数だけ足せます。長押しで並べ替え・名前・外す。")
                 Note("アプリの一覧は、画面上部の検索の横のボタン（Alt＋A）で開きます。")
+                Gap(18.dp)
+                SectionTitle("HATCH / Theta Hatch シリーズ")
+                Note("ほかの Hatch のアプリを、入れる・更新する・開く。GitHub の Releases の最新版を確かめ、取得してハッシュを照合してから Android のインストール画面へ進みます。")
+                var hatchList by remember { mutableStateOf(false) }
+                FlowRow2 { PillButton("Hatch のアプリ一覧", { model.checkHatchUpdates(); hatchList = true }) }
+                if (hatchList) androidx.compose.ui.window.Dialog(onDismissRequest = { hatchList = false }, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+                    Column(Modifier.fillMaxWidth(0.94f).then(Modifier.fillMaxHeight(0.88f)).background(p.panel).border(1.dp, p.line)) {
+                        Row(Modifier.fillMaxWidth().padding(start = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("Theta Hatch シリーズ", color = p.fg, fontSize = 16.sp, modifier = Modifier.weight(1f))
+                            GlyphButton(Glyph.CLOSE, "閉じる", { hatchList = false })
+                        }
+                        Box(Modifier.weight(1f)) { HatchDrawer(model) }
+                    }
+                }
                 Note("Theta Home Hatch ${BuildConfigInfo.versionName(actions.activity)}")
             }
         }
