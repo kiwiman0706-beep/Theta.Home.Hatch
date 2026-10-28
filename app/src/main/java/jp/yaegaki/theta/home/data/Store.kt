@@ -549,8 +549,10 @@ class Store(context: Context) {
         set(v) = putStrings("quickTargets", v)
 
     /** ホームの「通知」の区画に出す通知の条件。 */
+    /** 一度も決めていなければ、LINE の通知を出す。全部外したら何も出さない（空のまま覚えておく）。 */
     var noticeRules: List<jp.yaegaki.theta.home.notify.NoticeRule>
-        get() = objects("noticeRules") { jp.yaegaki.theta.home.notify.NoticeRule.fromJson(it) }
+        get() = if (!prefs.contains("noticeRules")) DEFAULT_NOTICE_RULES
+        else objects("noticeRules") { jp.yaegaki.theta.home.notify.NoticeRule.fromJson(it) }
         set(v) = putObjects("noticeRules", v) { it.toJson() }
 
     /** 中で開いた PDF を 1 ページずつめくる（false なら縦に続けて）。 */
@@ -691,6 +693,7 @@ class Store(context: Context) {
     companion object {
         fun newId(): String = UUID.randomUUID().toString().take(8)
 
+        val DEFAULT_NOTICE_RULES = listOf(jp.yaegaki.theta.home.notify.NoticeRule("line", "LINE", apps = listOf("jp.naver.line.android")))
         val DEFAULT_PINS = listOf("act:quick", "pkg:jp.naver.line.android", "act:voice", "act:memo-audio")
 
         /** 0.5.x までの日本語の初期名。名前を変えていなければ英語の初期名に置き換える。 */

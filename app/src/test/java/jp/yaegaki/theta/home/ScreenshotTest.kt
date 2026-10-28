@@ -872,8 +872,17 @@ class ScreenshotTest {
             jp.yaegaki.theta.home.notify.Notice("4", "com.example.delivery", "配達予定のお知らせ", "本日 14〜16 時", now - 900_000, null),
         ))
         compose.waitForIdle()
+        // 初めは LINE の通知だけ
+        org.junit.Assert.assertEquals(listOf("line"), m.noticeRules.map { it.id })
+        compose.onNodeWithText("[ NOTICE ]").assertExists()
+        compose.onNodeWithText("母").assertExists()
+        compose.onNodeWithText("【至急】見積もりの件").assertDoesNotExist()
+        // 全部外すと区画も無くなり、外したまま覚えておく
+        scenario!!.onActivity { m.removeNoticeRule("line") }
+        compose.waitForIdle()
         compose.onNodeWithText("[ FILES ]").assertExists()
         compose.onNodeWithText("[ NOTICE ]").assertDoesNotExist()
+        org.junit.Assert.assertTrue(jp.yaegaki.theta.home.data.Store(m.getApplication()).noticeRules.isEmpty())
         scenario!!.onActivity {
             m.saveNoticeRule(jp.yaegaki.theta.home.notify.NoticeRule("a", "至急", include = listOf("至急"), alert = true))
             m.saveNoticeRule(jp.yaegaki.theta.home.notify.NoticeRule("b", "家族", apps = listOf("jp.naver.line.android")))
