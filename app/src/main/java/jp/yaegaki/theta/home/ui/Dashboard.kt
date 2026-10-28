@@ -83,25 +83,18 @@ fun HomeBoard(model: HomeModel, openNasSettings: () -> Unit, openDriveSettings: 
         val twoCols = model.profile == "wide" && model.homeTwoColumns && maxWidth >= 640.dp
         val left = sections.filter { !twoCols || it.col == 0 }
         val right = if (twoCols) sections.filter { it.col == 1 } else emptyList()
-        when {
-            // 探している間は、検索までの区画と結果だけ（1 列）
-            model.query.isNotBlank() -> Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                val upto = sections.indexOfFirst { it.id == HomeSection.SEARCH }
-                sections.take(upto + 1).filter { it.id != HomeSection.FILER }.forEach { s ->
-                    key(s.id) { SectionView(model, s, 0.dp, openNasSettings, openDriveSettings) }
-                }
-                if (upto < 0) SearchRow(model)
-                SearchResults(model)
-            }
-            left.isNotEmpty() && right.isNotEmpty() -> Row(Modifier.fillMaxSize()) {
-                SectionColumn(model, left, Modifier.weight(1f).fillMaxHeight(), openNasSettings, openDriveSettings)
-                SectionColumn(model, right, Modifier.weight(1f).fillMaxHeight(), openNasSettings, openDriveSettings)
-            }
-            else -> SectionColumn(model, left + right, Modifier.fillMaxSize(), openNasSettings, openDriveSettings)
-        }
+        // 探している間も並びは変えない（検索の箱を作り直すとキーボードが閉じるので）。検索のある列で、箱の下に結果を出す
+        // 検索の区画を出していない画面で（キーボードから）打ったときは、箱と結果だけを出す
+        if (model.query.isNotBlank() && sections.none { it.id == HomeSection.SEARCH }) Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            SearchRow(model)
+            SearchResults(model)
+        } else if (left.isNotEmpty() && right.isNotEmpty()) Row(Modifier.fillMaxSize()) {
+            SectionColumn(model, left, Modifier.weight(1f).fillMaxHeight(), openNasSettings, openDriveSettings)
+            SectionColumn(model, right, Modifier.weight(1f).fillMaxHeight(), openNasSettings, openDriveSettings)
+        } else SectionColumn(model, left + right, Modifier.fillMaxSize(), openNasSettings, openDriveSettings)
     }
 }
 
@@ -110,14 +103,20 @@ fun HomeBoard(model: HomeModel, openNasSettings: () -> Unit, openDriveSettings: 
 private fun SectionColumn(model: HomeModel, list: List<HomeSection>, modifier: Modifier, openNasSettings: () -> Unit, openDriveSettings: () -> Unit) {
     BoxWithConstraints(modifier) {
         val filerHeight = (maxHeight - 24.dp).coerceAtLeast(320.dp)
-        if (list.size == 1 && list[0].id == HomeSection.FILER) {
+        // 探しているときは、検索の箱までの区画と結果だけ（検索の無い列はそのまま）
+        val upto = list.indexOfFirst { it.id == HomeSection.SEARCH }
+        val searching = model.query.isNotBlank() && upto >= 0
+        if (!searching && list.size == 1 && list[0].id == HomeSection.FILER) {
             FilerSection(model, Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 12.dp), openNasSettings, openDriveSettings)
         } else {
             Column(
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                list.forEach { s -> key(s.id) { SectionView(model, s, filerHeight, openNasSettings, openDriveSettings) } }
+                list.forEachIndexed { i, s ->
+                    key(s.id) { if (!searching || i <= upto) SectionView(model, s, filerHeight, openNasSettings, openDriveSettings) }
+                    if (searching && i == upto) SearchResults(model)
+                }
                 if (list.isEmpty()) Note("ホームに出す区画がありません。設定の「HOME / ホームの並び」で選べます。")
                 Gap(8.dp)
             }

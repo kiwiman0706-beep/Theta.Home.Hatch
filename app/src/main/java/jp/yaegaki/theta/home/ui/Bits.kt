@@ -163,6 +163,9 @@ fun Field(
     onFocus: ((Boolean) -> Unit)? = null,
     leading: (@Composable () -> Unit)? = null,
     password: Boolean = false,
+    trailing: (@Composable () -> Unit)? = null,
+    /** キーボードの「検索」キーで呼ぶ（null ならふつうの改行・完了）。 */
+    onSearch: (() -> Unit)? = null,
 ) {
     val p = LocalPalette.current
     BasicTextField(
@@ -173,6 +176,8 @@ fun Field(
         cursorBrush = SolidColor(p.accent),
         visualTransformation = if (password) androidx.compose.ui.text.input.PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
         modifier = modifier.onFocusChanged { onFocus?.invoke(it.isFocused) },
+        keyboardOptions = if (onSearch != null) androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search) else androidx.compose.foundation.text.KeyboardOptions.Default,
+        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { onSearch?.invoke() }),
         decorationBox = { inner ->
             Row(
                 Modifier
@@ -190,6 +195,7 @@ fun Field(
                     if (value.isEmpty()) Text(placeholder, color = p.faint, fontSize = 15.sp)
                     inner()
                 }
+                trailing?.invoke()
             }
         },
     )

@@ -352,7 +352,31 @@ internal fun SearchRow(model: HomeModel, leading: (@Composable () -> Unit)? = nu
     LaunchedEffect(model.focusSearch) { if (model.focusSearch > 0) runCatching { focus.requestFocus() } }
     Row(verticalAlignment = Alignment.CenterVertically) {
         leading?.invoke()
-        Field(model.query, { model.query = it }, "SEARCH  検索", Modifier.weight(1f).focusRequester(focus), leading = { GlyphIcon(Glyph.SEARCH, p.accent) })
+        // 箱は共通：打つ・話すとホームの中を探し、地球のボタン（キーボードの検索キー）で Google
+        val actions = LocalActions.current
+        val voice = rememberVoice(onPartial = { model.query = it }, onFinal = { model.query = it.first() })
+        Field(
+            model.query, { model.query = it }, "SEARCH  検索", Modifier.weight(1f).focusRequester(focus),
+            leading = { GlyphIcon(Glyph.SEARCH, p.accent) },
+            trailing = {
+                Row(Modifier.padding(start = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.combinedClickable(
+                            role = androidx.compose.ui.semantics.Role.Button,
+                            onClickLabel = if (voice.listening) "聞き取りを止める" else "声で探す",
+                            onLongClick = { model.webSearch("", voice = true, start = actions.start) },
+                            onLongClickLabel = "Google の音声検索",
+                        ) { if (voice.listening) voice.stop() else voice.start() }.semantics { contentDescription = "声で探す（長押しで Google の音声検索）" },
+                    ) { GlyphIcon(Glyph.MIC, if (voice.listening) p.accent else p.muted) }
+                    Box(
+                        Modifier.combinedClickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = "Google で検索") {
+                            model.webSearch(model.query, start = actions.start)
+                        }.semantics { contentDescription = "Google で検索" },
+                    ) { GlyphIcon(Glyph.GLOBE, p.muted) }
+                }
+            },
+            onSearch = { model.webSearch(model.query, start = actions.start) },
+        )
         Box(
             Modifier.size(44.dp)
                 .combinedClickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = "アプリ", onLongClick = { model.pressApps(long = true) }, onLongClickLabel = "声でアプリを開く") { model.pressApps(long = false) }
@@ -1117,10 +1141,8 @@ internal fun SearchResults(model: HomeModel) {
         }
         if (hits.isEmpty()) Text("見つかりませんでした", color = p.faint, fontSize = 14.sp, modifier = Modifier.padding(vertical = 10.dp))
         Text(
-            "Web で「$q」を検索", color = p.accent, fontSize = 14.sp,
-            modifier = Modifier.fillMaxWidth().clickable {
-                actions.start(Intent(Intent.ACTION_WEB_SEARCH).putExtra(android.app.SearchManager.QUERY, q))
-            }.padding(vertical = 12.dp),
+            "Google で「$q」を検索（キーボードの検索キーでも）", color = p.accent, fontSize = 14.sp,
+            modifier = Modifier.fillMaxWidth().clickable { model.webSearch(q, start = actions.start) }.padding(vertical = 12.dp),
         )
     }
 }

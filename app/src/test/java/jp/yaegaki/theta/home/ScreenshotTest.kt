@@ -1091,4 +1091,27 @@ class ScreenshotTest {
         }
         shot("lcd-cover")
     }
+
+    /** ホームの検索：1 文字打っても箱が作り直されず（キーボードが閉じず）続けて打てる。Google・声のボタン。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun searchKeepsFocus() {
+        launch()
+        compose.waitForIdle()
+        val m = model()
+        val box = compose.onNodeWithText("SEARCH  検索")
+        box.performClick()
+        box.performTextInput("C")
+        compose.waitForIdle()
+        org.junit.Assert.assertEquals("C", m.query)
+        compose.onNode(androidx.compose.ui.test.hasSetTextAction() and androidx.compose.ui.test.isFocused()).assertExists()
+        compose.onNode(androidx.compose.ui.test.hasSetTextAction()).performTextInput("ha")
+        compose.waitForIdle()
+        org.junit.Assert.assertEquals("Cha", m.query)
+        compose.onNodeWithText("Chat").assertExists()
+        compose.onNodeWithText("Google で「Cha」を検索", substring = true).assertExists()
+        compose.onNodeWithContentDescription("Google で検索").assertExists()
+        compose.onNodeWithContentDescription("声で探す", substring = true).assertExists()
+        shot("search")
+    }
 }

@@ -292,6 +292,24 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     }
     fun removeNoticeRule(id: String) { noticeRules = noticeRules.filterNot { it.id == id }; store.noticeRules = noticeRules }
 
+    // ---- Web 検索 ----
+
+    /**
+     * Google で探す。q が空なら Google の検索画面（voice なら音声検索）を開く。
+     * Google アプリが無ければブラウザで google.com を開く。探したら箱は空にする。
+     */
+    fun webSearch(q: String, voice: Boolean = false, start: (Intent) -> Unit) {
+        val text = q.trim()
+        val google = apps.any { it.packageName == GOOGLE }
+        val intent = when {
+            voice -> Intent(android.speech.RecognizerIntent.ACTION_WEB_SEARCH).apply { if (google) setPackage(GOOGLE) }
+            google -> Intent(Intent.ACTION_WEB_SEARCH).setPackage(GOOGLE).putExtra(android.app.SearchManager.QUERY, text)
+            else -> Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/" + if (text.isEmpty()) "" else "search?q=" + Uri.encode(text)))
+        }.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        start(intent)
+        query = ""
+    }
+
     // ---- 初めの案内 ----
 
     /** 新しく入れたときだけ出す（更新して入れ直したときは出さない）。 */
