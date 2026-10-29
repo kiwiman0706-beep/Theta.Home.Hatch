@@ -102,6 +102,30 @@ object Files {
     }
 
     /** 保存しているツリー許可がまだ有効か。 */
+    // ---- 端末のフォルダをパスで読む（Download など、フォルダを選ぶ画面では選べないところ） ----
+
+    /** パスで読むフォルダ（file://）か。 */
+    fun isPath(uri: Uri) = uri.scheme == "file"
+
+    /** 端末の Download フォルダ。 */
+    fun downloadsUri(): Uri = Uri.fromFile(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS))
+
+    /** パスで読む許可（「すべてのファイルへのアクセス」）があるか。 */
+    fun canReadAll(): Boolean = allFilesForTest ?: (android.os.Build.VERSION.SDK_INT < 30 || android.os.Environment.isExternalStorageManager())
+
+    /** 試験で、許可のあり・なしを決める。 */
+    @androidx.annotation.VisibleForTesting
+    var allFilesForTest: Boolean? = null
+
+    /** パスのフォルダの中身。フォルダが先、ファイルは新しい順。フォルダは file://、ファイルはほかのアプリに渡せる URI。 */
+    fun listPath(context: Context, dir: File): List<Entry> {
+        val all = dir.listFiles() ?: throw java.io.IOException("読めません")
+        return all.filter { !it.name.startsWith(".") }.map { f ->
+            if (f.isDirectory) Entry(Uri.fromFile(f), f.name, null, true, 0, f.lastModified())
+            else Entry(runCatching { localUri(context, f) }.getOrElse { Uri.fromFile(f) }, f.name, mimeOf(f.name), false, f.length(), f.lastModified())
+        }.sortedWith(compareBy<Entry>({ !it.isDir }, { if (it.isDir) 0L else -it.modified }, { it.name.lowercase(Locale.ROOT) }))
+    }
+
     fun hasGrant(context: Context, tree: Uri): Boolean =
         context.contentResolver.persistedUriPermissions.any { it.uri == tree && it.isReadPermission }
 }

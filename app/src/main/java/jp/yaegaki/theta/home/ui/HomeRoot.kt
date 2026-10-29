@@ -641,6 +641,7 @@ private fun TabMenu(model: HomeModel, id: String, expanded: Boolean, close: () -
         // 中身がフォルダ 1 つ・ファイル 1 つのタブは、ここからも選び直せる
         val only = model.boardItems(id).singleOrNull()
         if (only?.type == BoardItem.FOLDER) DropdownMenuItem(text = { Text("端末のフォルダを選び直す") }, onClick = { close(); actions.pickFolder(only.id) })
+        if (only?.type == BoardItem.FOLDER) DropdownMenuItem(text = { Text("ダウンロード（Download）にする") }, onClick = { close(); model.assignDownloads(only.id) })
         if (only?.type == BoardItem.FILE) DropdownMenuItem(text = { Text("ファイルを選び直す") }, onClick = {
             close(); actions.openDocument(arrayOf("image/*", "application/pdf")) { model.setTabFile(only.id, it) }
         })
@@ -714,6 +715,14 @@ fun AddTabDialog(model: HomeModel, onWidget: () -> Unit, onDismiss: () -> Unit) 
                         val (t, item) = model.addBoardTab(BoardItem.FOLDER)
                         onDismiss()
                         actions.pickFolder(item.id)
+                        model.toggle(t.id)
+                    })
+                    // Download はフォルダを選ぶ画面で選べないので、ここから直接
+                    PillButton("＋ ダウンロード", {
+                        val (t, item) = model.addBoardTab(BoardItem.FOLDER, jp.yaegaki.theta.home.data.Files.downloadsUri().toString())
+                        model.renameTab(t.id, "DOWNLOAD")
+                        model.updateBoardItem(item.copy(label = "DOWNLOAD"))
+                        onDismiss()
                         model.toggle(t.id)
                     })
                     // URL は開いたタブの中で入れる

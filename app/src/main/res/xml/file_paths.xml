@@ -3,4 +3,6 @@
     <files-path name="capture" path="Capture/" />
     <files-path name="clip" path="Clip/" />
     <cache-path name="nas" path="nas/" />
+    <!-- Download などパスで読むフォルダのファイルを、ほかのアプリ・中のビューアに渡す -->
+    <external-path name="storage" path="." />
 </paths>

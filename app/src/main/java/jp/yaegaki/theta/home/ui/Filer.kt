@@ -858,6 +858,10 @@ internal fun FolderView(
                 }
                 return
             }
+            if (state?.error == HomeModel.NEED_ALL_FILES) {
+                AllFilesPermission(model, tab)
+                return
+            }
             if (state?.error != null) {
                 NeedPermission(state.error, "フォルダを選び直す") { actions.pickFolder(tab.id) }
                 return
@@ -884,6 +888,34 @@ internal fun FolderView(
             )
         }
         else -> Note("左の「場所」かフォルダのタブを選んでください")
+    }
+}
+
+/**
+ * Download などパスで読むフォルダの許可：端末の「すべてのファイルへのアクセス」を開く。
+ * 戻ってきたら読み直す（このアプリの画面に戻ると、許可を確かめ直す）。
+ */
+@Composable
+private fun AllFilesPermission(model: HomeModel, tab: TabSpec) {
+    val actions = LocalActions.current
+    val ctx = actions.activity
+    // 設定から戻ってきたら読み直す
+    androidx.compose.runtime.DisposableEffect(tab.id) {
+        val owner = ctx as androidx.lifecycle.LifecycleOwner
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME && Files.canReadAll()) model.openRoot(tab)
+        }
+        owner.lifecycle.addObserver(obs)
+        onDispose { owner.lifecycle.removeObserver(obs) }
+    }
+    NeedPermission(
+        "Download（ダウンロード）は、Android の決まりでフォルダを選ぶ画面からは選べません。代わりに、端末の設定で「すべてのファイルへのアクセス」をこのホームに許可すると、ここで中身を見られます（読むだけ。ファイルを送ったり集めたりはしません）。" +
+            if (android.os.Build.VERSION.SDK_INT >= 33) "「制限付き設定」と出たら、アプリ情報の右上の「︙」→「制限付き設定を許可」をしてから。" else "",
+        "すべてのファイルへのアクセスを許可",
+    ) {
+        val pkg = Uri.parse("package:" + ctx.packageName)
+        runCatching { actions.start(Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, pkg)) }
+            .onFailure { actions.start(Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)) }
     }
 }
 

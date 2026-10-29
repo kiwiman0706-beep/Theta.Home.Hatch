@@ -209,6 +209,7 @@ private fun AddItemDialog(model: HomeModel, tabId: String, onDismiss: () -> Unit
                     onDismiss()
                     actions.pickFolder(item.id)
                 })
+                PillButton("＋ ダウンロード（Download）", { add(BoardItem.FOLDER, jp.yaegaki.theta.home.data.Files.downloadsUri().toString(), "DOWNLOAD"); onDismiss() })
                 if (folderTabs.isNotEmpty()) {
                     Note("ほかのタブに置いたフォルダと同じ場所（NAS・ドライブのフォルダもここから）")
                     FlowRow2 {

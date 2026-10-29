@@ -834,6 +834,12 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** そのフォルダ（タブに置いたもの）を端末の Download にする。 */
+    fun assignDownloads(itemId: String) {
+        setRef(itemId, Files.downloadsUri().toString())
+        folders.remove(itemId)
+    }
+
     fun assignNasFolder(tabId: String, path: String) {
         setRef(tabId, TabSpec.NAS_PREFIX + path)
         nasStates.remove(tabId)
@@ -1108,6 +1114,12 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             folders[t.id] = FolderState()
             return
         }
+        // Download など、パスで読むフォルダ：「すべてのファイルへのアクセス」が要る
+        if (Files.isPath(tree)) {
+            if (!Files.canReadAll()) folders[t.id] = FolderState(error = NEED_ALL_FILES)
+            else load(t.id, listOf(tree to t.label))
+            return
+        }
         if (!Files.hasGrant(ctx, tree)) {
             folders[t.id] = FolderState(error = "フォルダへのアクセス許可がなくなりました。選び直してください。")
             return
@@ -1136,7 +1148,12 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     private fun load(tabId: String, stack: List<Pair<Uri, String>>) {
         folders[tabId] = FolderState(stack = stack, entries = folders[tabId]?.entries.orEmpty(), loading = true)
         viewModelScope.launch {
-            val result = runCatching { withContext(Dispatchers.IO) { Files.list(ctx, stack.last().first) } }
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    val dir = stack.last().first
+                    if (Files.isPath(dir)) Files.listPath(ctx, File(dir.path!!)) else Files.list(ctx, dir)
+                }
+            }
             if (folders[tabId]?.stack != stack) return@launch
             folders[tabId] = result.fold(
                 { FolderState(stack = stack, entries = it) },
@@ -2090,6 +2107,9 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     companion object {
         const val APPS_ID = "@apps"
+
+        /** フォルダの読み込みの誤り：「すべてのファイルへのアクセス」が要る（Download など）。 */
+        const val NEED_ALL_FILES = "NEED_ALL_FILES"
 
         const val GOOGLE = "com.google.android.googlequicksearchbox"
         const val DSBOOKS = "jp.shinwakai.dsbooks.preview"

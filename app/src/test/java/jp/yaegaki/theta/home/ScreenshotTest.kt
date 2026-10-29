@@ -1203,4 +1203,43 @@ class ScreenshotTest {
             org.junit.Assert.assertTrue(c.get().isFinishing)
         }
     }
+
+    /** Download のタブ：許可が無ければ「すべてのファイルへのアクセス」の案内、あれば中身（フォルダが先、ファイルは新しい順）。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun downloadsTab() {
+        val dl = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS).apply { mkdirs() }
+        java.io.File(dl, "old.pdf").apply { writeText("a"); setLastModified(1_000_000L) }
+        java.io.File(dl, "new.txt").apply { writeText("b"); setLastModified(2_000_000L) }
+        java.io.File(dl, "Sub").mkdirs()
+        jp.yaegaki.theta.home.data.Files.allFilesForTest = false
+        launch()
+        compose.waitForIdle()
+        val m = model()
+        lateinit var tabId: String
+        lateinit var itemId: String
+        scenario!!.onActivity {
+            val (t, item) = m.addBoardTab(jp.yaegaki.theta.home.data.BoardItem.FOLDER, jp.yaegaki.theta.home.data.Files.downloadsUri().toString())
+            m.renameTab(t.id, "DOWNLOAD")
+            tabId = t.id; itemId = item.id
+            m.toggle(t.id)
+        }
+        compose.mainClock.advanceTimeBy(600)
+        compose.onNodeWithText("すべてのファイルへのアクセスを許可").assertExists()
+        shot("downloads-permission")
+        jp.yaegaki.theta.home.data.Files.allFilesForTest = true
+        scenario!!.onActivity { m.close(); m.folders.remove(itemId); m.toggle(tabId) }
+        // 読み込みは別のスレッドなので、終わるまで少しずつ待つ
+        repeat(100) {
+            if (m.folders[itemId]?.entries?.isNotEmpty() == true) return@repeat
+            Thread.sleep(50)
+            shadowOf(android.os.Looper.getMainLooper()).idle()
+            compose.mainClock.advanceTimeBy(50)
+        }
+        org.junit.Assert.assertEquals(listOf("Sub", "new.txt", "old.pdf"), m.folders[itemId]!!.entries.map { it.name })
+        compose.waitForIdle()
+        compose.onNodeWithText("new.txt").assertExists()
+        shot("downloads-tab")
+        jp.yaegaki.theta.home.data.Files.allFilesForTest = null
+    }
 }

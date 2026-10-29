@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Download など、フォルダを選ぶ画面で選べないフォルダを読む（設定の「すべてのファイルへのアクセス」で許可したときだけ） -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
     <!-- タスクバーの「最近使ったアプリ」：端末の設定の「使用状況へのアクセス」で許可したときだけ使う -->
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
