@@ -22,6 +22,8 @@ enum class TabKind(val group: Int, val defaultLabel: String, val key: Char?) {
     CLIP(2, "CLIP", 'X'),
     CAPTURE(2, "CAPTURE", 'R'),
     HATCH(2, "HATCH", 'H'),
+    /** 再生中の音楽（どの音楽アプリでも。Theta Music を先に）。 */
+    MUSIC(1, "MUSIC", 'U'),
     /** アプリのカテゴリー 1 つ分のアプリ。TabSpec.folderUri にカテゴリーの id を入れる。 */
     CATEGORY(2, "CATEGORY", null),
     /** 決めた URL のページをタブの中に出す。TabSpec.folderUri に URL を入れる。 */
@@ -125,6 +127,7 @@ data class BoardItem(
         val PANELS = mapOf(
             "calendar" to TabKind.CALENDAR, "mail" to TabKind.MAIL, "line" to TabKind.LINE, "people" to TabKind.PEOPLE,
             "links" to TabKind.BOOKMARKS, "clip" to TabKind.CLIP, "capture" to TabKind.CAPTURE, "hatch" to TabKind.HATCH,
+            "music" to TabKind.MUSIC,
         )
 
         /** 元のタブの種類から、置くものの種類へ。 */
@@ -138,6 +141,7 @@ data class BoardItem(
         fun defaultHeight(type: String) = when (type) {
             WIDGET -> 200
             "calendar" -> 480
+            "music" -> 200
             FILE -> 280
             WEB -> 420
             else -> 320
@@ -837,6 +841,7 @@ data class HomeSection(val id: String, val narrow: Boolean = true, val wide: Boo
         const val TODAY = "today"
         const val NOTICE = "notice"
         const val PINS = "pins"
+        const val MUSIC = "music"
         const val WEATHER = "weather"
         const val STATUS = "status"
         const val FILES = "files"
@@ -850,6 +855,7 @@ data class HomeSection(val id: String, val narrow: Boolean = true, val wide: Boo
             HomeSection(TODAY),
             HomeSection(NOTICE),
             HomeSection(PINS),
+            HomeSection(MUSIC),
             HomeSection(WEATHER),
             HomeSection(STATUS),
             HomeSection(FILES, narrow = true, wide = false),
@@ -858,7 +864,7 @@ data class HomeSection(val id: String, val narrow: Boolean = true, val wide: Boo
         )
 
         val LABELS = mapOf(
-            CLOCK to "時計", SEARCH to "検索", TODAY to "予定", NOTICE to "通知", PINS to "ピン留めのファイル", WEATHER to "天気",
+            CLOCK to "時計", SEARCH to "検索", TODAY to "予定", NOTICE to "通知", PINS to "ピン留めのファイル", MUSIC to "再生中の音楽", WEATHER to "天気",
             STATUS to "つながり（ネット・NAS など）", FILES to "ファイルへの入口", FILER to "ファイラー", DEVICE to "端末（電池・容量）",
         )
     }

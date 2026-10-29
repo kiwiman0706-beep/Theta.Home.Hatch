@@ -157,6 +157,7 @@ fun PanelView(model: HomeModel, type: String) {
         TabKind.CLIP -> ClipDrawer(model)
         TabKind.CAPTURE -> CaptureDrawer(model)
         TabKind.HATCH -> HatchDrawer(model)
+        TabKind.MUSIC -> Column(Modifier.padding(12.dp)) { MusicCard(model) }
         else -> Note("この版では表示できないものです")
     }
 }

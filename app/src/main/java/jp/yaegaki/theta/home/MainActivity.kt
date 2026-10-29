@@ -45,10 +45,7 @@ class MainActivity : ComponentActivity() {
     /** ホームが前にある間、5 分ごとに回線の速さを確かめる（測るかどうかは設定の間隔で決める）。 */
     private val speedTick: Runnable = object : Runnable {
         override fun run() {
-            healthy.removeCallbacks(speedTick)
-        healthy.postDelayed(speedTick, 5 * 60_000L)
-        model.refreshSpeed()
-        model.refreshUsage()
+            model.refreshSpeed()
             healthy.postDelayed(this, 5 * 60_000L)
         }
     }
@@ -114,6 +111,12 @@ class MainActivity : ComponentActivity() {
         model.refreshStatus()
         model.refreshWeather()
         model.refreshSpeed()
+        // ホームが前にある間は 5 分ごとに回線の速さ（測るかどうかは設定の間隔で決める）
+        healthy.removeCallbacks(speedTick)
+        healthy.postDelayed(speedTick, 5 * 60_000L)
+        // タスクバーの「最近」と、再生中の音楽
+        model.refreshUsage()
+        jp.yaegaki.theta.home.notify.MediaWatch.start(this)
         model.reloadShortcuts()
         model.refreshHomeRole()
         model.checkUpdate()

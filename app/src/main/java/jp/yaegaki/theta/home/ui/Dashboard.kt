@@ -1,5 +1,7 @@
 package jp.yaegaki.theta.home.ui
 
+import androidx.compose.runtime.collectAsState
+
 import android.Manifest
 import android.content.Intent
 import android.content.IntentFilter
@@ -138,6 +140,7 @@ private fun SectionView(model: HomeModel, s: HomeSection, filerHeight: Dp, openN
         }) { TodayEvents(model, max = 12) }
         HomeSection.NOTICE -> NoticePanel(model)
         HomeSection.PINS -> PinsPanel(model)
+        HomeSection.MUSIC -> MusicPanel(model)
         HomeSection.WEATHER -> Panel(model, "WEATHER", "天気", folded = {
             val f = model.forecast
             val warn = model.alerts?.list.orEmpty().joinToString("・") { it.name }
@@ -177,6 +180,18 @@ private fun FilerSection(model: HomeModel, modifier: Modifier, openNasSettings: 
         }
         FilerBody(model, Modifier.weight(1f).fillMaxWidth().padding(10.dp), openNasSettings, openDriveSettings)
     }
+}
+
+/** 再生中の音楽の区画。再生していなくて、Theta Music も入っていなければ出さない。 */
+@Composable
+private fun MusicPanel(model: HomeModel) {
+    val now by jp.yaegaki.theta.home.notify.MediaWatch.now.collectAsState()
+    val hasMusicApp = model.apps.any { it.packageName == jp.yaegaki.theta.home.notify.MediaWatch.THETA_MUSIC }
+    if (now == null && !hasMusicApp) return
+    Panel(model, "MUSIC", "音楽", folded = {
+        now?.let { n -> Text((if (n.playing) "▶ " else "❚❚ ") + listOf(n.title, n.artist).filter { it.isNotBlank() }.joinToString(" — "),
+            color = LocalPalette.current.muted, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
+    }) { MusicCard(model) }
 }
 
 /** ピン留めしたファイルの区画。留めたものが無ければ出さない。押すと開く。 */

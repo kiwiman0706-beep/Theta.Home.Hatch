@@ -58,6 +58,8 @@ class HatchNotificationListener : NotificationListenerService() {
     override fun onListenerConnected() {
         instance = this
         refresh()
+        // 通知へのアクセスがあれば、音楽アプリの再生も見られる
+        MediaWatch.start(this)
     }
 
     override fun onListenerDisconnected() {

@@ -327,17 +327,21 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     var usageRecent by mutableStateOf<List<String>>(store.launchRecent); private set
     var usageCounts by mutableStateOf<Map<String, Int>>(store.launchCounts); private set
     var usageAccess by mutableStateOf(false); private set
+    /** 端末の記録の代わりに、このホームから開いた記録を出しているか。 */
+    private var usingLaunchLog = true
 
     fun refreshUsage() {
         usageAccess = jp.yaegaki.theta.home.data.AppUsage.hasAccess(ctx)
         if (!usageAccess) {
+            usingLaunchLog = true
             usageRecent = store.launchRecent
             usageCounts = store.launchCounts
             return
         }
         io { runCatching { jp.yaegaki.theta.home.data.AppUsage.fromSystem(ctx) }.getOrNull() }.then { r ->
             // 端末の記録が取れない・空（許可した直後など）なら、このホームから開いた記録のまま
-            if (r != null && r.first.isNotEmpty()) { usageRecent = r.first; usageCounts = r.second }
+            usingLaunchLog = r == null || r.first.isEmpty()
+            if (!usingLaunchLog) { usageRecent = r!!.first; usageCounts = r.second }
             else { usageRecent = store.launchRecent; usageCounts = store.launchCounts }
         }
     }
@@ -348,7 +352,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         if (pkg == ctx.packageName || apps.none { it.packageName == pkg }) return
         store.launchRecent = listOf(pkg) + store.launchRecent.filter { it != pkg }
         store.launchCounts = store.launchCounts.toMutableMap().also { it[pkg] = (it[pkg] ?: 0) + 1 }
-        if (!usageAccess) { usageRecent = store.launchRecent; usageCounts = store.launchCounts }
+        if (usingLaunchLog) { usageRecent = store.launchRecent; usageCounts = store.launchCounts }
     }
 
     // ---- Web 検索 ----
@@ -701,6 +705,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             TabKind.CLIP -> "CLIP"
             TabKind.CAPTURE -> "CAMERA"
             TabKind.HATCH -> "HATCH"
+            TabKind.MUSIC -> "MUSIC"
             TabKind.WEB -> "GLOBE"
             TabKind.FILE -> "FILE"
             else -> "GRID"

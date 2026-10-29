@@ -942,8 +942,7 @@ class ScreenshotTest {
         val m = model()
         org.junit.Assert.assertEquals(jp.yaegaki.theta.home.data.HomeSection.DEFAULTS.map { it.id }, m.homeSections.map { it.id })
         scenario!!.onActivity {
-            m.moveSection("weather", -4)
-            m.moveSection("weather", -1)
+            m.moveSection("weather", -m.homeSections.indexOfFirst { it.id == "weather" })
             m.updateSection(m.homeSections.first { it.id == "device" }.copy(narrow = false))
         }
         compose.waitForIdle()
@@ -1241,5 +1240,32 @@ class ScreenshotTest {
         compose.onNodeWithText("new.txt").assertExists()
         shot("downloads-tab")
         jp.yaegaki.theta.home.data.Files.allFilesForTest = null
+    }
+
+    /** 再生中の音楽：ホームの区画とタブに、ジャケット・曲名・アーティスト・アルバムと操作。 */
+    @Test
+    @Config(qualifiers = "w360dp-h1400dp-xxhdpi")
+    fun music() {
+        launch()
+        compose.waitForIdle()
+        compose.onNodeWithText("[ MUSIC ]").assertDoesNotExist()
+        val art = android.graphics.Bitmap.createBitmap(200, 200, android.graphics.Bitmap.Config.ARGB_8888).apply {
+            android.graphics.Canvas(this).apply { drawColor(0xFF7A3B8F.toInt()); drawCircle(100f, 100f, 60f, android.graphics.Paint().apply { color = 0xFFF2C14E.toInt() }) }
+        }
+        jp.yaegaki.theta.home.notify.MediaWatch.setForTest(jp.yaegaki.theta.home.notify.NowPlaying(
+            "com.example.music", "Sweet Dreams", "Eurythmics", "Sweet Dreams (Are Made of This)", art, null,
+            playing = true, duration = 216_000, position = 64_000, speed = 1f, updatedAt = android.os.SystemClock.elapsedRealtime(),
+        ))
+        compose.waitForIdle()
+        compose.onNodeWithText("[ MUSIC ]").assertExists()
+        compose.onNodeWithText("Sweet Dreams").assertExists()
+        compose.onNodeWithContentDescription("一時停止").assertExists()
+        shot("music")
+        // タブにも置ける
+        val m = model()
+        scenario!!.onActivity { val (t, _) = m.addBoardTab("music"); m.toggle(t.id) }
+        compose.mainClock.advanceTimeBy(600)
+        org.junit.Assert.assertTrue(compose.onAllNodesWithText("Eurythmics").fetchSemanticsNodes().size >= 2)
+        jp.yaegaki.theta.home.notify.MediaWatch.setForTest(null)
     }
 }
