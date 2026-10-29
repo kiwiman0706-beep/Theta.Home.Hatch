@@ -78,6 +78,7 @@ fun SettingsPanel(model: HomeModel) {
                         { actions.start(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                     )
                 }
+                if (!HatchNotificationListener.isEnabled(actions.activity)) ListenerHelp()
                 Gap(18.dp)
                 SectionTitle("UPDATE / 更新", Modifier.padding(horizontal = 10.dp))
                 val u = model.update

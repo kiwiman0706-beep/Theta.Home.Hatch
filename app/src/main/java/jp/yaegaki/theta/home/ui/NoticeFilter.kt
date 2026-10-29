@@ -65,6 +65,7 @@ internal fun FilteredNotices(model: HomeModel, list: List<Pair<Notice, NoticeRul
         if (!HatchNotificationListener.isEnabled(actions.activity)) {
             Text("通知へのアクセスを許可すると、条件に合う通知がここに出ます（内容は端末の中だけで使います）", color = p.muted, fontSize = 13.sp,
                 modifier = Modifier.clickable { actions.start(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) })
+            ListenerHelp()
         }
         list.take(max).forEachIndexed { i, (n, rule) ->
             val bar = if (rule.alert) p.accent else p.line

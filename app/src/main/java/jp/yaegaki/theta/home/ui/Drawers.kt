@@ -180,6 +180,28 @@ fun NeedPermission(text: String, button: String, onClick: () -> Unit) {
     }
 }
 
+/**
+ * 通知へのアクセスが「制限付き設定」で許可できないとき（Android 13 以降、Play 以外から入れたアプリ）の案内。
+ * アプリ情報の右上の「︙」→「制限付き設定を許可」をしてから、もう一度許可する。
+ */
+@Composable
+fun ListenerHelp() {
+    if (android.os.Build.VERSION.SDK_INT < 33) return
+    val actions = LocalActions.current
+    val ctx = actions.activity
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Note(
+            "「制限付き設定」と出て許可できないとき：一度その画面を OK で閉じてから、下の「アプリ情報を開く」→ 右上の「︙」→「制限付き設定を許可」" +
+                "（端末のロックを確かめます）。そのあと「通知へのアクセスを許可」をもう一度押してオンにします。Play ストア以外から入れたアプリだけに要る手順で、一度だけです。",
+        )
+        FlowRow2 {
+            PillButton("アプリ情報を開く", {
+                actions.start(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + ctx.packageName)))
+            })
+        }
+    }
+}
+
 private val timeFmt = SimpleDateFormat("H:mm", Locale.JAPAN)
 private val dayFmt = SimpleDateFormat("M/d", Locale.JAPAN)
 
@@ -416,6 +438,7 @@ private fun NoticeDrawer(model: HomeModel, mail: Boolean) {
                     actions.start(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                 }
             }
+            item { ListenerHelp() }
         } else if (list.isEmpty()) {
             item { Note(if (mail) "新しいメールの通知はありません" else "新しいトークの通知はありません") }
         }
@@ -905,6 +928,7 @@ private fun AppsDrawer(model: HomeModel, only: String? = null, split: Boolean = 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Note("通知へのアクセスを許可すると、このカテゴリーのアプリの通知がここに並びます（端末の中だけで使い、保存も送信もしません）。")
                     PillButton("通知へのアクセスを許可", { actions.start(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) })
+                    ListenerHelp()
                 }
             } else if (mine.isEmpty()) item(key = "n:none") { Note("新しい通知はありません") }
             if (model.noticeOrder == "app") {
