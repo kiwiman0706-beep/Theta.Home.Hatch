@@ -21,8 +21,8 @@ android {
         applicationId = "app.thetahatch.home"
         minSdk = 29
         targetSdk = 35
-        versionCode = 55
-        versionName = "0.42.0-alpha"
+        versionCode = 100
+        versionName = "1.0.0"
     }
 
     // 署名はシリーズ共通の鍵（Theta.Hatch.Series の secrets/README.md）。CI では Secret の 4 つ
@@ -73,6 +73,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
     implementation("androidx.documentfile:documentfile:1.1.0")
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
     implementation("androidx.exifinterface:exifinterface:1.4.1")
     // Google ドライブ：Google アカウントでの許可（Drive API の読み取り）
     implementation("com.google.android.gms:play-services-auth:21.4.0")

@@ -56,7 +56,10 @@ class GDrive(context: Context, private val prefs: SharedPreferences) {
 
     var email: String
         get() = prefs.getString("driveEmail", "") ?: ""
-        set(v) = prefs.edit().putString("driveEmail", v).apply()
+        set(v) {
+            if (v != email) app.thetahatch.home.hub.SeriesMeta.stamp(prefs, "google.account")
+            prefs.edit().putString("driveEmail", v).apply()
+        }
 
     @Volatile private var token: String? = null
     @Volatile private var tokenAt = 0L

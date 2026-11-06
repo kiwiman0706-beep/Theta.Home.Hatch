@@ -35,10 +35,10 @@ import app.thetahatch.home.data.SavedQuery
 import app.thetahatch.home.data.Forecast
 import app.thetahatch.home.data.Weather
 import app.thetahatch.home.data.WeatherPlace
-import app.thetahatch.home.hatch.HatchApp
-import app.thetahatch.home.hatch.HatchCatalog
-import app.thetahatch.home.hatch.HatchInstaller
-import app.thetahatch.home.hatch.Release
+import app.thetahatch.home.hub.CatalogApp
+import app.thetahatch.home.hub.Catalog
+import app.thetahatch.home.hub.Release
+import app.thetahatch.home.hub.UpdateHub
 import app.thetahatch.home.nas.Nas
 import app.thetahatch.home.drive.GDrive
 import android.app.PendingIntent
@@ -94,14 +94,6 @@ data class NasState(
     val path: String = "",
     val entries: List<Nas.Item> = emptyList(),
     val loading: Boolean = false,
-    val error: String? = null,
-)
-
-data class HatchStatus(
-    val installed: String? = null,
-    val latest: Release? = null,
-    val checking: Boolean = false,
-    val progress: Float? = null,
     val error: String? = null,
 )
 
@@ -264,7 +256,12 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     var profile by mutableStateOf("narrow"); private set
 
     val folders = mutableStateMapOf<String, FolderState>()
-    val hatch = mutableStateMapOf<String, HatchStatus>()
+    /** Hatch の一覧で目立たせるアプリ（ほかのアプリの「更新する」から来たとき）。 */
+    var hatchFocus by mutableStateOf<String?>(null)
+    var hubMobile by mutableStateOf(store.hubMobile); private set
+    private var hatchCheckedAt = 0L
+    /** 移行の段階を読み直すきっかけ。 */
+    var migrationTick by mutableStateOf(0)
 
     init {
         refreshAll()
@@ -438,12 +435,21 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     var pagesRtl by mutableStateOf(store.pagesRtl); private set
     fun changePagesRtl(v: Boolean) { pagesRtl = v; store.pagesRtl = v }
 
-    fun dsbooksInstalled() = apps.any { it.packageName == DSBOOKS }
+    /** シリーズのアプリは新しい ID と古い ID のどちらでも：入っている方（無ければ pkg のまま）。 */
+    fun resolvePkg(pkg: String): String {
+        val a = Catalog.byPackage(pkg) ?: return pkg
+        return listOfNotNull(a.targetPackage, a.currentPackage).firstOrNull { p -> apps.any { it.packageName == p } } ?: pkg
+    }
+
+    private val dsbooks get() = resolvePkg(DSBOOKS)
+    private val memo get() = resolvePkg(MEMO)
+
+    fun dsbooksInstalled() = apps.any { it.packageName == dsbooks }
 
     /** DSBooks で開く（取り込んでから開く。0.8.7 から）。開けなければ false。 */
     fun openInDsbooks(uri: Uri, name: String, start: (Intent) -> Unit): Boolean {
         val mime = Viewable.bookMime(name) ?: return false
-        val i = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime).setPackage(DSBOOKS)
+        val i = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime).setPackage(dsbooks)
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
         if (i.resolveActivity(ctx.packageManager) == null) return false
         start(i)
@@ -1006,7 +1012,16 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     fun lineRecipients(): List<Pair<String, String>> =
         Shortcuts.shareTargets(ctx, LINE).map { it.id to Shortcuts.label(it) }
 
-    fun memoInstalled() = apps.any { it.packageName == MEMO }
+    fun memoInstalled() = apps.any { it.packageName == memo }
+
+    /** MemoHatch の共有の受け口（ShareActivity。新しい ID ではクラスの場所が変わることがあるので探す）。 */
+    private fun memoShare(): Intent {
+        val pkg = memo
+        val probe = Intent(Intent.ACTION_SEND).setType("text/plain").setPackage(pkg)
+        val hit = ctx.packageManager.queryIntentActivities(probe, 0).firstOrNull { it.activityInfo.name.endsWith(".ShareActivity") }
+        return if (hit != null) Intent(Intent.ACTION_SEND).setClassName(pkg, hit.activityInfo.name)
+        else Intent(Intent.ACTION_SEND).setClassName(pkg, "$pkg.ShareActivity")
+    }
 
     /**
      * 送る。まず MemoHatch に残し（入っていなければこのホームの Clip に）、それから送り先へ。
@@ -1025,7 +1040,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         }
         // 必ず残す（MemoHatch は受け取るとそのまま保存して閉じる）
         if (quickMemo || target == "memo") {
-            if (memoInstalled()) start(put(Intent(Intent.ACTION_SEND).setClassName(MEMO, "$MEMO.ShareActivity")))
+            if (memoInstalled()) start(put(memoShare()))
             else {
                 addToClip(ctx, body.ifEmpty { null }, listOfNotNull(photo))
                 reloadClips()
@@ -1533,14 +1548,13 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         isDefaultHome = rm == null || !rm.isRoleAvailable(android.app.role.RoleManager.ROLE_HOME) || rm.isRoleHeld(android.app.role.RoleManager.ROLE_HOME)
     }
 
-    /** 新しい版があるか確かめる。force でなければ自動更新がオンのときだけ、1 日 1 回まで。 */
+    /** 新しい版があるか確かめる（公開した版だけ。試験版は見ない）。force でなければ自動更新がオンのときだけ、1 時間に 1 回まで。 */
     fun checkUpdate(force: Boolean = false) {
         if (update.checking) return
-        // 使いながら版を重ねているので、1 時間ごとに確かめる（GitHub への問い合わせは軽い）
         if (!force && (!autoUpdate || System.currentTimeMillis() - store.lastUpdateCheck < 3600_000)) return
         update = update.copy(checking = true, error = null)
         viewModelScope.launch {
-            val r = runCatching { SelfUpdate.latest() }
+            val r = runCatching { UpdateHub.latest(SelfUpdate.REPO) }
             store.lastUpdateCheck = System.currentTimeMillis()
             val latest = r.getOrNull()
             update = UpdateState(
@@ -1552,21 +1566,15 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** 新しい版を取得して、ハッシュを照合し、インストールへ（onReady で確認画面を出す）。 */
-    fun downloadUpdate(onReady: (File) -> Unit) {
-        val r = update.latest ?: return
+    /** このアプリを新しい版にする：ハブと同じく、取得 → 照合（共通の鍵・パッケージ・版）→ PackageInstaller。 */
+    fun updateSelf() {
         if (update.progress != null) return
+        val me = Catalog.byPackage(ctx.packageName) ?: return
         update = update.copy(progress = 0f, error = null)
         viewModelScope.launch {
-            var shown = 0
-            val result = runCatching {
-                HatchInstaller.download(ctx, r) { p ->
-                    val pct = (p * 100).toInt()
-                    if (pct > shown) { shown = pct; viewModelScope.launch { update = update.copy(progress = p) } }
-                }
-            }
-            update = update.copy(progress = null, error = result.exceptionOrNull()?.message)
-            result.getOrNull()?.let(onReady)
+            if (UpdateHub.get(me.id).latest == null) UpdateHub.check(ctx, only = me.id)
+            val ok = UpdateHub.update(ctx, me)
+            update = update.copy(progress = null, error = if (ok) null else UpdateHub.get(me.id).error)
         }
     }
 
@@ -1842,7 +1850,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         when {
             key.startsWith("sc:") -> shortcuts.firstOrNull { it.id == key.removePrefix("sc:") }
             key.startsWith("pkg:") -> apps.firstOrNull { it.packageName == key.removePrefix("pkg:") }
-            key.startsWith("act:") -> DOCK_ACTIONS.firstOrNull { it.id == key.removePrefix("act:") }?.takeIf { a -> a.pkg == null || apps.any { it.packageName == a.pkg } || a.fallback }
+            key.startsWith("act:") -> DOCK_ACTIONS.firstOrNull { it.id == key.removePrefix("act:") }?.takeIf { a -> a.pkg == null || apps.any { it.packageName == resolvePkg(a.pkg) } || a.fallback }
             else -> apps.firstOrNull { it.key == key }
         }?.let { key to it }
     }
@@ -1861,7 +1869,13 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             // 声でアプリを開く（呼び名でも）：すべてのアプリを開いて聞き取る
             "voice-app" -> openApps(voice = true)
             // MemoHatch：新しい音声メモ（録音から）
-            "memo-audio" -> start(Intent("jp.yaegaki.theta.memo.NEW").setPackage(MEMO).putExtra("type", "audio").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            "memo-audio" -> {
+                val pkg = memo
+                // 新しい ID では app.thetahatch.memo.NEW、古い ID では jp.yaegaki.theta.memo.NEW
+                val i = listOf("$pkg.NEW", "$MEMO.NEW").map { Intent(it).setPackage(pkg).putExtra("type", "audio").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                    .firstOrNull { ctx.packageManager.resolveActivity(it, 0) != null } ?: Intent("$MEMO.NEW").setPackage(pkg).putExtra("type", "audio").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                start(i)
+            }
         }
     }
 
@@ -2104,43 +2118,96 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Hatch ----
 
+
+    fun changeHubMobile(v: Boolean) { hubMobile = v; store.hubMobile = v }
+
     fun refreshHatchInstalled() {
-        HatchCatalog.apps.forEach { a ->
-            val v = a.packageName?.let { Apps.versionName(ctx, it) }
-            hatch[a.id] = (hatch[a.id] ?: HatchStatus()).copy(installed = v)
-        }
+        UpdateHub.refreshInstalled(ctx)
+        migrationTick++
     }
 
-    fun checkHatchUpdates() {
-        refreshHatchInstalled()
-        HatchCatalog.apps.filter { it.repo != null && it.packageName != null }.forEach { a ->
-            if (hatch[a.id]?.checking == true || hatch[a.id]?.latest != null) return@forEach
-            hatch[a.id] = hatch[a.id]!!.copy(checking = true, error = null)
-            viewModelScope.launch {
-                val r = runCatching { HatchInstaller.latest(a) }.getOrNull()
-                hatch[a.id] = hatch[a.id]!!.copy(checking = false, latest = r)
-            }
-        }
+    /** 一覧を開いたとき：10 分に 1 回まで新しい版を確かめる。 */
+    fun checkHatchUpdates(force: Boolean = false) {
+        if (!force && System.currentTimeMillis() - hatchCheckedAt < 10 * 60_000) return
+        hatchCheckedAt = System.currentTimeMillis()
+        viewModelScope.launch { UpdateHub.check(ctx) }
     }
 
-    /** 取得とハッシュ照合までをここで行い、インストール確認画面は onReady で開く。 */
-    fun downloadHatch(a: HatchApp, onReady: (File) -> Unit) {
-        val r = hatch[a.id]?.latest ?: return
-        hatch[a.id] = hatch[a.id]!!.copy(progress = 0f, error = null)
+    fun updateHatch(a: CatalogApp) {
+        viewModelScope.launch { UpdateHub.update(ctx, a) }
+    }
+
+    fun updateAllHatch() {
         viewModelScope.launch {
-            var shown = 0
-            val result = runCatching {
-                HatchInstaller.download(ctx, r) { p ->
-                    // 1% 進むごとに表示を更新する
-                    val pct = (p * 100).toInt()
-                    if (pct > shown) {
-                        shown = pct
-                        viewModelScope.launch { hatch[a.id] = hatch[a.id]!!.copy(progress = p) }
-                    }
-                }
+            val done = UpdateHub.runAll(ctx, install = true, mobile = true, fromWorker = false)
+            (ctx as HomeApp).toast(if (done.isEmpty()) "更新したものはありません" else "更新しました：" + done.joinToString("・"))
+        }
+    }
+
+    /** Hatch の一覧を開く（id があればそのアプリを確かめる）。 */
+    fun showHatch(id: String) {
+        val t = tabs.firstOrNull { mainKind(it) == TabKind.HATCH }
+        if (t != null) openTab(t.id) else settingsOpen = true
+        hatchFocus = id.ifEmpty { null }
+        viewModelScope.launch { UpdateHub.check(ctx, only = id.ifEmpty { null }) }
+    }
+
+    /** 移行：新しい版での読み込みが済んだ。 */
+    fun markMigrated(id: String) { store.setMigrated(id, true); migrationTick++ }
+
+    /** 設定のハブ：ほかのアプリに見せている共通設定（キー → 値・だれが・いつ）と、秘密を貸した記録。 */
+    fun seriesInfo(): List<Triple<String, String, String>> = app.thetahatch.home.hub.SeriesMeta.INFO.map { k ->
+        val v = when (k) {
+            "ui.skin" -> themeMode
+            "gemini.model" -> geminiModel
+            "nas.url" -> store.prefs.getString("nasUrl", "").orEmpty()
+            "nas.user" -> store.prefs.getString("nasAccount", "").orEmpty()
+            "google.account" -> store.prefs.getString("driveEmail", "").orEmpty()
+            else -> app.thetahatch.home.hub.SeriesMeta.extra(store.prefs, k).orEmpty()
+        }
+        val by = app.thetahatch.home.hub.SeriesMeta.by(store.prefs, k)
+        val at = app.thetahatch.home.hub.SeriesMeta.at(store.prefs, k).take(16).replace('T', ' ')
+        Triple(k, v.ifEmpty { "—" }, listOf(by, at).filter { it.isNotEmpty() }.joinToString(" "))
+    }
+
+    fun seriesLent() = app.thetahatch.home.hub.SeriesMeta.lent(store.prefs)
+
+    fun migrationStep(a: CatalogApp) = app.thetahatch.home.hub.Migration.step(ctx, a, store)
+
+    /** 移行 1：古い ID・古い鍵の橋渡し版を、公開した版の中から探して入れる。 */
+    fun installBridge(a: CatalogApp) {
+        val repo = a.repo ?: return
+        viewModelScope.launch {
+            val toast = (ctx as HomeApp)::toast
+            toast("橋渡し版を探しています…")
+            var found = false
+            for (r in UpdateHub.releases(repo)) {
+                val prepared = runCatching { UpdateHub.prepare(ctx, a, r) }.getOrNull() ?: continue
+                if (prepared.second != app.thetahatch.home.hub.InstallKind.BRIDGE) { prepared.first.delete(); continue }
+                found = true
+                val (st, msg) = UpdateHub.install(ctx, prepared.first, a.currentPackage!!)
+                toast(if (st == android.content.pm.PackageInstaller.STATUS_SUCCESS) "橋渡し版にしました" else "入れられませんでした $msg")
+                break
             }
-            hatch[a.id] = hatch[a.id]!!.copy(progress = null, error = result.exceptionOrNull()?.message)
-            result.getOrNull()?.let(onReady)
+            if (!found) toast("橋渡し版が見つかりません（まだ出ていないかもしれません）")
+            migrationTick++
+        }
+    }
+
+    /** 移行：新しい ID の版を入れる。 */
+    fun installNew(a: CatalogApp) {
+        val repo = a.repo ?: return
+        viewModelScope.launch {
+            val toast = (ctx as HomeApp)::toast
+            val r = runCatching { UpdateHub.latest(repo) }.getOrNull() ?: run { toast("新しい版を確かめられませんでした"); return@launch }
+            val prepared = runCatching { UpdateHub.prepare(ctx, a, r) }
+            val (file, kind) = prepared.getOrElse { toast("入れられません：${it.message}"); return@launch }
+            if (kind != app.thetahatch.home.hub.InstallKind.NEW || app.thetahatch.home.hub.Verify.archive(ctx, file)?.packageName != a.targetPackage) {
+                file.delete(); toast("新しい ID の版はまだ出ていません"); return@launch
+            }
+            val (st, msg) = UpdateHub.install(ctx, file, a.targetPackage!!)
+            toast(if (st == android.content.pm.PackageInstaller.STATUS_SUCCESS) "新しい版を入れました" else "入れられませんでした $msg")
+            migrationTick++
         }
     }
 

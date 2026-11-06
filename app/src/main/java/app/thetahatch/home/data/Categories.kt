@@ -1,5 +1,6 @@
 package app.thetahatch.home.data
 
+import app.thetahatch.home.hub.Catalog
 import android.content.pm.ApplicationInfo
 
 /** 仕分けの最初に選べるカテゴリーの候補と、アプリの申告からのおすすめ。 */
@@ -31,7 +32,7 @@ object Categories {
     fun suggest(app: AppEntry): String? {
         val pkg = app.packageName
         return when {
-            pkg in hatchPackages -> HATCH
+            pkg in hatchPackages || pkg.startsWith("app.thetahatch.") || pkg in Catalog.packages -> HATCH
             pkg == "jp.naver.line.android" || pkg.contains("mail") || pkg.contains(".gm") || pkg.contains("messag") || pkg.contains("dialer") || pkg.contains("contacts") -> TALK
             pkg.contains("camera") || pkg.contains("photos") || pkg.contains("gallery") -> PHOTO
             pkg.contains("settings") || pkg.startsWith("com.samsung.android.app.") && pkg.contains("care") -> SYSTEM

@@ -2,6 +2,8 @@
 <paths>
     <files-path name="capture" path="Capture/" />
     <files-path name="clip" path="Clip/" />
+    <!-- 移行：古いアプリの書き出しを新しいアプリへ渡す -->
+    <files-path name="migrate" path="Migrate/" />
     <cache-path name="nas" path="nas/" />
     <!-- Download などパスで読むフォルダのファイルを、ほかのアプリ・中のビューアに渡す -->
     <external-path name="storage" path="." />

@@ -4,7 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.net.Uri
 import android.os.Build
-import app.thetahatch.home.hatch.HatchCatalog
+import app.thetahatch.home.hub.Catalog
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -118,11 +118,13 @@ object Backup {
         }
         e.apply()
 
-        val hatch = HatchCatalog.apps.mapNotNull { it.packageName }.toSet()
+        val hatch = Catalog.packages
+        // シリーズのアプリは、古い ID・新しい ID のどちらかが入っていれば足りている（古い Home 自身も除く）
+        fun counterpart(pkg: String) = Catalog.byPackage(pkg)?.let { a -> listOfNotNull(a.currentPackage, a.targetPackage).any { Apps.isInstalled(context, it) } } == true
         val missing = (o.optJSONArray("apps") ?: JSONArray()).let { a ->
             (0 until a.length()).map { a.getJSONObject(it) }
                 .map { MissingApp(it.optString("package"), it.optString("label"), it.optString("package") in hatch) }
-                .filter { it.packageName.isNotEmpty() && it.packageName != context.packageName && !Apps.isInstalled(context, it.packageName) }
+                .filter { it.packageName.isNotEmpty() && it.packageName != context.packageName && !Apps.isInstalled(context, it.packageName) && !counterpart(it.packageName) }
                 .distinctBy { it.packageName }
                 .sortedWith(compareBy({ !it.hatch }, { it.label }))
         }

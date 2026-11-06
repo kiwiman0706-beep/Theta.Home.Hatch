@@ -101,8 +101,9 @@ fun SettingsPanel(model: HomeModel) {
                     PillButton("今すぐ確認", { model.checkUpdate(force = true) })
                     PillButton("更新履歴（Releases）↗", { actions.start(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(SelfUpdate.RELEASES_URL))) })
                 }
-                Toggle("起動・復帰のときに新しい版を確かめる（1 日 1 回）", model.autoUpdate) { model.changeAutoUpdate(it) }
-                Note("新しい版があると、画面上部に「UPDATE」が出ます。押すと取得して SHA-256 を照合し、Android の確認画面へ進みます（2 回目からは確認を省けることがあります）。")
+                Toggle("自動で更新する（このホームと Hatch のアプリ。12 時間に 1 回）", model.autoUpdate) { model.changeAutoUpdate(it) }
+                Toggle("モバイル回線でも取得する", model.hubMobile) { model.changeHubMobile(it) }
+                Note("新しい版があると、画面上部に「UPDATE」が出ます。取得したら SHA-256・署名（シリーズ共通の鍵）・パッケージ・版を確かめてから入れます。KidsHome が既定のホームアプリのときは、更新は KidsHome に任せます。")
                 Gap(18.dp)
                 SectionTitle("RESCUE / もしものとき", Modifier.padding(horizontal = 10.dp))
                 FlowRow2 {
@@ -388,7 +389,7 @@ fun SettingsPanel(model: HomeModel) {
                 Note("アプリの一覧は、画面上部の検索の横のボタン（Alt＋A）で開きます。")
                 Gap(18.dp)
                 SectionTitle("HATCH / Theta Hatch シリーズ")
-                Note("ほかの Hatch のアプリを、入れる・更新する・開く。GitHub の Releases の最新版を確かめ、取得してハッシュを照合してから Android のインストール画面へ進みます。")
+                Note("ほかの Hatch のアプリを、入れる・更新する・開く・新しい ID へ移す。GitHub の Releases の最新版を確かめ、取得してハッシュと署名を照合してから入れます。")
                 var hatchList by remember { mutableStateOf(false) }
                 FlowRow2 { PillButton("Hatch のアプリ一覧", { model.checkHatchUpdates(); hatchList = true }) }
                 if (hatchList) androidx.compose.ui.window.Dialog(onDismissRequest = { hatchList = false }, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
@@ -399,6 +400,18 @@ fun SettingsPanel(model: HomeModel) {
                         }
                         Box(Modifier.weight(1f)) { HatchDrawer(model) }
                     }
+                }
+                Gap(18.dp)
+                SectionTitle("SERIES / Hatch シリーズの共通設定")
+                Note("同じ端末のシリーズのアプリ（共通の鍵で署名したもの）は、ここの値を読めます。スキン・Gemini・NAS・Google アカウントは、このホームの設定で変えたものがそのまま渡ります。API キーとパスワードは、相手のアプリで利用者が選んだときだけ貸し、貸したら通知で知らせます。")
+                var seriesOpen by remember { mutableStateOf(false) }
+                FlowRow2 { PillButton(if (seriesOpen) "閉じる" else "共通設定と貸した記録を見る", { seriesOpen = !seriesOpen }) }
+                if (seriesOpen) {
+                    model.seriesInfo().forEach { (k, v, meta) -> TwoLines("$k　$v", meta.ifEmpty { null }) }
+                    TwoLines("gemini.key", if (model.hasGeminiKey) "あり（貸すときは確認）" else "なし")
+                    val lent = model.seriesLent()
+                    if (lent.isEmpty()) Note("まだ秘密を貸していません。")
+                    lent.forEach { TwoLines("${it.app} に ${it.key}", it.at.take(16).replace('T', ' ')) }
                 }
                 Note("Theta Home Hatch ${BuildConfigInfo.versionName(actions.activity)}")
             }

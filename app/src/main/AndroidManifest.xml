@@ -22,6 +22,14 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- 更新のハブ：このアプリが入れたシリーズのアプリは、Android 12 以降は確認なしで更新できる -->
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
+
+    <!-- シリーズのアプリどうし（共通の鍵で署名したものだけ）：設定のハブ・更新中の知らせ -->
+    <permission
+        android:name="app.thetahatch.permission.SHARE"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="app.thetahatch.permission.SHARE" />
     <!-- 仕分けやアプリの一覧から「アンインストール」の確認画面を出す -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <!-- ウィジェットホストはこの宣言が必要。実際の割り当ては ACTION_APPWIDGET_BIND の確認画面で利用者が許可する。 -->
@@ -57,19 +65,53 @@
             <action android:name="android.intent.action.SENDTO" />
             <data android:scheme="mailto" />
         </intent>
-        <!-- Theta Hatch シリーズ（導入済みか・版の確認） -->
-        <package android:name="jp.theta.travelhatch" />
-        <package android:name="jp.yaegaki.equipment" />
-        <package android:name="jp.omoide.closet" />
-        <package android:name="jp.yaegaki.theta.mensetsu" />
-        <package android:name="jp.yaegaki.tepravoice" />
-        <package android:name="jp.yaegaki.omoide" />
-        <package android:name="jp.yaegaki.kururihair" />
-        <package android:name="jp.theta.oekakihatch" />
+        <!-- Theta Hatch シリーズ（導入済みか・版の確認・移行）。新しい ID と古い ID -->
+        <package android:name="app.thetahatch.home" />
+        <package android:name="jp.yaegaki.theta.home" />
+        <package android:name="app.thetahatch.kidshome" />
+        <package android:name="com.theta.kidshome" />
+        <package android:name="app.thetahatch.memo" />
+        <package android:name="jp.yaegaki.theta.memo" />
+        <package android:name="app.thetahatch.book" />
+        <package android:name="jp.shinwakai.dsbooks.preview" />
+        <package android:name="app.thetahatch.meishi" />
         <package android:name="jp.yaegaki.meishiclaude" />
+        <package android:name="app.thetahatch.item" />
+        <package android:name="jp.omoide.closet" />
+        <package android:name="app.thetahatch.kamigata" />
+        <package android:name="jp.yaegaki.kururihair" />
+        <package android:name="app.thetahatch.doorphoto" />
+        <package android:name="jp.yaegaki.omoide" />
+        <package android:name="app.thetahatch.label" />
+        <package android:name="jp.yaegaki.tepravoice" />
+        <package android:name="app.thetahatch.device" />
+        <package android:name="jp.yaegaki.equipment" />
+        <package android:name="app.thetahatch.travel" />
+        <package android:name="jp.theta.travelhatch" />
+        <package android:name="app.thetahatch.oekaki" />
+        <package android:name="jp.theta.oekakihatch" />
+        <package android:name="app.thetahatch.mensetsu" />
+        <package android:name="jp.yaegaki.theta.mensetsu" />
+        <package android:name="app.thetahatch.music" />
+        <package android:name="com.thetahatch.theta_music" />
+        <package android:name="app.thetahatch.photo" />
+        <package android:name="photo.theta.theta_photo_hatch" />
+        <package android:name="app.thetahatch.chirashi" />
+        <package android:name="jp.yaegaki.theta.chirashi" />
+        <!-- 既定のホームアプリ（更新の受け持ちを決める） -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
+        <!-- 移行の書き出し・読み込み -->
+        <intent>
+            <action android:name="app.thetahatch.action.EXPORT" />
+        </intent>
+        <intent>
+            <action android:name="app.thetahatch.action.IMPORT" />
+        </intent>
         <package android:name="jp.naver.line.android" />
         <package android:name="com.tailscale.ipn" />
-        <package android:name="jp.shinwakai.dsbooks.preview" />
     </queries>
 
     <application
@@ -252,8 +294,38 @@
         </service>
 
         <receiver
-            android:name=".hatch.InstallResultReceiver"
+            android:name=".hub.InstallResultReceiver"
             android:exported="false" />
+
+        <!-- もう 1 つのハブ（KidsHome）からの「更新中」（共通の鍵で署名したアプリだけが送れる） -->
+        <receiver
+            android:name=".hub.BusyReceiver"
+            android:exported="true"
+            android:permission="app.thetahatch.permission.SHARE">
+            <intent-filter>
+                <action android:name="app.thetahatch.action.UPDATE_BUSY" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ほかのアプリの「更新する」：Intent("app.thetahatch.action.UPDATE")（extra packageName） -->
+        <activity
+            android:name=".hub.UpdateActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="app.thetahatch.action.UPDATE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- 設定のハブ：シリーズ共通の鍵で署名したアプリだけが読み書きできる（THETA_SHARED_SETTINGS §4.0） -->
+        <provider
+            android:name=".hub.SettingsProvider"
+            android:authorities="${applicationId}.theta"
+            android:exported="true"
+            android:permission="app.thetahatch.permission.SHARE" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

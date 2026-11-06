@@ -1,0 +1,700 @@
+{
+  "spec": 1,
+  "updated": "2026-11-06",
+  "owner": "kiwiman0706-beep",
+  "note": "シリーズのアプリ一覧（機械が読む用）。current は今、target は揃えた後。autoUpdate は Android のアプリ内自動更新の有無。Theta Home Hatch の Hatch ドロワーはこれを正本にする（spec §6.1）。 settingsExport・integrations は yes / partial / planned / no（README の「連携の対応状況」と同じ）。 updateHub は Android の更新をまとめて行うアプリ（spec §6.1）。 migration.bridge は移行の橋渡し版を作るか、migration.data はデータを移すか（docs/MIGRATION.md §3）。",
+  "apps": [
+    {
+      "id": "book",
+      "name": "Theta Book Hatch",
+      "nickname": "DSBooks",
+      "current": {
+        "repo": "Theta.Book.Hatch",
+        "packageName": "jp.shinwakai.dsbooks.preview"
+      },
+      "target": {
+        "repo": "Theta.Book.Hatch",
+        "packageName": "app.thetahatch.book"
+      },
+      "platforms": [
+        "android",
+        "androidtv",
+        "windows",
+        "mac"
+      ],
+      "autoUpdate": "unknown",
+      "vault": false,
+      "integrations": {
+        "obsidianVault": "partial",
+        "googleDrive": "no",
+        "synology": "yes",
+        "secureSignIn": "partial"
+      },
+      "settingsExport": "partial",
+      "remark": "ブランチが分かれている：claude/vigilant-ramanujan-4v5vsv（1.0.0、デスクトップ版あり）と ccr-fbd7a73d-mp81q5（0.8.7-preview、Android のみ）",
+      "thread": "session_01VBri9A5SpavPKRqvCQZARs",
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      },
+      "migration": {
+        "bridge": true,
+        "data": "required"
+      }
+    },
+    {
+      "id": "meishi",
+      "name": "Theta Meishi Hatch",
+      "current": {
+        "repo": "Theta.Meishi.Hatch",
+        "packageName": "jp.yaegaki.meishiclaude"
+      },
+      "target": {
+        "repo": "Theta.Meishi.Hatch",
+        "packageName": "app.thetahatch.meishi"
+      },
+      "platforms": [
+        "android",
+        "windows",
+        "mac",
+        "web"
+      ],
+      "autoUpdate": true,
+      "vault": true,
+      "remark": "共通鍵で署名済み。ID は変わるので一度入れ直し（データは Vault から戻る）",
+      "integrations": {
+        "obsidianVault": "yes",
+        "googleDrive": "yes",
+        "synology": "no",
+        "secureSignIn": "no"
+      },
+      "settingsExport": "partial",
+      "thread": "session_016tfKWDzu24Zp9FBxh4cjKS",
+      "googleOAuth": {
+        "registered": "2026-10-22（名前を変更）"
+      },
+      "migration": {
+        "bridge": true,
+        "data": "required"
+      }
+    },
+    {
+      "id": "item",
+      "name": "Theta Item Hatch",
+      "nickname": "おもいでクローゼット",
+      "current": {
+        "repo": "Theta.Item.Hatch",
+        "packageName": "jp.omoide.closet"
+      },
+      "target": {
+        "repo": "Theta.Item.Hatch",
+        "packageName": "app.thetahatch.item"
+      },
+      "platforms": [
+        "android"
+      ],
+      "autoUpdate": false,
+      "vault": false,
+      "integrations": {
+        "obsidianVault": "no",
+        "googleDrive": "yes",
+        "synology": "no",
+        "secureSignIn": "no"
+      },
+      "settingsExport": "partial",
+      "thread": "session_01QGzXdJYduLXUGSNC9NMCDu",
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      },
+      "migration": {
+        "bridge": false,
+        "data": "none"
+      }
+    },
+    {
+      "id": "kamigata",
+      "name": "Theta Kamigata Hatch",
+      "nickname": "くるりヘア",
+      "current": {
+        "repo": "Theta.Kamigata.Hatch",
+        "packageName": "jp.yaegaki.kururihair"
+      },
+      "target": {
+        "repo": "Theta.Kamigata.Hatch",
+        "packageName": "app.thetahatch.kamigata"
+      },
+      "platforms": [
+        "android"
+      ],
+      "autoUpdate": false,
+      "vault": false,
+      "integrations": {
+        "obsidianVault": "no",
+        "googleDrive": "no",
+        "synology": "no",
+        "secureSignIn": "no"
+      },
+      "settingsExport": "partial",
+      "thread": "session_01De2aFah9Lcgtf5wm3XZKDX",
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      },
+      "migration": {
+        "bridge": false,
+        "data": "none"
+      }
+    },
+    {
+      "id": "doorphoto",
+      "name": "Theta DoorPhoto Hatch",
+      "nickname": "おもいで年表",
+      "current": {
+        "repo": "Theta.DoorPhoto.Hatch",
+        "packageName": "jp.yaegaki.omoide"
+      },
+      "target": {
+        "repo": "Theta.DoorPhoto.Hatch",
+        "packageName": "app.thetahatch.doorphoto"
+      },
+      "platforms": [
+        "android"
+      ],
+      "autoUpdate": false,
+      "vault": false,
+      "integrations": {
+        "obsidianVault": "no",
+        "googleDrive": "planned",
+        "synology": "no",
+        "secureSignIn": "no"
+      },
+      "settingsExport": "partial",
+      "thread": "session_01EBZjKxFPPAcMuVaRQmJaEM",
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      },
+      "migration": {
+        "bridge": false,
+        "data": "none"
+      }
+    },
+    {
+      "id": "label",
+      "name": "Theta Label Hatch",
+      "nickname": "声でテプラ",
+      "current": {
+        "repo": "Theta.Label.Hatch",
+        "packageName": "jp.yaegaki.tepravoice"
+      },
+      "target": {
+        "repo": "Theta.Label.Hatch",
+        "packageName": "app.thetahatch.label"
+      },
+      "platforms": [
+        "android"
+      ],
+      "autoUpdate": false,
+      "vault": false,
+      "integrations": {
+        "obsidianVault": "no",
+        "googleDrive": "no",
+        "synology": "no",
+        "secureSignIn": "no"
+      },
+      "settingsExport": "no",
+      "thread": "session_01SsMo5spj81EiVV3fsBYJwr",
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      },
+      "migration": {
+        "bridge": false,
+        "data": "none"
+      }
+    },
+    {
+      "id": "device",
+      "name": "Theta Device Hatch",
+      "nickname": "機器台帳",
+      "current": {
+        "repo": "Theta.Device.Hatch",
+        "packageName": "jp.yaegaki.equipment"
+      },
+      "target": {
+        "repo": "Theta.Device.Hatch",
+        "packageName": "app.thetahatch.device"
+      },
+      "platforms": [
+        "android"
+      ],
+      "autoUpdate": false,
+      "vault": false,
+      "integrations": {
+        "obsidianVault": "no",
+        "googleDrive": "no",
+        "synology": "no",
+        "secureSignIn": "no"
+      },
+      "settingsExport": "partial",
+      "thread": "session_01MfF9qvjEzW47oy37eYGX2f",
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      },
+      "migration": {
+        "bridge": false,
+        "data": "none"
+      }
+    },
+    {
+      "id": "travel",
+      "name": "Theta Travel Hatch",
+      "nickname": "TravelHatch",
+      "current": {
+        "repo": "Theta.Travel.Hatch",
+        "packageName": "jp.theta.travelhatch"
+      },
+      "target": {
+        "repo": "Theta.Travel.Hatch",
+        "packageName": "app.thetahatch.travel"
+      },
+      "platforms": [
+        "android"
+      ],
+      "autoUpdate": false,
+      "vault": false,
+      "integrations": {
+        "obsidianVault": "no",
+        "googleDrive": "no",
+        "synology": "no",
+        "secureSignIn": "no"
+      },
+      "settingsExport": "partial",
+      "thread": "session_01AvSnwTjAMGxxrwossSH8b5",
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      },
+      "migration": {
+        "bridge": false,
+        "data": "none"
+      }
+    },
+    {
+      "id": "oekaki",
+      "name": "Theta Oekaki Hatch",
+      "nickname": "おえかきハッチ",
+      "current": {
+        "repo": "Theta.Oekaki.Hatch",
+        "packageName": "jp.theta.oekakihatch"
+      },
+      "target": {
+        "repo": "Theta.Oekaki.Hatch",
+        "packageName": "app.thetahatch.oekaki"
+      },
+      "platforms": [
+        "android",
+        "web"
+      ],
+      "autoUpdate": false,
+      "vault": true,
+      "integrations": {
+        "obsidianVault": "partial",
+        "googleDrive": "yes",
+        "synology": "no",
+        "secureSignIn": "no"
+      },
+      "settingsExport": "partial",
+      "thread": "session_01LmiStbYTVdJCtU26X4VDQh",
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      },
+      "migration": {
+        "bridge": false,
+        "data": "none"
+      }
+    },
+    {
+      "id": "mensetsu",
+      "name": "Theta Mensetsu Hatch",
+      "current": {
+        "repo": "Theta.Mensetsu.Hatch",
+        "packageName": "jp.yaegaki.theta.mensetsu"
+      },
+      "target": {
+        "repo": "Theta.Mensetsu.Hatch",
+        "packageName": "app.thetahatch.mensetsu"
+      },
+      "platforms": [
+        "android",
+        "windows",
+        "mac",
+        "web"
+      ],
+      "autoUpdate": "desktop-only",
+      "vault": true,
+      "integrations": {
+        "obsidianVault": "yes",
+        "googleDrive": "yes",
+        "synology": "no",
+        "secureSignIn": "no"
+      },
+      "settingsExport": "partial",
+      "thread": "session_01UZcNkbW2pixSpi59267B3r",
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      },
+      "migration": {
+        "bridge": false,
+        "data": "none"
+      }
+    },
+    {
+      "id": "home",
+      "name": "Theta Home Hatch",
+      "current": {
+        "repo": "Theta.Home.Hatch",
+        "packageName": "jp.yaegaki.theta.home"
+      },
+      "target": {
+        "repo": "Theta.Home.Hatch",
+        "packageName": "app.thetahatch.home"
+      },
+      "platforms": [
+        "android"
+      ],
+      "autoUpdate": true,
+      "vault": false,
+      "integrations": {
+        "obsidianVault": "planned",
+        "googleDrive": "yes",
+        "synology": "yes",
+        "secureSignIn": "yes"
+      },
+      "settingsExport": "yes",
+      "thread": "session_01GMSgoGarRChJJQLGtjAFKY",
+      "updateHub": true,
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      },
+      "migration": {
+        "bridge": false,
+        "data": "none"
+      }
+    },
+    {
+      "id": "memo",
+      "name": "Theta Memo Hatch",
+      "current": {
+        "repo": "Theta.Memo.Hatch",
+        "packageName": "jp.yaegaki.theta.memo"
+      },
+      "target": {
+        "repo": "Theta.Memo.Hatch",
+        "packageName": "app.thetahatch.memo"
+      },
+      "platforms": [
+        "android"
+      ],
+      "autoUpdate": true,
+      "vault": true,
+      "integrations": {
+        "obsidianVault": "yes",
+        "googleDrive": "yes",
+        "synology": "no",
+        "secureSignIn": "no"
+      },
+      "settingsExport": "no",
+      "thread": "session_01H9m1j4wPmRzXQbzu7zWADS",
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      },
+      "migration": {
+        "bridge": false,
+        "data": "none"
+      }
+    },
+    {
+      "id": "kidshome",
+      "name": "Theta KidsHome Hatch",
+      "nickname": "キッズホーム",
+      "current": {
+        "repo": "Theta.KidsHome.Hatch",
+        "packageName": "com.theta.kidshome"
+      },
+      "target": {
+        "repo": "Theta.KidsHome.Hatch",
+        "packageName": "app.thetahatch.kidshome"
+      },
+      "platforms": [
+        "android",
+        "androidtv"
+      ],
+      "autoUpdate": true,
+      "vault": false,
+      "integrations": {
+        "obsidianVault": "no",
+        "googleDrive": "no",
+        "synology": "planned",
+        "secureSignIn": "no"
+      },
+      "settingsExport": "yes",
+      "thread": "session_01NhS3xRwFVfssMDMXfSoJEv",
+      "updateHub": true,
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      },
+      "migration": {
+        "bridge": false,
+        "data": "none"
+      }
+    },
+    {
+      "id": "hitsudan",
+      "name": "Theta Hitsudan Hatch",
+      "nickname": "筆談・翻訳表示",
+      "current": {
+        "repo": "Theta.Hitsudan.Hatch",
+        "packageName": null
+      },
+      "target": {
+        "repo": "Theta.Hitsudan.Hatch",
+        "packageName": null,
+        "appId": "app.thetahatch.hitsudan"
+      },
+      "platforms": [
+        "windows",
+        "mac",
+        "web",
+        "m5paper"
+      ],
+      "autoUpdate": false,
+      "vault": false,
+      "remark": "Android 版なし（PC の Python サーバー＋ブラウザ＋M5PaperS3）。署名鍵・Android の自動更新は対象外",
+      "integrations": {
+        "obsidianVault": "no",
+        "googleDrive": "no",
+        "synology": "no",
+        "secureSignIn": "no"
+      },
+      "settingsExport": "no",
+      "thread": "session_01B9UWzs14Mh99ti9U7GyxZV",
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      }
+    },
+    {
+      "id": "music",
+      "name": "Theta Music Hatch",
+      "nickname": "Theta Music",
+      "current": {
+        "repo": "Theta.Music.Hatch",
+        "packageName": "com.thetahatch.theta_music"
+      },
+      "target": {
+        "repo": "Theta.Music.Hatch",
+        "packageName": "app.thetahatch.music"
+      },
+      "platforms": [
+        "android"
+      ],
+      "autoUpdate": false,
+      "vault": false,
+      "remark": "Flutter。2026-11-06 に公開（ハブが Releases を読めるように）。鍵は key.properties かデバッグ鍵だったので共通鍵へ。Obsidian 書き出しは NAS 上の Vault（Theta Vault 外、Dataview 使用）",
+      "integrations": {
+        "obsidianVault": "partial",
+        "googleDrive": "no",
+        "synology": "yes",
+        "secureSignIn": "yes"
+      },
+      "settingsExport": "no",
+      "thread": "session_012DXkc2Wd5iBmicj8ba39vG",
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      },
+      "migration": {
+        "bridge": false,
+        "data": "none"
+      }
+    },
+    {
+      "id": "photo",
+      "name": "Theta Photo Hatch",
+      "current": {
+        "repo": "Theta.Photo.Hatch",
+        "packageName": "photo.theta.theta_photo_hatch"
+      },
+      "target": {
+        "repo": "Theta.Photo.Hatch",
+        "packageName": "app.thetahatch.photo"
+      },
+      "platforms": [
+        "android"
+      ],
+      "autoUpdate": false,
+      "vault": false,
+      "remark": "Flutter。Windows・Mac は予定",
+      "integrations": {
+        "obsidianVault": "planned",
+        "googleDrive": "no",
+        "synology": "partial",
+        "secureSignIn": "no"
+      },
+      "settingsExport": "no",
+      "thread": "session_012DXkby1gTG6FFj5k36BF48",
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      },
+      "migration": {
+        "bridge": false,
+        "data": "none"
+      }
+    },
+    {
+      "id": "mitene",
+      "name": "Theta Mitene Hatch",
+      "status": "concept",
+      "current": {
+        "repo": "Theta.Mitene.Hatch",
+        "packageName": null
+      },
+      "target": {
+        "repo": "Theta.Mitene.Hatch",
+        "packageName": "app.thetahatch.mitene"
+      },
+      "platforms": [],
+      "autoUpdate": false,
+      "vault": false,
+      "remark": "構想中（リポジトリは空）",
+      "integrations": {
+        "obsidianVault": "no",
+        "googleDrive": "no",
+        "synology": "planned",
+        "secureSignIn": "no"
+      },
+      "settingsExport": "no",
+      "thread": "session_012DXkc1gdp42YFc5gM1nwUj",
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      }
+    },
+    {
+      "id": "movie",
+      "name": "Theta Movie Hatch",
+      "status": "design",
+      "current": {
+        "repo": "Theta.Movie.Hatch",
+        "packageName": null
+      },
+      "target": {
+        "repo": "Theta.Movie.Hatch",
+        "packageName": "app.thetahatch.movie"
+      },
+      "platforms": [],
+      "autoUpdate": false,
+      "vault": false,
+      "remark": "設計中（NAS の Jellyfin＋ファイル名規則）",
+      "integrations": {
+        "obsidianVault": "no",
+        "googleDrive": "no",
+        "synology": "planned",
+        "secureSignIn": "no"
+      },
+      "settingsExport": "no",
+      "thread": "session_012DXkbxgRpZwVsU9fra6sF1",
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      }
+    },
+    {
+      "id": "file",
+      "name": "Theta File Hatch",
+      "status": "prototype",
+      "current": {
+        "repo": "Theta.File.Hatch",
+        "packageName": null
+      },
+      "target": {
+        "repo": "Theta.File.Hatch",
+        "packageName": "app.thetahatch.file"
+      },
+      "platforms": [
+        "web"
+      ],
+      "autoUpdate": false,
+      "vault": true,
+      "settingsExport": "no",
+      "integrations": {
+        "obsidianVault": "yes",
+        "googleDrive": "no",
+        "synology": "planned",
+        "secureSignIn": "no"
+      },
+      "remark": "試作（ブラウザのデモ）",
+      "thread": "session_012DXkbxcLWLwFVYWM9tVHxb",
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      }
+    },
+    {
+      "id": "chirashi",
+      "name": "Theta Chirashi Hatch",
+      "current": {
+        "repo": "Theta.Chirashi.Hatch",
+        "packageName": "jp.yaegaki.theta.chirashi"
+      },
+      "target": {
+        "repo": "Theta.Chirashi.Hatch",
+        "packageName": "app.thetahatch.chirashi"
+      },
+      "platforms": [
+        "android"
+      ],
+      "autoUpdate": false,
+      "vault": false,
+      "settingsExport": "no",
+      "integrations": {
+        "obsidianVault": "no",
+        "googleDrive": "yes",
+        "synology": "no",
+        "secureSignIn": "no"
+      },
+      "remark": "release.yml は共通の Secret 名を使用済み。アプリ ID の変更はこれから",
+      "thread": "session_012DXkbxUnbUEgxEY1bfHP77",
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      },
+      "migration": {
+        "bridge": true,
+        "data": "required"
+      }
+    },
+    {
+      "id": "desk",
+      "name": "DeskHatch",
+      "series": false,
+      "current": {
+        "repo": "deskhatch",
+        "packageName": null
+      },
+      "target": {
+        "repo": "deskhatch",
+        "packageName": null,
+        "appId": "app.thetahatch.desk"
+      },
+      "platforms": [
+        "windows",
+        "mac"
+      ],
+      "autoUpdate": true,
+      "vault": false,
+      "integrations": {
+        "obsidianVault": "partial",
+        "googleDrive": "partial",
+        "synology": "no",
+        "secureSignIn": "no"
+      },
+      "settingsExport": "yes",
+      "thread": "session_018tmaD8HpkoGTEfY5qob4Dd",
+      "googleOAuth": {
+        "registered": "2026-11-06"
+      }
+    }
+  ],
+  "googleCloudProject": "meishi-512311"
+}

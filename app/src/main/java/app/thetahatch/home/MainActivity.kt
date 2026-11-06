@@ -66,6 +66,7 @@ class MainActivity : ComponentActivity() {
             return
         }
         if (safe) model.safeMode = true
+        intent?.getStringExtra(EXTRA_HATCH)?.let { model.showHatch(it) }
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
             addAction(Intent.ACTION_PACKAGE_REMOVED)
@@ -94,6 +95,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         // ホームボタンを押したら、開いているドロワーを閉じてホームに戻る
         if (intent.hasCategory(Intent.CATEGORY_HOME)) model.onHome()
+        intent.getStringExtra(EXTRA_HATCH)?.let { model.showHatch(it) }
     }
 
     override fun onStart() {
@@ -124,12 +126,14 @@ class MainActivity : ComponentActivity() {
         model.reloadShortcuts()
         model.refreshHomeRole()
         model.checkUpdate()
+        app.thetahatch.home.hub.UpdateHub.foreground = true
         // エッジ：ホームが見えている間は端の取っ手を隠す
         EdgeService.homeShown.value = true
         model.syncEdge()
     }
 
     override fun onPause() {
+        app.thetahatch.home.hub.UpdateHub.foreground = false
         healthy.removeCallbacks(speedTick)
         EdgeService.homeShown.value = false
         super.onPause()
@@ -187,5 +191,7 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val REQ_WIDGET_CONFIGURE = 51
+        /** Hatch の一覧を開く（値はアプリの id。空なら一覧だけ）。更新の通知・ほかのアプリの「更新する」から。 */
+        const val EXTRA_HATCH = "app.thetahatch.home.HATCH"
     }
 }

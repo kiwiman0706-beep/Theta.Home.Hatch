@@ -101,8 +101,11 @@ public final class Nas {
         SharedPreferences.Editor e = prefs.edit().putString("nasUrl", u).putString("nasAccount", account.trim());
         if (!password.isEmpty()) e.putString("nasPassword", Secret.seal(password));
         // 接続先かアカウントが変わったら、デバイストークンと証明書の信頼はやり直す
-        if (!u.equals(base()) || !account.trim().equals(account())) e.remove("nasDid").remove("nasCertPin");
+        boolean moved = !u.equals(base()) || !account.trim().equals(account());
+        if (moved) e.remove("nasDid").remove("nasCertPin");
         e.apply();
+        if (moved) { app.thetahatch.home.hub.SeriesMeta.stamp(prefs, "nas.url"); app.thetahatch.home.hub.SeriesMeta.stamp(prefs, "nas.user"); }
+        if (!password.isEmpty()) app.thetahatch.home.hub.SeriesMeta.stamp(prefs, "nas.password");
         synchronized (this) { sid = null; apis = null; }
     }
 
@@ -347,7 +350,7 @@ public final class Nas {
         JSONObject data = login.getJSONObject("data");
         sid = data.getString("sid");
         String newDid = data.optString("did", data.optString("device_id", ""));
-        if (!newDid.isEmpty()) prefs.edit().putString("nasDid", newDid).apply();
+        if (!newDid.isEmpty()) { prefs.edit().putString("nasDid", newDid).apply(); app.thetahatch.home.hub.SeriesMeta.stamp(prefs, "nas.deviceToken"); }
     }
 
     private JSONObject api(String name) throws IOException {

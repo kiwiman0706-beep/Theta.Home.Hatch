@@ -57,7 +57,7 @@ fun MusicCard(model: HomeModel) {
     val actions = LocalActions.current
     val ctx = actions.activity
     val now by MediaWatch.now.collectAsState()
-    val musicApp = model.apps.firstOrNull { it.packageName == MediaWatch.THETA_MUSIC }
+    val musicApp = model.apps.firstOrNull { it.packageName in MediaWatch.THETA_MUSIC_IDS }
     val n = now
     if (n == null) {
         val enabled = HatchNotificationListener.isEnabled(ctx)

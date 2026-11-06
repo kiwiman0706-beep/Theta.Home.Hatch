@@ -38,6 +38,8 @@ data class NowPlaying(
  */
 object MediaWatch {
     const val THETA_MUSIC = "com.thetahatch.theta_music"
+    /** Theta Music の新しい ID と古い ID。 */
+    val THETA_MUSIC_IDS = setOf("app.thetahatch.music", THETA_MUSIC)
 
     private val state = MutableStateFlow<NowPlaying?>(null)
     val now: StateFlow<NowPlaying?> = state
@@ -79,8 +81,8 @@ object MediaWatch {
     private fun pick() {
         val live = controllers.filter { it.metadata != null }
         val playing = live.filter { it.playbackState?.state == PlaybackState.STATE_PLAYING }
-        val c = playing.firstOrNull { it.packageName == THETA_MUSIC } ?: playing.firstOrNull()
-            ?: live.firstOrNull { it.packageName == THETA_MUSIC } ?: live.firstOrNull()
+        val c = playing.firstOrNull { it.packageName in THETA_MUSIC_IDS } ?: playing.firstOrNull()
+            ?: live.firstOrNull { it.packageName in THETA_MUSIC_IDS } ?: live.firstOrNull()
         current = c
         state.value = c?.let(::read)
     }

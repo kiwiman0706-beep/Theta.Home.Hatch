@@ -26,6 +26,9 @@ class HomeApp : Application() {
         store = Store(this)
         widgets = WidgetController(this)
         Rescue.watchMainThread(this)
+        app.thetahatch.home.hub.Catalog.load(this)
+        // 更新のハブ：12 時間に 1 回（試験の環境などで WorkManager が無いときは何もしない）
+        runCatching { app.thetahatch.home.hub.UpdateWorker.schedule(this) }
     }
 
     fun toast(message: String) {

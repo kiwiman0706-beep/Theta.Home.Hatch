@@ -125,7 +125,7 @@ fun DockIcon(model: HomeModel, item: Any, size: Dp) {
         is AppEntry -> AppIcon(item, size)
         is PinnedShortcut -> ShortcutIcon(item, size)
         is DockAction -> Box(Modifier.size(size)) {
-            val app = item.pkg?.let { pkg -> model.apps.firstOrNull { it.packageName == pkg } }
+            val app = item.pkg?.let { pkg -> model.resolvePkg(pkg) }?.let { pkg -> model.apps.firstOrNull { it.packageName == pkg } }
             if (app != null) AppIcon(app, size) else GlyphIcon(if (item.id == "quick") Glyph.PENCIL else Glyph.MIC, p.accent, size)
             if (app != null) Box(
                 Modifier.align(Alignment.BottomEnd).size(size * 0.5f).background(p.accent),

@@ -81,7 +81,8 @@ import app.thetahatch.home.data.Files
 import app.thetahatch.home.data.ViewItem
 import app.thetahatch.home.data.TabKind
 import app.thetahatch.home.data.TabSpec
-import app.thetahatch.home.hatch.HatchCatalog
+import app.thetahatch.home.hub.Catalog
+import app.thetahatch.home.hub.UpdateHub
 import app.thetahatch.home.nas.Nas
 import app.thetahatch.home.drive.GDrive
 import kotlinx.coroutines.Dispatchers
@@ -94,7 +95,6 @@ import app.thetahatch.home.MainActivity
 import app.thetahatch.home.data.Calendar
 import app.thetahatch.home.data.Event
 import app.thetahatch.home.data.PinnedFile
-import app.thetahatch.home.hatch.HatchInstaller
 import app.thetahatch.home.hatch.SelfUpdate
 
 /** 一覧の 1 行。端末のファイル（Entry）と NAS のファイル（Nas.Item）を同じ形で扱う。 */
@@ -1216,11 +1216,11 @@ internal fun SearchResults(model: HomeModel) {
             model.bookmarks.filter { it.name.contains(q, true) || it.url.contains(q, true) }.forEach { b ->
                 add(Hit("栞", b.name, Uri.parse(b.url).host ?: "") { actions.start(Intent(Intent.ACTION_VIEW, Uri.parse(b.url))) })
             }
-            HatchCatalog.apps.filter { it.name.contains(q, true) }.forEach { a ->
+            Catalog.shown.filter { it.name.contains(q, true) || it.nickname?.contains(q, true) == true }.forEach { a ->
                 val tab = model.tabWith("hatch")
                 add(Hit("Hatch", a.name, a.summary) {
                     model.query = ""
-                    val launch = a.packageName?.let { actions.activity.packageManager.getLaunchIntentForPackage(it) }
+                    val launch = a.installedPackage(UpdateHub.versionOf(actions.activity))?.let { actions.activity.packageManager.getLaunchIntentForPackage(it) }
                     if (launch != null) actions.start(launch) else tab?.let { model.toggle(it.id) }
                 })
             }
@@ -1248,16 +1248,13 @@ fun openRequest(actions: Actions) {
     actions.start(Intent(Intent.ACTION_VIEW, Uri.parse(SelfUpdate.REQUEST_URL)))
 }
 
-/** 新しい版を入れる：提供元不明のアプリの許可 → 取得とハッシュ照合 → Android の確認画面。 */
+/** 新しい版を入れる：提供元不明のアプリの許可 → 取得と照合（ハッシュ・共通の鍵・パッケージ・版）→ PackageInstaller。 */
 fun installUpdate(model: HomeModel, actions: Actions) {
-    val ctx = actions.activity
-    HatchInstaller.permissionIntent(ctx)?.let {
+    UpdateHub.permissionIntent(actions.activity)?.let {
         actions.toast("「この提供元のアプリを許可」をオンにしてから、もう一度押してください")
         actions.start(it)
         return
     }
     actions.toast("新しい版を取得しています…")
-    model.downloadUpdate { file ->
-        runCatching { HatchInstaller.install(ctx, file) }.onFailure { actions.toast("更新を始められませんでした") }
-    }
+    model.updateSelf()
 }

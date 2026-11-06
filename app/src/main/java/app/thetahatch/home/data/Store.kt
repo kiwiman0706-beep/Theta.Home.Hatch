@@ -349,7 +349,7 @@ class Store(context: Context) {
     /** "dark"・"light"・"system"（端末に合わせる）。0.4.0 までの「グレーの配色」はライトとして読む。 */
     var themeMode: String
         get() = prefs.getString("theme", null) ?: if (prefs.getBoolean("gray", false)) "light" else "dark"
-        set(v) = prefs.edit().putString("theme", v).apply()
+        set(v) { prefs.edit().putString("theme", v).apply(); app.thetahatch.home.hub.SeriesMeta.stamp(prefs, "ui.skin") }
 
     fun categories(): List<Category> = objects("categories") { Category(it.getString("id"), it.getString("name")) }
 
@@ -394,17 +394,30 @@ class Store(context: Context) {
 
     var geminiModel: String
         get() = prefs.getString("geminiModel", null) ?: IconStyle.DEFAULT_MODEL
-        set(v) = prefs.edit().putString("geminiModel", v.trim().ifEmpty { IconStyle.DEFAULT_MODEL }).apply()
+        set(v) {
+            val m = v.trim().ifEmpty { IconStyle.DEFAULT_MODEL }
+            if (m != prefs.getString("geminiModel", null)) app.thetahatch.home.hub.SeriesMeta.stamp(prefs, "gemini.model")
+            prefs.edit().putString("geminiModel", m).apply()
+        }
 
     /** Gemini の API キー。端末の鍵で暗号化して保存し、書き出し（バックアップ）には含めない。 */
     var geminiKey: String
         get() = Secret.open(prefs.getString("geminiKey", ""))
-        set(v) = prefs.edit().putString("geminiKey", if (v.isBlank()) "" else Secret.seal(v.trim())).apply()
+        set(v) { prefs.edit().putString("geminiKey", if (v.isBlank()) "" else Secret.seal(v.trim())).apply(); app.thetahatch.home.hub.SeriesMeta.stamp(prefs, "gemini.key") }
 
     /** 起動・復帰のときに更新を確かめる（1 日 1 回まで）。 */
     var autoUpdate: Boolean
         get() = prefs.getBoolean("autoUpdate", true)
         set(v) = prefs.edit().putBoolean("autoUpdate", v).apply()
+
+    /** Hatch の更新：モバイル回線でも取得する（既定オフ）。 */
+    var hubMobile: Boolean
+        get() = prefs.getBoolean("hubMobile", false)
+        set(v) = prefs.edit().putBoolean("hubMobile", v).apply()
+
+    /** 移行：新しい版で読み込みが済んだアプリ。 */
+    fun migrated(id: String) = prefs.getBoolean("migrated_$id", false)
+    fun setMigrated(id: String, v: Boolean) = prefs.edit().putBoolean("migrated_$id", v).apply()
 
     var lastUpdateCheck: Long
         get() = prefs.getLong("lastUpdateCheck", 0)

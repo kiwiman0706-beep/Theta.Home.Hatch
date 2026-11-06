@@ -189,7 +189,7 @@ private fun FilerSection(model: HomeModel, modifier: Modifier, openNasSettings: 
 @Composable
 private fun MusicPanel(model: HomeModel) {
     val now by MediaWatch.now.collectAsState()
-    val hasMusicApp = model.apps.any { it.packageName == MediaWatch.THETA_MUSIC }
+    val hasMusicApp = model.apps.any { it.packageName in MediaWatch.THETA_MUSIC_IDS }
     if (now == null && !hasMusicApp) return
     Panel(model, "MUSIC", "音楽", folded = {
         now?.let { n -> Text((if (n.playing) "▶ " else "❚❚ ") + listOf(n.title, n.artist).filter { it.isNotBlank() }.joinToString(" — "),

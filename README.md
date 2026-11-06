@@ -8,7 +8,8 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**0.42.0-alpha（versionCode 55）**／package `jp.yaegaki.theta.home`／Android 10（API 29）以上
+- 版：**1.0.0（versionCode 100）**／package `app.thetahatch.home`（0.42 までは `jp.yaegaki.theta.home`）／Android 10（API 29）以上
+- [Theta Hatch シリーズ](https://github.com/kiwiman0706-beep/Theta.Hatch.Series)の 1 つ。シリーズの**更新のハブ・設定のハブ**を兼ねる（下の「Hatch シリーズのハブ」）
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
 
@@ -47,7 +48,7 @@
 
 ## エッジ（ほかのアプリの上で端からタブ）
 
-**「タブを出す」ショートカット**：端をなぞる代わりに、ほかのアプリから同じタブを出せる（エッジがオフでも使える）。Dimple などショートカットを置けるアプリでは「タブを出す」ショートカット、Galaxy のモードとルーチンでは「アプリを開く」でアプリの一覧の「タブを出す」を選ぶ。自動化アプリからはアクティビティのアクション `jp.yaegaki.theta.home.SHOW_TABS`。アプリの一覧の「タブを出す」は設定 → SHORTCUT で隠せる。
+**「タブを出す」ショートカット**：端をなぞる代わりに、ほかのアプリから同じタブを出せる（エッジがオフでも使える）。Dimple などショートカットを置けるアプリでは「タブを出す」ショートカット、Galaxy のモードとルーチンでは「アプリを開く」でアプリの一覧の「タブを出す」を選ぶ。自動化アプリからはアクティビティのアクション `app.thetahatch.home.SHOW_TABS`。アプリの一覧の「タブを出す」は設定 → SHORTCUT で隠せる。
 
 設定 → EDGE をオンにすると、どのアプリを使っていても、画面の端の細い線を内側へなぞる（または押す）だけで、**ホームと同じタブと中身**（ウィジェット・フォルダ・予定・アプリ・置いたショートカットなど）を下のアプリの上に重ねて出せます。外側を押すか「戻る」で閉じ、アプリを開くと自動で閉じます。左右の端と高さを選べます。「ほかのアプリの上に表示」の許可と、常駐の通知が要ります。ホームキーの動き（押すとホーム全体）は Android の決まりなので変えていません。
 
@@ -104,7 +105,7 @@
 - **思いついたらすぐ入力**：ほかのアプリの上でも、ボタン 1 つで入力の画面を開き、書いて（話して・撮って）から送り先を選ぶ。送ったら元のアプリに戻る。
   - Dimple などショートカットを置けるアプリ：このアプリのショートカット「声で入力」「文字で入力」「写真で入力」「声でアプリ」
   - モードとルーチンの「アプリを開く」：アプリの一覧の「すぐメモ」（声から。設定で隠せる）
-  - 自動化アプリ：アクティビティ `jp.yaegaki.theta.home.QUICK`（extra `mode` = `voice`・`text`・`photo`）、`jp.yaegaki.theta.home.VOICE_APP`
+  - 自動化アプリ：アクティビティ `app.thetahatch.home.QUICK`（extra `mode` = `voice`・`text`・`photo`）、`app.thetahatch.home.VOICE_APP`
 - **予定は何日分でも**：ホームの予定は今日から 1・3・7 日分（初めは 3 日。見出しの「3D」を押すたびに切り替え）。2 日目からは日付の見出し付き。
 - **区画をたたむ**：ダッシュボードの TODAY・WEATHER・FILES・DEVICE は見出しを押すとたたむ（予定は次の 1 件、天気は気温と天気・警報だけ 1 行で）。広い画面のファイラーの上の予定も、見出しの ▾ でたたむ。
 
@@ -157,7 +158,7 @@ Drive API でつなぐ（読み取りのみ、`drive.readonly`）。ファイラ
 1. プロジェクトを作る
 2. Drive API を有効にする
 3. Google Auth Platform：アプリ名・メール、対象は「外部」、テストユーザーに自分
-4. クライアント（Android）を作る：パッケージ名 `jp.yaegaki.theta.home` と、画面に出る署名の SHA-1
+4. クライアント（Android）を作る：パッケージ名 `app.thetahatch.home` と、署名の SHA-1（シリーズ共通の鍵。シリーズのプロジェクトには 2026-11-06 に登録済み）
 5. アプリで「Google でログイン」
 
 公開ステータスが「テスト」のままだと 1 週間ほどでログインし直しになることがある（「本番環境」にすれば避けられる。自分だけで使うなら審査は要らない）。
@@ -231,31 +232,51 @@ DSBooks と同じく、Synology の DSM File Station API でつなぐ（設定 �
 
 ![](docs/screenshots/rescue.png)
 
+## Hatch シリーズのハブ
+
+**更新のハブ**（シリーズ共通仕様 §6.1）
+- Hatch の一覧（タブの HATCH・設定 → HATCH）に、シリーズの Android アプリの入っている版と新しい版。「更新」「すべて更新」「入れる」「変更点」
+- 一覧はシリーズの `catalog/apps.json`（APK に同梱し、ネットで読めたら新しい方）。Releases は公開版だけ（試験版は見ない）
+- 取得したら SHA-256（GitHub の digest）・署名（シリーズ共通の鍵）・パッケージ・版を確かめてから `PackageInstaller` で入れる。共通の鍵でない APK は入れない（移行の橋渡し版だけ例外）
+- 12 時間に 1 回、裏で確かめる（設定 → UPDATE「自動で更新する」既定オン、「モバイル回線でも取得する」既定オフ）
+- KidsHome が既定のホームアプリのときは、裏の更新は KidsHome に任せる。両方が更新するときは `app.thetahatch.action.UPDATE_BUSY` で知らせ合う
+- ほかのアプリの「更新する」：`Intent("app.thetahatch.action.UPDATE")`（extra `packageName`）でこの一覧を開く
+
+**移行**（シリーズの `docs/MIGRATION.md` §3）
+- 古い ID のアプリが入っていると、一覧の上に「移行が必要」。段階ごとのボタンだけを出す：橋渡し版に更新 → 書き出す（`app.thetahatch.action.EXPORT`）→ 新しい版を入れる → 読み込む（`app.thetahatch.action.IMPORT`）→ 古いアプリを削除。橋渡し版の無いアプリは、新しい版を入れて古いものを削除するだけ
+
+**設定のハブ**（シリーズ共通設定 §4.0）
+- `content://app.thetahatch.home.theta/info`（列 key・value・by・at）：`ui.skin`・`gemini.model`・`nas.url`・`nas.user`・`nas.shareRoot`・`google.account`
+- `content://app.thetahatch.home.theta/secret/<キー>`（列 key・value）：`gemini.key`・`nas.password`・`nas.deviceToken`。読まれたら通知で知らせ、設定 → SERIES に記録
+- `update` を `/info` に送ると書き戻し（秘密は受け付けない）。権限 `app.thetahatch.permission.SHARE`（signature）なので、共通の鍵で署名したアプリだけ
+
 ## 入れ方
 
-1. APK を端末で開いてインストール（「提供元不明のアプリ」の許可が必要）。0.2.0 を入れていれば上書きできる（同じ鍵）。
+1. APK を端末で開いてインストール（「提供元不明のアプリ」の許可が必要）。**1.0.0 から ID と鍵が変わったので、0.42 までのものとは別のアプリとして入る**（設定は古い方の 設定 → 書き出し、新しい方の 設定 → 読み込み で移す。そのあと Hatch の一覧の「古いアプリを削除」）。
 2. まず普通のアプリとして開き、フォルダのタブにフォルダを割り当て、NAS を登録して動きを確かめる。
 3. 設定 →「既定のホームにする」。
 
 ## リリース
 
-1. 手元で `./gradlew :app:assembleRelease`（鍵は `keystore.properties`）し、APK を `releases/ThetaHomeHatch-<版>.apk` として置く
-2. `releases/SHA256SUMS-<x.y.z>.txt`（`sha256sum` の出力）と `docs/release-notes/v<版>.md` を置いてコミット
-3. Actions の `release-apk` を「Run workflow」で版（例 `v0.5.0-alpha`）を指定して実行するか、`v<版>` のタグをプッシュする。ハッシュ・署名の証明書・版を確かめてから Release を作り、タグも付ける。`-` 付きの版はプレリリース
+1.0.0 から、**CI がシリーズ共通の鍵でビルドする**（APK はコミットしない。`releases/` は 0.42 までの記録）。
+
+1. `app/build.gradle.kts` の版と `docs/release-notes/v<版>.md`・`CHANGELOG.md` を直してプッシュ
+2. Actions の `release` を「Run workflow」で版（例 `1.0.1`）を指定して実行。リポジトリの Secret（`ANDROID_KEYSTORE_B64`・`ANDROID_KEYSTORE_PASSWORD`・`ANDROID_KEY_ALIAS`・`ANDROID_KEY_PASSWORD`）で署名し、署名者（共通の鍵）・パッケージ・版を確かめてから Release を作る。`-` 付きの版はプレリリース（ハブからは見えない）
 
 ## ビルド
 
-`./gradlew :app:assembleDebug`。テスト・lint・画面の見本は `./gradlew :app:testDebugUnitTest :app:lintDebug`（見本は `app/build/screenshots/`）。リリース署名はリポジトリの外の鍵を `keystore.properties`（gitignore 済み）で渡して `./gradlew :app:assembleRelease`。**鍵と鍵の情報はコミットしない。**
+`./gradlew :app:assembleDebug`。テスト・lint・画面の見本は `./gradlew :app:testDebugUnitTest :app:lintDebug`（見本は `app/build/screenshots/`）。リリース署名は環境変数 `ANDROID_KEYSTORE_FILE`・`ANDROID_KEYSTORE_PASSWORD`・`ANDROID_KEY_ALIAS`・`ANDROID_KEY_PASSWORD`（手元では `keystore.properties`、gitignore 済み）。**鍵と鍵の情報はコミットしない。**
 
 ## 構成
 
 | 場所 | 内容 |
 | --- | --- |
-| `app/src/main/java/jp/yaegaki/theta/home/` | `HomeModel`（状態）、`MainActivity`、`ShareToClipActivity` |
+| `app/src/main/java/app/thetahatch/home/` | `HomeModel`（状態）、`MainActivity`、`ShareToClipActivity` |
 | `…/ui/Filer.kt` | 背景のファイラー、状態表示、NAS の登録 |
 | `…/ui/HomeRoot.kt` | 端のタブ、ドロワーのスライドイン、ピン留め |
 | `…/ui/WidgetDrawer.kt` | 1 タブ 1 ウィジェット、大きさの変更、取り込み |
 | `…/nas/` | Synology への接続（`Nas.java`）、パスワードの暗号化（`Secret.java`） |
-| `…/data/`・`capture/`・`notify/`・`hatch/`・`widgets/` | フォルダ・予定・連絡先、記録、通知、Hatch、ウィジェットのホスト |
+| `…/hub/` | 更新のハブ（`Catalog`・`Verify`・`UpdateHub`・`UpdateWorker`・`UpdateActivity`）、移行（`Migration`）、設定のハブ（`SettingsProvider`・`SeriesMeta`） |
+| `…/data/`・`capture/`・`notify/`・`widgets/` | フォルダ・予定・連絡先、記録、通知、ウィジェットのホスト |
 | `docs/PLAN.md` | 経緯と計画 |
 | `reference/` | ChatGPT 版 0.1.0-alpha のソース・調査メモ・モックアップ（参照用） |
