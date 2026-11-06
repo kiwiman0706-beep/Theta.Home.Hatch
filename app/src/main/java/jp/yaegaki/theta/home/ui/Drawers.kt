@@ -6,6 +6,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.horizontalScroll
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
@@ -553,7 +554,8 @@ private fun AppMenu(model: HomeModel, app: jp.yaegaki.theta.home.data.AppEntry, 
     DropdownMenu(expanded = expanded, onDismissRequest = close) {
         DropdownMenuItem(text = { Text("ショートカット（タブに置く）") }, onClick = { close(); shortcuts() })
         DropdownMenuItem(text = { Text(model.nicknamesOf(app).let { if (it.isEmpty()) "呼び名をつける（声で開く・検索）" else "呼び名：" + it.joinToString("、") }) }, onClick = { close(); naming = true })
-        DropdownMenuItem(text = { Text(if (model.isPinned(app)) "ピン留めを外す" else "ピン留め（端の下・すべてのアプリの上）") }, onClick = { close(); model.toggleDockApp(app) })
+        DropdownMenuItem(text = { Text(if (model.isStartPinned(app)) "スタートから外す" else "スタートにピン留め") }, onClick = { close(); model.toggleStartPin(app.key) })
+        DropdownMenuItem(text = { Text(if (model.isPinned(app)) "端の下のピン留めを外す" else "端の下にピン留め") }, onClick = { close(); model.toggleDockApp(app) })
         DropdownMenuItem(text = { Text("カテゴリーを変える") }, onClick = { close(); move() })
         DropdownMenuItem(text = { Text("アプリ情報") }, onClick = { actions.start(Apps.infoIntent(app.packageName)); close() })
         if (!Apps.isSystem(actions.activity, app.packageName)) {
@@ -586,7 +588,8 @@ private fun NicknameDialog(model: HomeModel, app: jp.yaegaki.theta.home.data.App
 @Composable
 private fun ShortcutMenu(model: HomeModel, sc: jp.yaegaki.theta.home.data.PinnedShortcut, expanded: Boolean, close: () -> Unit, rename: () -> Unit) {
     DropdownMenu(expanded = expanded, onDismissRequest = close) {
-        DropdownMenuItem(text = { Text(if ("sc:" + sc.id in model.favoriteApps) "ピン留めを外す" else "ピン留め（端の下・すべてのアプリの上）") }, onClick = { close(); model.toggleDock("sc:" + sc.id) })
+        DropdownMenuItem(text = { Text(if ("sc:" + sc.id in model.startPins) "スタートから外す" else "スタートにピン留め") }, onClick = { close(); model.toggleStartPin("sc:" + sc.id) })
+        DropdownMenuItem(text = { Text(if ("sc:" + sc.id in model.favoriteApps) "端の下のピン留めを外す" else "端の下にピン留め") }, onClick = { close(); model.toggleDock("sc:" + sc.id) })
         DropdownMenuItem(text = { Text("名前を変える") }, onClick = { close(); rename() })
         DropdownMenuItem(text = { Text("このショートカットを外す") }, onClick = { close(); model.removeShortcut(sc.id) })
     }
@@ -727,7 +730,16 @@ private fun AppsDrawer(model: HomeModel, only: String? = null, split: Boolean = 
             // 1 段目：絞り込みとマイク。2 段目：仕分け・一覧／グリッド・大きさ（狭い画面でも欄がつぶれないよう 2 段に）
             Column(Modifier.padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Field(q, { q = it }, "名前で絞り込み", Modifier.weight(1f))
+                    // START（すべてのアプリ）を開いたら、すぐ打てるよう絞り込みに合わせる（声で開いたとき・カテゴリーのタブは除く）
+                    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+                    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+                    LaunchedEffect(Unit) {
+                        if (only == null && !model.voicePending && !voice.listening) {
+                            kotlinx.coroutines.delay(150)
+                            runCatching { focus.requestFocus(); keyboard?.show() }
+                        }
+                    }
+                    Field(q, { q = it }, "名前で絞り込み", Modifier.weight(1f).focusRequester(focus))
                     GlyphButton(Glyph.MIC, "声でアプリを開く", { if (voice.listening) voice.stop() else voice.start() }, filled = voice.listening)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -740,8 +752,44 @@ private fun AppsDrawer(model: HomeModel, only: String? = null, split: Boolean = 
                 }
             }
         }
-        // すべてのアプリ：端の下に置いたもの（ピン留め）を上に 1 列で。長押しで外す
+        // START のピン留め：いちばん上に大きく。長押しで並べ替え・外す
         if (only == null && q.isBlank()) {
+            val starts = model.startItems()
+            if (starts.isNotEmpty()) item(key = "start") {
+                Column(Modifier.padding(bottom = 8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(Modifier.size(8.dp).background(p.accent))
+                        Text("START", color = p.accent, fontSize = 12.sp, fontFamily = Hud.mono, letterSpacing = 1.5.sp)
+                        Ticks(Modifier.weight(1f).height(5.dp))
+                    }
+                    FlowRow(Modifier.fillMaxWidth().padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        starts.forEachIndexed { i, (key, item) ->
+                            var menu by remember(key) { mutableStateOf(false) }
+                            Box {
+                                Column(
+                                    Modifier.width(76.dp)
+                                        .combinedClickable(onClick = { dockLaunch(model, actions, item) }, onLongClick = { menu = true }, onClickLabel = "開く", onLongClickLabel = "並べ替え・外す")
+                                        .padding(vertical = 4.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    DockIcon(model, item, 52.dp)
+                                    Text(dockLabel(item), color = p.fg, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(horizontal = 2.dp))
+                                }
+                                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                                    if (i > 0) DropdownMenuItem(text = { Text("◀ 前へ") }, onClick = { model.moveStartPin(key, -1) })
+                                    if (i < starts.lastIndex) DropdownMenuItem(text = { Text("▶ 後ろへ") }, onClick = { model.moveStartPin(key, 1) })
+                                    DropdownMenuItem(text = { Text("スタートから外す") }, onClick = { menu = false; model.toggleStartPin(key) })
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // すべてのアプリ：端の下に置いたもの（ピン留め）を上に 1 列で。長押しで外す（START のピン留めがあるときは、そちらだけ）
+        if (only == null && q.isBlank() && model.startPins.isEmpty()) {
             val pinned = model.dockItems()
             if (pinned.isNotEmpty()) item(key = "pinned") {
                 Column(Modifier.padding(bottom = 6.dp)) {

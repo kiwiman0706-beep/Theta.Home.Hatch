@@ -1268,4 +1268,30 @@ class ScreenshotTest {
         org.junit.Assert.assertTrue(compose.onAllNodesWithText("Eurythmics").fetchSemanticsNodes().size >= 2)
         jp.yaegaki.theta.home.notify.MediaWatch.setForTest(null)
     }
+
+    /** START：開くと絞り込みに合っていてすぐ打てる。アプリの長押し「スタートにピン留め」で上に大きく並ぶ。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun startPins() {
+        launch()
+        compose.waitForIdle()
+        val m = model()
+        scenario!!.onActivity {
+            m.toggleStartPin(m.apps.first { it.label == "Notes" }.key)
+            m.toggleStartPin(m.apps.first { it.label == "Maps" }.key)
+        }
+        compose.onNodeWithContentDescription("START", substring = true).performClick()
+        compose.mainClock.advanceTimeBy(800)
+        compose.waitForIdle()
+        compose.onNode(androidx.compose.ui.test.hasSetTextAction() and androidx.compose.ui.test.isFocused()).assertExists()
+        compose.onNodeWithText("START").assertExists()
+        shot("start-pins")
+        // 打つとすぐ絞り込み（START のピン留めは隠れる）
+        compose.onNode(androidx.compose.ui.test.hasSetTextAction() and androidx.compose.ui.test.isFocused()).performTextInput("Ch")
+        compose.waitForIdle()
+        compose.onNodeWithText("START").assertDoesNotExist()
+        compose.onNodeWithText("Chat").assertExists()
+        scenario!!.onActivity { m.moveStartPin(m.startPins.last(), -1) }
+        org.junit.Assert.assertEquals(listOf("Maps", "Notes"), m.startItems().map { jp.yaegaki.theta.home.ui.dockLabel(it.second) })
+    }
 }

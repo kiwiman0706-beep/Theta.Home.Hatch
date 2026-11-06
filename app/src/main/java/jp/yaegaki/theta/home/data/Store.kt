@@ -630,6 +630,11 @@ class Store(context: Context) {
         get() = prefs.getBoolean("welcomed", false)
         set(v) = prefs.edit().putBoolean("welcomed", v).apply()
 
+    /** START（すべてのアプリ）の上に大きく並べるピン留め。キーは favoriteApps と同じ書き方（アプリ・"pkg:"・"sc:"）。 */
+    var startPins: List<String>
+        get() = strings("startPins")
+        set(v) = putStrings("startPins", v)
+
     /** ピン留めしたファイル（並べた順）。 */
     var pinnedFiles: List<PinnedFile>
         get() = objects("pinnedFiles") { PinnedFile.fromJson(it) }

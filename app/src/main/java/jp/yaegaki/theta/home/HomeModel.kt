@@ -1750,6 +1750,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         folderViews = store.folderViews()
         queries = store.queries()
         pinnedFiles = store.pinnedFiles
+        startPins = store.startPins
         homeSections = store.homeSections
         appOrder = store.appOrder()
         tabOpts = store.tabOpts()
@@ -1794,7 +1795,28 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** ピン留めの中身：アプリ・ショートカット・機能。入っていないアプリ・消えたショートカットは出さない。 */
-    fun dockItems(): List<Pair<String, Any>> = favoriteApps.mapNotNull { key ->
+    fun dockItems(): List<Pair<String, Any>> = itemsFor(favoriteApps)
+
+    // ---- START（すべてのアプリ）のピン留め：端の下とは別に、START の上に大きく並べる ----
+
+    var startPins by mutableStateOf(store.startPins); private set
+    fun startItems(): List<Pair<String, Any>> = itemsFor(startPins)
+    fun isStartPinned(app: AppEntry) = app.key in startPins
+    fun toggleStartPin(key: String) {
+        startPins = if (key in startPins) startPins - key else startPins + key
+        store.startPins = startPins
+        (ctx as HomeApp).toast(if (key in startPins) "スタートにピン留めしました" else "スタートから外しました")
+    }
+    fun moveStartPin(key: String, delta: Int) {
+        val i = startPins.indexOf(key)
+        val j = i + delta
+        if (i < 0 || j !in startPins.indices) return
+        startPins = startPins.toMutableList().also { it.add(j, it.removeAt(i)) }
+        store.startPins = startPins
+    }
+
+    /** ピン留めのキー（アプリ・"pkg:"・"sc:"・"act:"）から、出すもの（アプリ・ショートカット・機能）へ。無くなったものは飛ばす。 */
+    private fun itemsFor(keys: List<String>): List<Pair<String, Any>> = keys.mapNotNull { key ->
         when {
             key.startsWith("sc:") -> shortcuts.firstOrNull { it.id == key.removePrefix("sc:") }
             key.startsWith("pkg:") -> apps.firstOrNull { it.packageName == key.removePrefix("pkg:") }
