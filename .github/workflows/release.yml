@@ -1,0 +1,79 @@
+name: release
+
+# シリーズ共通の鍵（Secret の 4 つ）で APK をビルド・署名し、GitHub Release に出す。
+# Actions の画面から版（例：1.0.0）を指定して実行する。タグ v<版> はそのとき付く。
+# 版は app/build.gradle.kts の versionName と同じであること。本文は docs/release-notes/v<版>.md。
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版（例：1.0.0）'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      # シリーズ共通の鍵の SHA-256（Theta.Hatch.Series の secrets/README.md）
+      CERT_SHA256: f47740d8549bc1c37feb00b18780d80b52758b60252ba0d2217d83ab3f012a23
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: 版を確かめる
+        id: v
+        run: |
+          ver="${{ github.event.inputs.version }}"
+          ver="${ver#v}"
+          grep -q "versionName = \"${ver}\"" app/build.gradle.kts || { echo "::error::app/build.gradle.kts の versionName が ${ver} ではありません"; exit 1; }
+          notes="docs/release-notes/v${ver}.md"
+          test -f "$notes" || { echo "::error::$notes がありません"; exit 1; }
+          echo "ver=$ver" >> "$GITHUB_OUTPUT"
+          echo "notes=$notes" >> "$GITHUB_OUTPUT"
+      - name: 鍵を用意する
+        env:
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_B64" || { echo "::error::Secret ANDROID_KEYSTORE_B64 がありません"; exit 1; }
+          echo "$ANDROID_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+      - name: ビルド
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease
+      - name: 署名と版を確かめる
+        id: apk
+        run: |
+          ver="${{ steps.v.outputs.ver }}"
+          src=app/build/outputs/apk/release/app-release.apk
+          test -f "$src" || { echo "::error::署名済みの APK ができていません（Secret を確かめてください）"; exit 1; }
+          apk="ThetaHomeHatch-${ver}.apk"
+          cp "$src" "$apk"
+          bt=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          certs=$("$bt/apksigner" verify --print-certs "$apk")
+          echo "$certs"
+          echo "$certs" | grep -q "SHA-256 digest: ${CERT_SHA256}" || { echo "::error::シリーズ共通の鍵で署名されていません"; exit 1; }
+          "$bt/aapt2" dump badging "$apk" | grep -q "package: name='app.thetahatch.home'" || { echo "::error::アプリ ID が app.thetahatch.home ではありません"; exit 1; }
+          "$bt/aapt2" dump badging "$apk" | grep -q "versionName='${ver}'" || { echo "::error::APK の版が ${ver} ではありません"; exit 1; }
+          sha256sum "$apk" > "SHA256SUMS-${ver}.txt"
+          cat "SHA256SUMS-${ver}.txt"
+          echo "apk=$apk" >> "$GITHUB_OUTPUT"
+          echo "sums=SHA256SUMS-${ver}.txt" >> "$GITHUB_OUTPUT"
+      - name: Release を作る
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ver="${{ steps.v.outputs.ver }}"
+          # 版に「-」があるとき（1.1.0-beta など）だけ試験版。ハブは試験版を見ない（spec §6.1）
+          pre=""
+          case "$ver" in *-*) pre="--prerelease";; esac
+          gh release create "v${ver}" "${{ steps.apk.outputs.apk }}" "${{ steps.apk.outputs.sums }}" --target "$GITHUB_SHA" \
+            --title "Theta Home Hatch ${ver}" --notes-file "${{ steps.v.outputs.notes }}" $pre

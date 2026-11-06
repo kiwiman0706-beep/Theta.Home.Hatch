@@ -8,9 +8,9 @@
         android:shortcutLongLabel="@string/show_tabs_long"
         android:shortcutShortLabel="@string/show_tabs">
         <intent
-            android:action="jp.yaegaki.theta.home.SHOW_TABS"
-            android:targetClass="jp.yaegaki.theta.home.edge.EdgeLauncher"
-            android:targetPackage="jp.yaegaki.theta.home" />
+            android:action="app.thetahatch.home.SHOW_TABS"
+            android:targetClass="app.thetahatch.home.edge.EdgeLauncher"
+            android:targetPackage="app.thetahatch.home" />
     </shortcut>
     <shortcut
         android:enabled="true"
@@ -19,9 +19,9 @@
         android:shortcutLongLabel="@string/quick_voice_long"
         android:shortcutShortLabel="@string/quick_voice">
         <intent
-            android:action="jp.yaegaki.theta.home.QUICK"
-            android:targetClass="jp.yaegaki.theta.home.edge.EdgeLauncher"
-            android:targetPackage="jp.yaegaki.theta.home">
+            android:action="app.thetahatch.home.QUICK"
+            android:targetClass="app.thetahatch.home.edge.EdgeLauncher"
+            android:targetPackage="app.thetahatch.home">
             <extra android:name="mode" android:value="voice" />
         </intent>
     </shortcut>
@@ -32,9 +32,9 @@
         android:shortcutLongLabel="@string/quick_text_long"
         android:shortcutShortLabel="@string/quick_text">
         <intent
-            android:action="jp.yaegaki.theta.home.QUICK"
-            android:targetClass="jp.yaegaki.theta.home.edge.EdgeLauncher"
-            android:targetPackage="jp.yaegaki.theta.home">
+            android:action="app.thetahatch.home.QUICK"
+            android:targetClass="app.thetahatch.home.edge.EdgeLauncher"
+            android:targetPackage="app.thetahatch.home">
             <extra android:name="mode" android:value="text" />
         </intent>
     </shortcut>
@@ -45,9 +45,9 @@
         android:shortcutLongLabel="@string/quick_photo_long"
         android:shortcutShortLabel="@string/quick_photo">
         <intent
-            android:action="jp.yaegaki.theta.home.QUICK"
-            android:targetClass="jp.yaegaki.theta.home.edge.EdgeLauncher"
-            android:targetPackage="jp.yaegaki.theta.home">
+            android:action="app.thetahatch.home.QUICK"
+            android:targetClass="app.thetahatch.home.edge.EdgeLauncher"
+            android:targetPackage="app.thetahatch.home">
             <extra android:name="mode" android:value="photo" />
         </intent>
     </shortcut>
@@ -58,9 +58,9 @@
         android:shortcutLongLabel="@string/voice_app_long"
         android:shortcutShortLabel="@string/voice_app">
         <intent
-            android:action="jp.yaegaki.theta.home.VOICE_APP"
-            android:targetClass="jp.yaegaki.theta.home.edge.EdgeLauncher"
-            android:targetPackage="jp.yaegaki.theta.home">
+            android:action="app.thetahatch.home.VOICE_APP"
+            android:targetClass="app.thetahatch.home.edge.EdgeLauncher"
+            android:targetPackage="app.thetahatch.home">
         </intent>
     </shortcut>
 </shortcuts>

@@ -110,7 +110,7 @@
             android:exported="false"
             android:label="ホームのレスキュー"
             android:process=":rescue"
-            android:taskAffinity="jp.yaegaki.theta.home.rescue"
+            android:taskAffinity="app.thetahatch.home.rescue"
             android:theme="@android:style/Theme.Material.NoActionBar" />
 
         <service
@@ -170,22 +170,22 @@
             android:exported="true"
             android:launchMode="singleTask"
             android:resizeableActivity="true"
-            android:taskAffinity="jp.yaegaki.theta.home.edge"
+            android:taskAffinity="app.thetahatch.home.edge"
             android:theme="@style/Theme.HomeHatch.Edge"
             android:windowSoftInputMode="adjustResize">
             <!-- ほかのアプリ（Dimple・モードとルーチン・自動化アプリ）から呼べる入口 -->
             <intent-filter>
-                <action android:name="jp.yaegaki.theta.home.SHOW_TABS" />
+                <action android:name="app.thetahatch.home.SHOW_TABS" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <!-- 入力（声・文字・写真 → 送り先を選ぶ）。extra "mode" に voice・text・photo -->
             <intent-filter>
-                <action android:name="jp.yaegaki.theta.home.QUICK" />
+                <action android:name="app.thetahatch.home.QUICK" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <!-- 声でアプリを開く（呼び名でも） -->
             <intent-filter>
-                <action android:name="jp.yaegaki.theta.home.VOICE_APP" />
+                <action android:name="app.thetahatch.home.VOICE_APP" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -196,12 +196,12 @@
             android:excludeFromRecents="true"
             android:exported="true"
             android:noHistory="true"
-            android:taskAffinity="jp.yaegaki.theta.home.edgelauncher"
+            android:taskAffinity="app.thetahatch.home.edgelauncher"
             android:theme="@style/Theme.HomeHatch.Invisible">
             <intent-filter>
-                <action android:name="jp.yaegaki.theta.home.SHOW_TABS" />
-                <action android:name="jp.yaegaki.theta.home.QUICK" />
-                <action android:name="jp.yaegaki.theta.home.VOICE_APP" />
+                <action android:name="app.thetahatch.home.SHOW_TABS" />
+                <action android:name="app.thetahatch.home.QUICK" />
+                <action android:name="app.thetahatch.home.VOICE_APP" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

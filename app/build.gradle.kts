@@ -14,25 +14,28 @@ val signing = Properties().apply {
 fun signingValue(key: String, env: String): String? = signing.getProperty(key) ?: System.getenv(env)
 
 android {
-    namespace = "jp.yaegaki.theta.home"
+    namespace = "app.thetahatch.home"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "jp.yaegaki.theta.home"
+        applicationId = "app.thetahatch.home"
         minSdk = 29
         targetSdk = 35
         versionCode = 55
         versionName = "0.42.0-alpha"
     }
 
+    // 署名はシリーズ共通の鍵（Theta.Hatch.Series の secrets/README.md）。CI では Secret の 4 つ
+    // （ANDROID_KEYSTORE_B64 を戻したファイルの場所が ANDROID_KEYSTORE_FILE、ANDROID_KEYSTORE_PASSWORD・ANDROID_KEY_ALIAS・ANDROID_KEY_PASSWORD）。
+    // 手元では keystore.properties（storeFile・storePassword・keyAlias・keyPassword）でもよい
     signingConfigs {
-        val store = signingValue("storeFile", "HOME_KEYSTORE")
+        val store = signingValue("storeFile", "ANDROID_KEYSTORE_FILE")
         if (store != null) {
             create("release") {
                 storeFile = file(store)
-                storePassword = signingValue("storePassword", "HOME_KEYSTORE_PASSWORD")
-                keyAlias = signingValue("keyAlias", "HOME_KEY_ALIAS")
-                keyPassword = signingValue("keyPassword", "HOME_KEY_PASSWORD")
+                storePassword = signingValue("storePassword", "ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = signingValue("keyAlias", "ANDROID_KEY_ALIAS")
+                keyPassword = signingValue("keyPassword", "ANDROID_KEY_PASSWORD")
             }
         }
     }
