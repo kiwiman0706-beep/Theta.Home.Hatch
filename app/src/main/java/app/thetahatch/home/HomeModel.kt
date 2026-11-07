@@ -260,15 +260,6 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     var hatchFocus by mutableStateOf<String?>(null)
     var hubMobile by mutableStateOf(store.hubMobile); private set
     private var hatchCheckedAt = 0L
-    /** ギガの残り（容量を入れていなければ null）。usedBytes が null なら使用状況へのアクセスが無い。 */
-    var giga by mutableStateOf<app.thetahatch.home.data.Giga.State?>(null); private set
-    var gigaNeedsAccess by mutableStateOf(false); private set
-    var gigaPlan by mutableStateOf(store.gigaPlan); private set
-    var gigaWarn by mutableStateOf(store.gigaWarn); private set
-    /** 今月足した分（繰り越し・チャージ）。月が変わっていたら 0。 */
-    val gigaExtra: Float get() = if (store.gigaExtraMonth == app.thetahatch.home.data.Giga.month()) store.gigaExtra else 0f
-    private var gigaUsed: Long? = null
-
     /** 移行の段階を読み直すきっかけ。 */
     var migrationTick by mutableStateOf(0)
 
@@ -2180,29 +2171,6 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun seriesLent() = app.thetahatch.home.hub.SeriesMeta.lent(store.prefs)
-
-    fun refreshGiga() {
-        if (gigaPlan <= 0f) { giga = null; gigaNeedsAccess = false; return }
-        viewModelScope.launch {
-            val used = withContext(Dispatchers.IO) { app.thetahatch.home.data.Giga.usedBytes(ctx) }
-            gigaUsed = used
-            gigaNeedsAccess = used == null
-            giga = used?.let { app.thetahatch.home.data.Giga.state(it, gigaPlan.toDouble(), store.gigaExtra.toDouble(), store.gigaExtraMonth, gigaWarn.toDouble()) }
-        }
-    }
-
-    /** 容量・足した分・知らせる残りを決める。remaining を渡せば My IIJmio の残量に合わせて足した分を出す。 */
-    fun saveGiga(plan: Float, extra: Float?, warn: Float, remaining: Float?) {
-        gigaPlan = plan.coerceAtLeast(0f); store.gigaPlan = gigaPlan
-        gigaWarn = warn.coerceAtLeast(0f); store.gigaWarn = gigaWarn
-        val used = gigaUsed ?: app.thetahatch.home.data.Giga.usedBytes(ctx)
-        val e = when {
-            remaining != null && used != null -> app.thetahatch.home.data.Giga.extraFor(remaining.toDouble(), used, gigaPlan.toDouble()).toFloat()
-            else -> extra
-        }
-        if (e != null) { store.gigaExtra = e; store.gigaExtraMonth = app.thetahatch.home.data.Giga.month() }
-        refreshGiga()
-    }
 
     fun migrationStep(a: CatalogApp) = app.thetahatch.home.hub.Migration.step(ctx, a, store)
 

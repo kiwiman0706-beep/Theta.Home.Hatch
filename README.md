@@ -8,7 +8,7 @@
 スマホはアプリには行きやすいのにファイルには行きにくいので、PC のデスクトップのように「ファイルの置き場」をホームにする。ただ散らかして置くのではなく、ファイラーとして置く。
 
 - **ダウンロード：[Releases](https://github.com/kiwiman0706-beep/Theta.Home.Hatch/releases)**（`ThetaHomeHatch-<版>.apk`）
-- 版：**1.1.0（versionCode 110）**／package `app.thetahatch.home`（0.42 までは `jp.yaegaki.theta.home`）／Android 10（API 29）以上
+- 版：**1.1.1（versionCode 111）**／package `app.thetahatch.home`（0.42 までは `jp.yaegaki.theta.home`）／Android 10（API 29）以上
 - [Theta Hatch シリーズ](https://github.com/kiwiman0706-beep/Theta.Hatch.Series)の 1 つ。シリーズの**更新のハブ・設定のハブ**を兼ねる（下の「Hatch シリーズのハブ」）
 - 対象：Galaxy Z Fold5（カバー・メイン）、Alldocube iPlay 60 / 80 Pro 系、Unihertz Titan 2（物理キーボード）
 - **実機での確認はまだです。** 画面は JVM 上で描いて確かめています（[`docs/screenshots/`](docs/screenshots)）。
@@ -162,13 +162,6 @@ Drive API でつなぐ（読み取りのみ、`drive.readonly`）。ファイラ
 5. アプリで「Google でログイン」
 
 公開ステータスが「テスト」のままだと 1 週間ほどでログインし直しになることがある（「本番環境」にすれば避けられる。自分だけで使うなら審査は要らない）。
-
-## ギガの残り（IIJmio）
-
-設定 → GIGA で今月の容量を入れると、画面上部に「GIGA 残り 6.2/13G」。残りが決めた量（既定 1GB）を切ると「MY IIJMIO 開く ›」が出る（入っていなければ Google Play）。
-
-- IIJmio の残量の API（クーポンスイッチ API）は 2025-01-31 で終わったので、端末が測った今月（1 日から）のモバイル通信量から出す。使用状況へのアクセスの許可が要る
-- 繰り越し・チャージは「今月足した分」に入れるか、My IIJmio の残量を入れて合わせる。月が変わると 0 に戻る
 
 ## NAS と Tailscale
 
