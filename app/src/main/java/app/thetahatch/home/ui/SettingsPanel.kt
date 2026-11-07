@@ -88,6 +88,12 @@ fun SettingsPanel(model: HomeModel) {
                 }
                 if (!HatchNotificationListener.isEnabled(actions.activity)) ListenerHelp()
                 Gap(18.dp)
+                SectionTitle("GIGA / モバイルデータの残り", Modifier.padding(horizontal = 10.dp))
+                var gigaDialog by remember { mutableStateOf(false) }
+                FlowRow2 { PillButton(if (model.gigaPlan > 0f) "容量・残量を合わせる" else "残りを出す（容量を入れる）", { gigaDialog = true }) }
+                if (gigaDialog) GigaDialog(model) { gigaDialog = false }
+                Note("画面上部に「GIGA 残り 6.2/13G」。残りが少なくなると「MY IIJMIO 開く ›」が出ます。使用状況へのアクセスの許可が要ります（タスクバーと同じ）。")
+                Gap(18.dp)
                 SectionTitle("UPDATE / 更新", Modifier.padding(horizontal = 10.dp))
                 val u = model.update
                 Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {

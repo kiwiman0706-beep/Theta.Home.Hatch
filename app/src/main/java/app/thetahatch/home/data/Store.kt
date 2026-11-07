@@ -410,6 +410,24 @@ class Store(context: Context) {
         get() = prefs.getBoolean("autoUpdate", true)
         set(v) = prefs.edit().putBoolean("autoUpdate", v).apply()
 
+    /** ギガ：今月の容量（GB）。0 なら出さない。 */
+    var gigaPlan: Float
+        get() = prefs.getFloat("gigaPlan", 0f)
+        set(v) = prefs.edit().putFloat("gigaPlan", v).apply()
+
+    /** ギガ：今月足した分（繰り越し・チャージ、GB）と、その月（"2026-11"）。 */
+    var gigaExtra: Float
+        get() = prefs.getFloat("gigaExtra", 0f)
+        set(v) = prefs.edit().putFloat("gigaExtra", v).apply()
+    var gigaExtraMonth: String
+        get() = prefs.getString("gigaExtraMonth", "") ?: ""
+        set(v) = prefs.edit().putString("gigaExtraMonth", v).apply()
+
+    /** ギガ：残りがこれを切ったら知らせて My IIJmio のボタンを出す（GB）。 */
+    var gigaWarn: Float
+        get() = prefs.getFloat("gigaWarn", 1f)
+        set(v) = prefs.edit().putFloat("gigaWarn", v).apply()
+
     /** Hatch の更新：モバイル回線でも取得する（既定オフ）。 */
     var hubMobile: Boolean
         get() = prefs.getBoolean("hubMobile", false)

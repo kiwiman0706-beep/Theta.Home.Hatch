@@ -112,6 +112,8 @@
         </intent>
         <package android:name="jp.naver.line.android" />
         <package android:name="com.tailscale.ipn" />
+        <!-- ギガが足りないときに開く My IIJmio -->
+        <package android:name="jp.ad.iij.myiijmio" />
     </queries>
 
     <application

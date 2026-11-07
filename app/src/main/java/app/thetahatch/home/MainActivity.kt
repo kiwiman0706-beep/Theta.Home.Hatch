@@ -50,6 +50,7 @@ class MainActivity : ComponentActivity() {
     private val speedTick: Runnable = object : Runnable {
         override fun run() {
             model.refreshSpeed()
+            model.refreshGiga()
             healthy.postDelayed(this, 5 * 60_000L)
         }
     }
@@ -117,6 +118,7 @@ class MainActivity : ComponentActivity() {
         model.refreshStatus()
         model.refreshWeather()
         model.refreshSpeed()
+        model.refreshGiga()
         // ホームが前にある間は 5 分ごとに回線の速さ（測るかどうかは設定の間隔で決める）
         healthy.removeCallbacks(speedTick)
         healthy.postDelayed(speedTick, 5 * 60_000L)

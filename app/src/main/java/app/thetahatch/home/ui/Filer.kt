@@ -553,6 +553,8 @@ internal fun StatusStrip(model: HomeModel, openNasSettings: () -> Unit) {
         }
     }
     val nasOk = s?.nas == Nas.OK
+    var gigaDialog by remember { mutableStateOf(false) }
+    if (gigaDialog) GigaDialog(model) { gigaDialog = false }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             chip("NET", if (s == null) "----" else if (s.network) "ONLINE" else "OFFLINE", s?.network) { model.refreshStatus(force = true) }
@@ -566,6 +568,18 @@ internal fun StatusStrip(model: HomeModel, openNasSettings: () -> Unit) {
             }, if (sp == null) (if (model.speedError != null) false else null) else sp.down >= 1.0) { model.refreshSpeed(force = true) }
             if (s?.network == false || model.speedError != null || (sp != null && sp.down < 0.5)) {
                 chip("RECONNECT", "再接続 ›", false) { model.reconnect(actions.start) }
+            }
+            // ギガの残り（端末で測った量）。足りないときは My IIJmio を開くボタン
+            if (model.gigaPlan > 0f) {
+                val g = model.giga
+                chip("GIGA", when {
+                    model.gigaNeedsAccess -> "許可 ›"
+                    g == null -> "----"
+                    else -> "残り ${app.thetahatch.home.data.Giga.label(g.remainingGb)}/${app.thetahatch.home.data.Giga.label(g.totalGb)}G"
+                }, if (model.gigaNeedsAccess) false else g?.let { !it.low }) {
+                    if (model.gigaNeedsAccess) actions.start(Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)) else gigaDialog = true
+                }
+                if (g?.low == true) chip("MY IIJMIO", "開く ›", false) { actions.start(app.thetahatch.home.data.Giga.openIntent(actions.activity)) }
             }
             chip("TAILSCALE", when {
                 s == null -> "----"
@@ -1137,6 +1151,46 @@ private fun Preview(model: HomeModel, r: Row?, modifier: Modifier) {
 }
 
 /** NAS の接続先。パスワードは端末の鍵で暗号化して保存する。 */
+/** ギガの残り：容量・今月足した分・知らせる残り。My IIJmio の残量を入れると、それに合わせる。 */
+@Composable
+fun GigaDialog(model: HomeModel, onDismiss: () -> Unit) {
+    val p = LocalPalette.current
+    val actions = LocalActions.current
+    fun num(v: Float) = if (v == 0f) "" else if (v % 1f == 0f) v.toInt().toString() else v.toString()
+    fun parse(t: String) = t.replace(',', '.').toFloatOrNull()
+    var plan by remember { mutableStateOf(num(model.gigaPlan)) }
+    var extra by remember { mutableStateOf(num(model.gigaExtra)) }
+    var warn by remember { mutableStateOf(num(model.gigaWarn)) }
+    var remaining by remember { mutableStateOf("") }
+    val g = model.giga
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("ギガの残り") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                g?.let { Text("今月 ${"%.2f".format(it.usedGb)}GB 使用 · 残り ${"%.2f".format(it.remainingGb)}GB", color = if (it.low) p.accent else p.fg, fontSize = 14.sp, fontFamily = Hud.mono) }
+                Text("今月の容量（GB、0 で出さない）", color = p.muted, fontSize = 12.sp)
+                Field(plan, { plan = it.filter { c -> c.isDigit() || c == '.' } }, "例 10")
+                Text("今月足した分（繰り越し・チャージ、GB）", color = p.muted, fontSize = 12.sp)
+                Field(extra, { extra = it.filter { c -> c.isDigit() || c == '.' || c == '-' } }, "例 3.5")
+                Text("または My IIJmio の今の残量（GB）を入れて合わせる", color = p.muted, fontSize = 12.sp)
+                Field(remaining, { remaining = it.filter { c -> c.isDigit() || c == '.' } }, "例 6.8（入れたら上の足した分は計算し直す）")
+                Text("残りがこれを切ったら知らせる（GB）", color = p.muted, fontSize = 12.sp)
+                Field(warn, { warn = it.filter { c -> c.isDigit() || c == '.' } }, "例 1")
+                Note("IIJmio の残量の API は終わったので、端末が測った今月（1 日から）のモバイル通信量から出しています。IIJmio の集計と少しずれることがあるので、ときどき My IIJmio の残量で合わせてください。月が変わると足した分は 0 に戻ります。")
+                PillButton("My IIJmio を開く ↗", { actions.start(app.thetahatch.home.data.Giga.openIntent(actions.activity)) })
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                model.saveGiga(parse(plan) ?: 0f, parse(extra) ?: 0f, parse(warn) ?: 1f, parse(remaining))
+                onDismiss()
+            }) { Text("保存") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("やめる") } },
+    )
+}
+
 @Composable
 fun NasDialog(model: HomeModel, onDismiss: () -> Unit) {
     val p = LocalPalette.current
