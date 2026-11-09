@@ -264,6 +264,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     var migrationTick by mutableStateOf(0)
 
     init {
+        store.tidyLayoutOnce()
         refreshAll()
     }
 
@@ -407,6 +408,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     var homeSections by mutableStateOf(store.homeSections); private set
     var homeTwoColumns by mutableStateOf(store.homeTwoColumns); private set
+    var weatherDetail by mutableStateOf(store.weatherDetail); private set
+    fun changeWeatherDetail(v: Boolean) { weatherDetail = v; store.weatherDetail = v }
     fun changeHomeTwoColumns(v: Boolean) { homeTwoColumns = v; store.homeTwoColumns = v }
 
     private fun saveSections(list: List<HomeSection>) { homeSections = list; store.homeSections = list }

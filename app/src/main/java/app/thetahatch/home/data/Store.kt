@@ -671,6 +671,28 @@ class Store(context: Context) {
         }
         set(v) = putObjects("homeSections", v) { it.toJson() }
 
+    /** 天気の 24 時間・7 日を出す（ふだんはたたむ）。 */
+    var weatherDetail: Boolean
+        get() = prefs.getBoolean("weatherDetail", false)
+        set(v) = prefs.edit().putBoolean("weatherDetail", v).apply()
+
+    /**
+     * 1.2.0 の並びの見直しを 1 回だけ：端末（電池・容量）は出さない、閉じた画面のファイルへの入口は出さない
+     * （どちらも場所のわりに使わないので）。設定の「HOME / ホームの並び」で戻せる。
+     */
+    fun tidyLayoutOnce() {
+        if (prefs.getBoolean("layoutTidy120", false)) return
+        prefs.edit().putBoolean("layoutTidy120", true).apply()
+        if (objects("homeSections") { HomeSection.fromJson(it) }.isEmpty()) return
+        homeSections = homeSections.map {
+            when (it.id) {
+                HomeSection.DEVICE -> it.copy(narrow = false, wide = false)
+                HomeSection.FILES -> it.copy(narrow = false)
+                else -> it
+            }
+        }
+    }
+
     /** 開いた画面・横長では 2 列に並べる。 */
     var homeTwoColumns: Boolean
         get() = prefs.getBoolean("homeTwoColumns", true)
@@ -867,25 +889,27 @@ data class HomeSection(val id: String, val narrow: Boolean = true, val wide: Boo
         const val FILES = "files"
         const val FILER = "filer"
         const val DEVICE = "device"
+        const val QUICK = "quick"
 
         /** 初めの並び。開いた画面では左に時計・予定など、右にファイラー。閉じた画面ではファイラーの代わりにファイルへの入口。 */
         val DEFAULTS = listOf(
             HomeSection(CLOCK),
             HomeSection(SEARCH),
+            HomeSection(QUICK),
             HomeSection(TODAY),
             HomeSection(NOTICE),
             HomeSection(PINS),
             HomeSection(MUSIC),
             HomeSection(WEATHER),
             HomeSection(STATUS),
-            HomeSection(FILES, narrow = true, wide = false),
+            HomeSection(FILES, narrow = false, wide = false),
             HomeSection(FILER, narrow = false, wide = true, col = 1),
-            HomeSection(DEVICE),
+            HomeSection(DEVICE, narrow = false, wide = false),
         )
 
         val LABELS = mapOf(
             CLOCK to "時計", SEARCH to "検索", TODAY to "予定", NOTICE to "通知", PINS to "ピン留めのファイル", MUSIC to "再生中の音楽", WEATHER to "天気",
-            STATUS to "つながり（ネット・NAS など）", FILES to "ファイルへの入口", FILER to "ファイラー", DEVICE to "端末（電池・容量）",
+            QUICK to "すぐ記録（撮る・録る・書く）", STATUS to "つながり（ネット・NAS など）", FILES to "ファイルへの入口", FILER to "ファイラー", DEVICE to "端末（電池・容量）",
         )
     }
 }

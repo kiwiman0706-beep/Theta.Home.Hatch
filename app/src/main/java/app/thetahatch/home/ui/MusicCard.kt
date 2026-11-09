@@ -99,6 +99,22 @@ fun MusicCard(model: HomeModel) {
     }
     val art = n.art ?: loaded
     val shape = RoundedCornerShape(if (p.pop) p.radius else 0.dp)
+    // 止まっているときは 1 行：小さなジャケット・曲名・再生・開く（場所を取りすぎないように）
+    if (!n.playing) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clip(shape).background(p.raised).clickable(onClickLabel = "アプリを開く") { openApp() }, contentAlignment = Alignment.Center) {
+                if (art != null) Image(art.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                else GlyphIcon(Glyph.MUSIC, p.faint, 20.dp)
+            }
+            Column(Modifier.weight(1f)) {
+                Text(n.title.ifBlank { app?.label ?: "音楽" }, color = p.fg, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(listOf(n.artist, if (n.title.isBlank()) "" else app?.label.orEmpty()).filter { it.isNotBlank() }.joinToString(" · ").ifEmpty { "止まっています" },
+                    color = p.faint, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Control("▶", "再生", big = true) { MediaWatch.playPause() }
+        }
+        return
+    }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(

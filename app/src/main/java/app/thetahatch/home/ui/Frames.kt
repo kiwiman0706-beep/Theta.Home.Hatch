@@ -49,13 +49,13 @@ internal fun SectionFrame(
                 Text("$code  ${title}", color = p.bg, fontSize = 13.sp, fontFamily = Hud.mono, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 Text(trailing, color = p.bg, fontSize = 13.sp, fontFamily = Hud.mono)
             }
-            if (showBody) Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { body() }
+            if (showBody) Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { body() }
         }
         "window" -> {
             val shape = RoundedCornerShape(p.radius)
             Column(Modifier.fillMaxWidth().popShadow(p, shape).clip(shape).background(p.panel).border(lineWidth, p.line, shape)) {
                 WindowBar(title, header) { Text(trailing, color = p.fg, fontSize = 12.sp) }
-                if (showBody) Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { body() }
+                if (showBody) Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { body() }
             }
         }
         "lcd" -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -67,7 +67,7 @@ internal fun SectionFrame(
         }
         "soft", "braun" -> {
             val shape = RoundedCornerShape(p.radius)
-            Column(Modifier.fillMaxWidth().popShadow(p, shape).clip(shape).background(p.panel).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.fillMaxWidth().popShadow(p, shape).clip(shape).background(p.panel).padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(header.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (p.style == "braun") Box(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(p.accent))
                     Text(if (p.style == "braun") code else title, color = p.faint, fontSize = 12.sp, letterSpacing = if (p.style == "braun") 1.5.sp else 0.sp,
@@ -82,14 +82,14 @@ internal fun SectionFrame(
             val b = band ?: p.raised
             val on = if (b == p.accent) p.onAccent else p.fg
             Column(Modifier.fillMaxWidth().popShadow(p, shape).clip(shape).background(p.panel).border(lineWidth, p.line, shape)) {
-                Row(header.fillMaxWidth().background(b).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(header.fillMaxWidth().background(b).padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(code, color = on, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Text(title, color = on, fontSize = 12.sp, modifier = Modifier.weight(1f))
                     Text(trailing, color = on, fontSize = 12.sp)
                 }
                 if (showBody) {
                     Box(Modifier.fillMaxWidth().height(lineWidth).background(p.line))
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { body() }
+                    Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { body() }
                 }
             }
         }
@@ -110,7 +110,7 @@ internal fun SectionFrame(
 internal fun WindowBar(title: String, modifier: Modifier = Modifier, trailing: @Composable RowScope.() -> Unit = {}) {
     val p = LocalPalette.current
     Column {
-        Row(modifier.fillMaxWidth().background(p.accent).padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(modifier.fillMaxWidth().background(p.accent).padding(horizontal = 10.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(title, color = p.onAccent, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             trailing()
             listOf("–", "□", "×").forEach { g ->

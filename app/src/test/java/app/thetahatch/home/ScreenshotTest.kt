@@ -911,7 +911,7 @@ class ScreenshotTest {
         // 全部外すと区画も無くなり、外したまま覚えておく
         scenario!!.onActivity { m.removeNoticeRule("line") }
         compose.waitForIdle()
-        compose.onNodeWithText("[ FILES ]").assertExists()
+        compose.onNodeWithText("[ TODAY ]").assertExists()
         compose.onNodeWithText("[ NOTICE ]").assertDoesNotExist()
         org.junit.Assert.assertTrue(Store(m.getApplication()).noticeRules.isEmpty())
         scenario!!.onActivity {
@@ -921,12 +921,12 @@ class ScreenshotTest {
         }
         compose.waitForIdle()
         compose.onNodeWithText("[ NOTICE ]").assertExists()
-        compose.onNodeWithText("[ FILES ]").assertExists()
+        compose.onNodeWithText("[ TODAY ]").assertExists()
         compose.onNodeWithText("セール開催中").assertDoesNotExist()
         shot("notice-filter")
         compose.onNodeWithText("FILTER ⚙").performClick()
         compose.waitForIdle()
-        compose.onNodeWithText("[ FILES ]").assertExists()
+        compose.onNodeWithText("[ TODAY ]").assertExists()
         compose.onNodeWithText("閉じる").performClick()
         compose.waitForIdle()
         HatchNotificationListener.setForTest(emptyList())

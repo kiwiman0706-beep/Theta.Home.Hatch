@@ -273,7 +273,7 @@ private fun HudClock(d: Date, big: Boolean) {
         }
         Column(Modifier.padding(bottom = 8.dp)) {
             Text(SimpleDateFormat("yyyy.MM.dd", Locale.US).format(d), color = p.fg, fontSize = 14.sp, fontFamily = Hud.mono)
-            Text(SimpleDateFormat("EEE", Locale.US).format(d).uppercase(Locale.US) + " / " + SimpleDateFormat("E曜日", Locale.JAPAN).format(d), color = p.accent, fontSize = 12.sp, fontFamily = Hud.mono)
+            Text(SimpleDateFormat("E曜日", Locale.JAPAN).format(d), color = p.accent, fontSize = 13.sp)
         }
     }
 }
@@ -352,11 +352,11 @@ private fun SoftClock(d: Date, big: Boolean) {
     val p = LocalPalette.current
     val shape = RoundedCornerShape(p.radius)
     Column(
-        Modifier.popShadow(p, shape).clip(shape).background(p.panel).padding(horizontal = 22.dp, vertical = 12.dp),
+        Modifier.popShadow(p, shape).clip(shape).background(p.panel).padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(SimpleDateFormat("HH:mm", Locale.US).format(d), color = p.fg, fontSize = if (big) 64.sp else 50.sp, fontWeight = FontWeight.Bold, lineHeight = if (big) 68.sp else 54.sp, letterSpacing = 2.sp)
-        Text(SimpleDateFormat("yyyy-MM-dd  EEE", Locale.US).format(d) + "  " + weekdayJa(d), color = p.muted, fontSize = 14.sp)
+        Text(SimpleDateFormat("yyyy-MM-dd", Locale.US).format(d) + "  " + weekdayJa(d), color = p.muted, fontSize = 14.sp)
     }
 }
 
@@ -371,7 +371,7 @@ private fun WindowClock(d: Date, big: Boolean) {
             Text(SimpleDateFormat("HH:mm", Locale.US).format(d), color = p.fg, fontSize = if (big) 64.sp else 48.sp, fontWeight = FontWeight.Bold, lineHeight = if (big) 68.sp else 52.sp)
             Column(Modifier.padding(bottom = 8.dp)) {
                 Text(SimpleDateFormat("yyyy.MM.dd", Locale.US).format(d), color = p.fg, fontSize = 14.sp)
-                Text(SimpleDateFormat("EEE", Locale.US).format(d).uppercase(Locale.US) + " / " + weekdayJa(d), color = p.widget, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text(weekdayJa(d), color = p.widget, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -424,7 +424,10 @@ internal fun SearchRow(model: HomeModel, leading: (@Composable () -> Unit)? = nu
 @Composable
 internal fun EventLine(e: Event, onClick: () -> Unit) {
     val p = LocalPalette.current
-    val done = !e.allDay && e.end < System.currentTimeMillis()
+    val nowMs = System.currentTimeMillis()
+    val done = !e.allDay && e.end < nowMs
+    // 目立たせるのは、今の予定と 1 時間以内に始まる予定だけ（全部を強調色にすると効かないので）
+    val soon = !e.allDay && !done && e.begin - nowMs < 3_600_000L
     Row(
         Modifier.fillMaxWidth().clickable(onClickLabel = "予定を開く", onClick = onClick).padding(vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -432,7 +435,7 @@ internal fun EventLine(e: Event, onClick: () -> Unit) {
     ) {
         Text(
             if (e.allDay) "ALL DAY" else SimpleDateFormat("HH:mm", Locale.US).format(Date(e.begin)),
-            color = if (done) p.faint else p.accent, fontSize = 12.sp, fontFamily = Hud.mono, modifier = Modifier.width(58.dp),
+            color = when { done -> p.faint; soon -> p.accent; else -> p.muted }, fontSize = 12.sp, fontFamily = Hud.mono, modifier = Modifier.width(58.dp),
         )
         Box(Modifier.width(3.dp).height(16.dp).background(if (e.color != 0) Color(e.color) else p.widget))
         Text(e.title, color = if (done) p.faint else p.fg, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
@@ -553,8 +556,34 @@ internal fun StatusStrip(model: HomeModel, openNasSettings: () -> Unit) {
         }
     }
     val nasOk = s?.nas == Nas.OK
+    // 全部が正常なら 1 行の小さな表示だけ（押すと広げる）。問題があるときはいつものチップ
+    val sp0 = model.speed
+    val allOk = s != null && s.network && model.speedError == null && (sp0 == null || sp0.down >= 1.0) &&
+        (!s.tailscale || s.vpn) && (s.nas == Nas.OK || s.nas == Nas.UNSET) && !model.safeMode && model.isDefaultHome &&
+        !(model.update.newer && model.update.latest != null)
+    var expanded by remember { mutableStateOf(false) }
+    if (allOk && !expanded) {
+        Row(
+            Modifier.fillMaxWidth().clickable(onClickLabel = "つながりを詳しく") { expanded = true }.padding(vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Box(Modifier.size(7.dp).clip(androidx.compose.foundation.shape.CircleShape).background(p.launch))
+            Text(
+                listOfNotNull(
+                    "ONLINE",
+                    sp0?.let { "↓${app.thetahatch.home.data.NetSpeed.label(it.down)}M" },
+                    if (s!!.tailscale) "Tailscale ON" else null,
+                    if (s.nas == Nas.OK) "NAS" else null,
+                ).joinToString(" · "),
+                color = p.muted, fontSize = 11.sp, fontFamily = Hud.mono, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+            )
+            Text("▸", color = p.faint, fontSize = 11.sp)
+        }
+        return
+    }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (allOk) chip("▾", "たたむ", null) { expanded = false }
             chip("NET", if (s == null) "----" else if (s.network) "ONLINE" else "OFFLINE", s?.network) { model.refreshStatus(force = true) }
             // 回線の速さ（押すと測り直す）。つながらない・とても遅いときは再接続
             val sp = model.speed
@@ -594,7 +623,6 @@ internal fun StatusStrip(model: HomeModel, openNasSettings: () -> Unit) {
             if (u.newer && u.latest != null) {
                 chip("UPDATE", if (u.progress != null) "%d%%".format((u.progress * 100).toInt()) else "v${u.latest.version} ›", false) { installUpdate(model, actions) }
             }
-            chip("REQUEST", "依頼 ↗", null) { openRequest(actions) }
         }
         if (s != null && s.nas != Nas.OK && s.nas != Nas.UNSET && !model.checking) {
             Text(s.message, color = p.muted, fontSize = 12.sp)
@@ -1047,12 +1075,12 @@ private fun Listing(
     }
 }
 
-/** サムネイル。写真・動画・PDF は中身を、それ以外は種類の札（フォルダはオレンジ）を出す。 */
+/** サムネイル。写真・動画・PDF は中身を、それ以外は種類の札（フォルダは強調色のフォルダの絵）を出す。 */
 @Composable
 private fun Thumb(model: HomeModel, r: Row, modifier: Modifier) {
     val p = LocalPalette.current
     val ctx = LocalActions.current.activity
-    BoxWithConstraints(modifier.clipToBounds().background(if (r.isDir) p.accent else p.raised).border(1.dp, if (r.isDir) p.accent else p.line), contentAlignment = Alignment.Center) {
+    BoxWithConstraints(modifier.clipToBounds().background(p.raised).border(1.dp, p.line), contentAlignment = Alignment.Center) {
         val side = minOf(maxWidth, maxHeight)
         val px = with(LocalDensity.current) { side.roundToPx() }
         val kind = if (r.isDir) null else Thumbs.kind(r.name, r.mime) ?: if (r.drive?.thumb != null) "doc" else null
@@ -1074,7 +1102,7 @@ private fun Thumb(model: HomeModel, r: Row, modifier: Modifier) {
                 modifier = Modifier.align(Alignment.BottomStart).background(Color(0x99000000)).padding(horizontal = 4.dp))
         } else if (r.isDir) {
             val virtual = r.drive?.id?.startsWith(SavedQuery.PREFIX) == true || r.nas?.path?.startsWith("?") == true
-            GlyphIcon(if (virtual) Glyph.SEARCH else Glyph.FOLDER, p.onAccent, size = side * 0.5f)
+            GlyphIcon(if (virtual) Glyph.SEARCH else Glyph.FOLDER, p.accent, size = side * 0.5f)
         } else {
             Text(r.badge, color = p.muted, fontSize = (side.value * 0.24f).coerceIn(10f, 22f).sp, fontFamily = Hud.mono, maxLines = 1)
         }

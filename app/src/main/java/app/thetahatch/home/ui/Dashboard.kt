@@ -85,9 +85,15 @@ fun HomeBoard(model: HomeModel, openNasSettings: () -> Unit, openDriveSettings: 
     LaunchedEffect(model.weatherPlace) { model.refreshWeather() }
     val sections = model.sectionsHere()
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val twoCols = model.profile == "wide" && model.homeTwoColumns && maxWidth >= 640.dp
-        val left = sections.filter { !twoCols || it.col == 0 }
-        val right = if (twoCols) sections.filter { it.col == 1 } else emptyList()
+        // 両側にタブを出すと幅が減るので 560dp から（Fold5 のメインで両側のタブでも 2 列になるように）
+        val twoCols = model.profile == "wide" && model.homeTwoColumns && maxWidth >= 560.dp
+        // 右の列に何も置いていなければ、ファイラー（無ければ下半分）を右へ。全部が 1 列に縦に並ばないように
+        val placed = if (twoCols && sections.none { it.col == 1 } && sections.size > 1) {
+            if (sections.any { it.id == HomeSection.FILER }) sections.map { if (it.id == HomeSection.FILER) it.copy(col = 1) else it }
+            else sections.mapIndexed { i, it -> if (i >= (sections.size + 1) / 2) it.copy(col = 1) else it }
+        } else sections
+        val left = placed.filter { !twoCols || it.col == 0 }
+        val right = if (twoCols) placed.filter { it.col == 1 } else emptyList()
         // 探している間も並びは変えない（検索の箱を作り直すとキーボードが閉じるので）。検索のある列で、箱の下に結果を出す
         // 検索の区画を出していない画面で（キーボードから）打ったときは、箱と結果だけを出す
         if (model.query.isNotBlank() && sections.none { it.id == HomeSection.SEARCH }) Column(
@@ -115,8 +121,8 @@ private fun SectionColumn(model: HomeModel, list: List<HomeSection>, modifier: M
             FilerSection(model, Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 12.dp), openNasSettings, openDriveSettings)
         } else {
             Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 list.forEachIndexed { i, s ->
                     key(s.id) { if (!searching || i <= upto) SectionView(model, s, filerHeight, openNasSettings, openDriveSettings) }
@@ -132,10 +138,7 @@ private fun SectionColumn(model: HomeModel, list: List<HomeSection>, modifier: M
 @Composable
 private fun SectionView(model: HomeModel, s: HomeSection, filerHeight: Dp, openNasSettings: () -> Unit, openDriveSettings: () -> Unit) {
     when (s.id) {
-        HomeSection.CLOCK -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            ClockBlock(big = model.profile == "wide")
-            Ticks(Modifier.fillMaxWidth().height(6.dp))
-        }
+        HomeSection.CLOCK -> ClockBlock(big = model.profile == "wide")
         HomeSection.SEARCH -> SearchRow(model)
         HomeSection.TODAY -> Panel(model, "TODAY", "予定", folded = {
             val next = model.nextEvent
@@ -152,6 +155,7 @@ private fun SectionView(model: HomeModel, s: HomeSection, filerHeight: Dp, openN
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }) { WeatherPanel(model) }
         HomeSection.STATUS -> StatusStrip(model, openNasSettings)
+        HomeSection.QUICK -> QuickSection(model)
         HomeSection.FILES -> Panel(model, "FILES", "ファイル") { FilesPanel(model) }
         HomeSection.FILER -> FilerSection(model, Modifier.fillMaxWidth().height(filerHeight), openNasSettings, openDriveSettings)
         HomeSection.DEVICE -> Panel(model, "DEVICE", "端末") { DevicePanel() }
@@ -195,6 +199,53 @@ private fun MusicPanel(model: HomeModel) {
         now?.let { n -> Text((if (n.playing) "▶ " else "❚❚ ") + listOf(n.title, n.artist).filter { it.isNotBlank() }.joinToString(" — "),
             color = LocalPalette.current.muted, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
     }) { MusicCard(model) }
+}
+
+/**
+ * すぐ記録：撮る（写真に言葉を添えて残す）・録る（録音。もう一度押すと止める）・書く（文字で残す）。
+ * 撮る・書くは「入力」と同じで、MemoHatch に残してから送り先を選べる。録音は記録（CAPTURE）に残る。
+ */
+@Composable
+private fun QuickSection(model: HomeModel) {
+    val p = LocalPalette.current
+    val actions = LocalActions.current
+    val ctx = actions.activity
+    val recording by app.thetahatch.home.capture.RecordingService.startedAt.collectAsState()
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(recording) {
+        while (recording != null) { now = System.currentTimeMillis(); delay(1000) }
+        model.refreshCaptures()
+    }
+    fun record() {
+        if (recording != null) { app.thetahatch.home.capture.RecordingService.stop(ctx); return }
+        val need = buildList {
+            if (!model.has(Manifest.permission.RECORD_AUDIO)) add(Manifest.permission.RECORD_AUDIO)
+            if (android.os.Build.VERSION.SDK_INT >= 33 && !model.has(Manifest.permission.POST_NOTIFICATIONS)) add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        if (need.isEmpty()) app.thetahatch.home.capture.RecordingService.start(ctx)
+        else actions.requestPermissions(need.toTypedArray()) {
+            if (model.has(Manifest.permission.RECORD_AUDIO)) app.thetahatch.home.capture.RecordingService.start(ctx) else actions.toast("録音にはマイクの許可が必要です")
+        }
+    }
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(if (p.pop) p.radius else 0.dp)
+    @Composable
+    fun androidx.compose.foundation.layout.RowScope.Big(glyph: Glyph, label: String, on: Boolean, desc: String, onClick: () -> Unit) {
+        val bg = if (on) p.accent2 else p.accent
+        Column(
+            Modifier.weight(1f).height(64.dp).popShadow(p, shape).clip(shape).background(bg)
+                .clickable(onClickLabel = desc, onClick = onClick),
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+        ) {
+            GlyphIcon(glyph, p.onAccent, 22.dp)
+            Text(label, color = p.onAccent, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        }
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Big(Glyph.CAMERA, "撮る", false, "写真を撮って残す") { model.quickOpen = "photo" }
+        val rec = recording
+        Big(Glyph.MIC, if (rec != null) "■ ${(now - rec) / 1000}秒" else "録る", rec != null, if (rec != null) "録音を止める" else "録音する") { record() }
+        Big(Glyph.PENCIL, "書く", false, "文字で残す") { model.quickOpen = "text" }
+    }
 }
 
 /** ピン留めしたファイルの区画。留めたものが無ければ出さない。押すと開く。 */
@@ -271,10 +322,10 @@ private fun WeatherPanel(model: HomeModel) {
         }
     } else {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            WeatherGlyph(f?.code ?: 3, 52.dp, p.accent, night = f?.isDay == false)
+            WeatherGlyph(f?.code ?: 3, 40.dp, p.accent, night = f?.isDay == false)
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(f?.let { "${it.temp.roundToInt()}°" } ?: "--°", color = p.fg, fontSize = 40.sp, fontFamily = Hud.display, fontWeight = FontWeight.Light, lineHeight = 44.sp)
+                    Text(f?.let { "${it.temp.roundToInt()}°" } ?: "--°", color = p.fg, fontSize = 32.sp, fontFamily = Hud.display, fontWeight = FontWeight.Light, lineHeight = 36.sp)
                     Text(f?.let { Weather.label(it.code) } ?: "", color = p.fg, fontSize = 14.sp, modifier = Modifier.padding(bottom = 6.dp))
                 }
                 if (f != null) Text(
@@ -299,7 +350,22 @@ private fun WeatherPanel(model: HomeModel) {
         }
         model.weatherError?.let { Text(it, color = p.accent, fontSize = 12.sp) }
         AlertChips(model)
-        if (f != null) {
+        // ふだんは 3 日分を 1 行だけ。24 時間と 7 日は「詳しく」で（場所を取りすぎるので）
+        if (f != null && !model.weatherDetail) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                f.days.drop(1).take(3).forEach { d ->
+                    Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(SimpleDateFormat("E", Locale.JAPAN).format(Date(d.date)), color = p.muted, fontSize = 12.sp)
+                        WeatherGlyph(d.code, 16.dp, p.fg)
+                        Text("${d.max.roundToInt()}/${d.min.roundToInt()}", color = p.fg, fontSize = 12.sp, fontFamily = Hud.mono, maxLines = 1)
+                        Text("${d.rain}%", color = if (d.rain >= 50) p.accent else p.muted, fontSize = 11.sp, fontFamily = Hud.mono, maxLines = 1)
+                    }
+                }
+                Text("詳しく ▾", color = p.faint, fontSize = 12.sp, modifier = Modifier.clickable { model.changeWeatherDetail(true) }.padding(4.dp))
+            }
+        }
+        if (f != null && model.weatherDetail) {
+            Text("たたむ ▴", color = p.faint, fontSize = 12.sp, modifier = Modifier.clickable { model.changeWeatherDetail(false) }.padding(vertical = 2.dp))
             // 24 時間：時刻・絵・気温・降水確率
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 f.hours.forEach { h ->
@@ -324,9 +390,9 @@ private fun WeatherPanel(model: HomeModel) {
                             color = if (i == 0) p.accent else p.fg, fontSize = 12.sp, fontFamily = Hud.mono, modifier = Modifier.width(90.dp),
                         )
                         WeatherGlyph(d.code, 18.dp, p.fg)
-                        Spacer(Modifier.weight(1f))
-                        Text("${d.max.roundToInt()}° / ${d.min.roundToInt()}°", color = p.fg, fontSize = 12.sp, fontFamily = Hud.mono)
+                        Text("${d.max.roundToInt()}° / ${d.min.roundToInt()}°", color = p.fg, fontSize = 12.sp, fontFamily = Hud.mono, modifier = Modifier.width(84.dp))
                         Text("${d.rain}%", color = if (d.rain >= 50) p.accent else p.muted, fontSize = 11.sp, fontFamily = Hud.mono, modifier = Modifier.width(34.dp))
+                        Spacer(Modifier.weight(1f))
                     }
                 }
             }

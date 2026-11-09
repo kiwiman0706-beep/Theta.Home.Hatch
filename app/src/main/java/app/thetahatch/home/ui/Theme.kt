@@ -237,7 +237,7 @@ val SoftPalette = Palette(
     accent2 = Color(0xFFE8606F),
     accent3 = Color(0xFF7FC08E),
     style = "soft",
-    radius = 18.dp,
+    radius = 14.dp,
     font = "sans",
     shadow = "soft",
     iconShape = "round",
@@ -414,8 +414,9 @@ fun androidx.compose.ui.Modifier.popShadow(p: Palette, shape: androidx.compose.u
     "soft" -> this.drawBehind {
         val outline = shape.createOutline(size, layoutDirection, this)
         // 重ねるほど薄く、遠くへ：ぼかした影の代わり
-        for (i in 1..5) {
-            val o = i * 1.6.dp.toPx()
+        // 3 重・近くに：影が場所を取りすぎないように（1.x までは 5 重・1.6dp ずつ）
+        for (i in 1..3) {
+            val o = i * 1.3.dp.toPx()
             translate(o, o) { drawOutline(outline, Color.Black.copy(alpha = 0.035f)) }
             translate(-o * 0.6f, -o * 0.6f) { drawOutline(outline, Color.White.copy(alpha = 0.12f)) }
         }
