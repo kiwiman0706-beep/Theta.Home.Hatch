@@ -996,6 +996,27 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     /** 開いている入力の初めのやり方（"voice"・"text"・"photo"）。null なら閉じている。 */
     var quickOpen by mutableStateOf<String?>(null)
+    /** 入力を開くときに最初から入れておく文（録音の文字起こしなど）。開いたら空に戻す。 */
+    var quickPrefill by mutableStateOf("")
+    /** 録音を文字起こししている間 true。 */
+    var transcribing by mutableStateOf(false); private set
+
+    /** 録り終えた録音を Gemini で文字起こしして、入力を開く（送り先を選べる）。キーが無ければ録音だけ残す。 */
+    fun transcribeAndOpen(audio: java.io.File) {
+        val key = store.geminiKey
+        val home = ctx as HomeApp
+        if (key.isEmpty()) { home.toast("録音を「記録」に残しました（Gemini のキーを入れると文字起こしもします）"); return }
+        transcribing = true
+        viewModelScope.launch {
+            val r = runCatching { app.thetahatch.home.data.Transcribe.run(key, audio) }
+            transcribing = false
+            r.onSuccess { quickPrefill = it; quickOpen = "text" }
+                .onFailure { home.toast("文字起こしできませんでした：${it.message}（録音は「記録」に残っています）") }
+        }
+    }
+
+    /** 入力の送り先に出す AI のアプリ（入っているものだけ）。 */
+    fun aiTargets(): List<String> = AI_APPS.filter { (_, pkg) -> apps.any { it.packageName == pkg } }.map { it.key }
     var quickTargets by mutableStateOf(store.quickTargets); private set
     var quickMemo by mutableStateOf(store.quickMemo); private set
     fun changeQuickMemo(v: Boolean) { quickMemo = v; store.quickMemo = v }
@@ -1008,6 +1029,10 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         t == "mail" -> "メール"
         t == "share" -> "ほかへ共有"
         t == "clip" -> "Clip"
+        t == "copy" -> "コピー"
+        t == "gemini" -> "Gemini"
+        t == "claude" -> "Claude"
+        t == "chatgpt" -> "ChatGPT"
         else -> t
     }
 
@@ -1058,6 +1083,16 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
                 val subject = body.lineSequence().firstOrNull().orEmpty().take(40)
                 if (photo == null) start(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")).putExtra(Intent.EXTRA_SUBJECT, subject).putExtra(Intent.EXTRA_TEXT, body).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 else start(put(Intent(Intent.ACTION_SEND)).putExtra(Intent.EXTRA_SUBJECT, subject).apply { selector = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")) })
+            }
+            target == "copy" -> {
+                val cm = ctx.getSystemService(android.content.ClipboardManager::class.java)
+                cm?.setPrimaryClip(android.content.ClipData.newPlainText("Theta Home", body))
+                (ctx as HomeApp).toast("コピーしました")
+            }
+            target in AI_APPS -> {
+                val pkg = AI_APPS.getValue(target)
+                if (apps.none { it.packageName == pkg }) (ctx as HomeApp).toast("${quickTargetLabel(target)} のアプリが入っていません")
+                else start(put(Intent(Intent.ACTION_SEND).setPackage(pkg)))
             }
             target == "clip" -> {
                 if (!(quickMemo && !memoInstalled())) { addToClip(ctx, body.ifEmpty { null }, listOfNotNull(photo)); reloadClips() }
@@ -2233,6 +2268,9 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         const val DSBOOKS = "jp.shinwakai.dsbooks.preview"
         const val MEMO = "jp.yaegaki.theta.memo"
         const val LINE = "jp.naver.line.android"
+
+        /** 入力の送り先にできる AI のアプリ。 */
+        val AI_APPS = linkedMapOf("gemini" to "com.google.android.apps.bard", "claude" to "com.anthropic.claude", "chatgpt" to "com.openai.chatgpt")
 
         /** ピン留めできる機能。pkg のアプリが入っているときだけ出す（fallback は無くても出す）。 */
         val DOCK_ACTIONS = listOf(

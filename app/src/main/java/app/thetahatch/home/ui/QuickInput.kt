@@ -1,5 +1,7 @@
 package app.thetahatch.home.ui
 
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.layout.height
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.BackHandler
@@ -63,7 +65,7 @@ private fun QuickBody(model: HomeModel, startMode: String) {
     val actions = LocalActions.current
     val ctx = actions.activity
     var mode by remember { mutableStateOf(startMode) }
-    var text by remember { mutableStateOf("") }
+    var text by remember { mutableStateOf(model.quickPrefill.also { model.quickPrefill = "" }) }
     var partial by remember { mutableStateOf("") }
     var photo by remember { mutableStateOf<File?>(null) }
     var editTargets by remember { mutableStateOf(false) }
@@ -144,11 +146,28 @@ private fun QuickBody(model: HomeModel, startMode: String) {
                     }
                 }
             }
+            // 声で入れる：大きく目立つボタン（押すと聞き取り、もう一度で止める）
+            Row(
+                Modifier.fillMaxWidth().height(52.dp).background(if (voice.listening) p.accent2 else p.accent)
+                    .clickable(onClickLabel = if (voice.listening) "聞き取りを止める" else "声で入れる") {
+                        mode = "voice"; if (voice.listening) voice.stop() else voice.start()
+                    },
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
+            ) {
+                GlyphIcon(Glyph.MIC, p.onAccent, 22.dp)
+                Text(if (voice.listening) "  聞き取り中…（押すと止める）" else "  話して入れる", color = p.onAccent, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            }
             SectionTitle("SEND")
             FlowRow2 {
                 model.quickTargets.forEachIndexed { i, t -> PillButton(model.quickTargetLabel(t), { send(t) }, primary = i == 0) }
                 PillButton("メモだけ", { send("memo") })
+                PillButton("コピー", { send("copy") })
                 PillButton("送り先…", { editTargets = true })
+            }
+            val ai = model.aiTargets().filter { it !in model.quickTargets }
+            if (ai.isNotEmpty()) {
+                SectionTitle("AI に聞く")
+                FlowRow2 { ai.forEach { t -> PillButton(model.quickTargetLabel(t), { send(t) }) } }
             }
             Note(
                 if (!model.quickMemo) "MemoHatch には残しません（送り先… で変えられます）"
@@ -207,7 +226,7 @@ private fun TargetsDialog(model: HomeModel, onDismiss: () -> Unit) {
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Note("押した順に並びます（1 番目が目立つボタン）")
-                listOf("line", "mail", "share", "clip").forEach { Row1(it) }
+                (listOf("line", "mail", "share", "clip", "copy") + HomeModel.AI_APPS.keys).forEach { Row1(it) }
                 SectionTitle("LINE の決まった宛先")
                 if (lineTargets.isEmpty()) Note("LINE で最近話した相手が見つかりません（このホームを既定のホームにして、LINE で一度共有すると出ます）")
                 lineTargets.forEach { Row1(it) }

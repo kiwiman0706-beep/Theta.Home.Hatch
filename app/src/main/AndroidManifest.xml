@@ -112,6 +112,10 @@
         </intent>
         <package android:name="jp.naver.line.android" />
         <package android:name="com.tailscale.ipn" />
+        <!-- 入力の送り先にする AI のアプリ -->
+        <package android:name="com.google.android.apps.bard" />
+        <package android:name="com.anthropic.claude" />
+        <package android:name="com.openai.chatgpt" />
     </queries>
 
     <application

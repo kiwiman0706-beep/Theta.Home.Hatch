@@ -202,8 +202,8 @@ private fun MusicPanel(model: HomeModel) {
 }
 
 /**
- * すぐ記録：撮る（写真に言葉を添えて残す）・録る（録音。もう一度押すと止める）・書く（文字で残す）。
- * 撮る・書くは「入力」と同じで、MemoHatch に残してから送り先を選べる。録音は記録（CAPTURE）に残る。
+ * すぐ記録：撮る（写真に言葉を添えて残す）・録る（録音。止めると Gemini で文字起こしして入力を開く）・描く（手書き）・打つ（文字）。
+ * 撮る・打つは「入力」と同じで、MemoHatch に残してから送り先（LINE・メール・AI・コピー）を選べる。録音と手書きは記録（CAPTURE）に残る。
  */
 @Composable
 private fun QuickSection(model: HomeModel) {
@@ -212,9 +212,17 @@ private fun QuickSection(model: HomeModel) {
     val ctx = actions.activity
     val recording by app.thetahatch.home.capture.RecordingService.startedAt.collectAsState()
     var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    var wasRecording by remember { mutableStateOf(false) }
+    var inking by remember { mutableStateOf(false) }
     LaunchedEffect(recording) {
+        if (recording != null) wasRecording = true
         while (recording != null) { now = System.currentTimeMillis(); delay(1000) }
         model.refreshCaptures()
+        // ここで止めた録音は、文字起こしして入力を開く
+        if (wasRecording) {
+            wasRecording = false
+            app.thetahatch.home.capture.RecordingService.lastFile.value?.let { model.transcribeAndOpen(it) }
+        }
     }
     fun record() {
         if (recording != null) { app.thetahatch.home.capture.RecordingService.stop(ctx); return }
@@ -232,20 +240,23 @@ private fun QuickSection(model: HomeModel) {
     fun androidx.compose.foundation.layout.RowScope.Big(glyph: Glyph, label: String, on: Boolean, desc: String, onClick: () -> Unit) {
         val bg = if (on) p.accent2 else p.accent
         Column(
-            Modifier.weight(1f).height(64.dp).popShadow(p, shape).clip(shape).background(bg)
+            Modifier.weight(1f).height(60.dp).popShadow(p, shape).clip(shape).background(bg)
                 .clickable(onClickLabel = desc, onClick = onClick),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
         ) {
-            GlyphIcon(glyph, p.onAccent, 22.dp)
+            GlyphIcon(glyph, p.onAccent, 20.dp)
             Text(label, color = p.onAccent, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         }
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Big(Glyph.CAMERA, "撮る", false, "写真を撮って残す") { model.quickOpen = "photo" }
         val rec = recording
-        Big(Glyph.MIC, if (rec != null) "■ ${(now - rec) / 1000}秒" else "録る", rec != null, if (rec != null) "録音を止める" else "録音する") { record() }
-        Big(Glyph.PENCIL, "書く", false, "文字で残す") { model.quickOpen = "text" }
+        Big(Glyph.MIC, when { rec != null -> "■ ${(now - rec) / 1000}秒"; model.transcribing -> "文字起こし…"; else -> "録る" }, rec != null || model.transcribing,
+            if (rec != null) "録音を止めて文字起こし" else "録音する（止めると文字起こし）") { if (!model.transcribing) record() }
+        Big(Glyph.PENCIL, "描く", false, "手書きで残す") { inking = true }
+        Big(Glyph.LIST, "打つ", false, "文字で入れて送る") { model.quickOpen = "text" }
     }
+    if (inking) InkDialog(onDismiss = { inking = false }) { file -> inking = false; model.refreshCaptures(); actions.toast("保存しました：${file.name}") }
 }
 
 /** ピン留めしたファイルの区画。留めたものが無ければ出さない。押すと開く。 */

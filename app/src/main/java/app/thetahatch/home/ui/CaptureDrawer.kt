@@ -132,7 +132,7 @@ fun CaptureDrawer(model: HomeModel) {
 
 /** 手書き。ペン優先なら指の入力は無視する（手のひらで線が出ない）。筆圧で太さが変わる。消しゴム側は線を消す。 */
 @Composable
-private fun InkDialog(onDismiss: () -> Unit, onSaved: (File) -> Unit) {
+internal fun InkDialog(onDismiss: () -> Unit, onSaved: (File) -> Unit) {
     val p = LocalPalette.current
     val ctx = LocalActions.current.activity
     val density = LocalDensity.current.density

@@ -84,6 +84,7 @@ class RecordingService : Service() {
             }
         }
         recorder = null
+        output?.takeIf { it.exists() && it.length() > 0 }?.let { last.value = it }
         state.value = null
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -102,6 +103,10 @@ class RecordingService : Service() {
         /** 録音を始めた時刻。録音していなければ null。 */
         private val state = MutableStateFlow<Long?>(null)
         val startedAt: StateFlow<Long?> = state
+
+        /** 最後に録り終えたファイル（すぐ記録の「録る」で文字起こしに使う）。 */
+        private val last = MutableStateFlow<java.io.File?>(null)
+        val lastFile: StateFlow<java.io.File?> = last
 
         fun start(context: Context) {
             context.startForegroundService(Intent(context, RecordingService::class.java))
