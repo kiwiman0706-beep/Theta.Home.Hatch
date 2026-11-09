@@ -271,6 +271,9 @@ object UpdateHub {
 
     /** 1 つ更新する（取得済みならそれを使う）。結果を状態に書く。 */
     suspend fun update(context: Context, a: CatalogApp): Boolean {
+        // 入れる直前に最新を読み直す（前に確かめた古い版を入れようとして「新しくありません」になるのを防ぐ）
+        val fresh = a.repo?.let { runCatching { latest(it) }.getOrNull() }
+        if (fresh != null) put(a.id) { it.copy(latest = fresh, ready = it.ready?.takeIf { f -> f.name == fresh.apkName }) }
         val s = get(a.id)
         val r = s.latest ?: return false
         put(a.id) { it.copy(error = null, result = null) }

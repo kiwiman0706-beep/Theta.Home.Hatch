@@ -1575,7 +1575,6 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         val me = Catalog.byPackage(ctx.packageName) ?: return
         update = update.copy(progress = 0f, error = null)
         viewModelScope.launch {
-            if (UpdateHub.get(me.id).latest == null) UpdateHub.check(ctx, only = me.id)
             val ok = UpdateHub.update(ctx, me)
             update = update.copy(progress = null, error = if (ok) null else UpdateHub.get(me.id).error)
         }
