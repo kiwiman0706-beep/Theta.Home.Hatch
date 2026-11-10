@@ -556,34 +556,8 @@ internal fun StatusStrip(model: HomeModel, openNasSettings: () -> Unit) {
         }
     }
     val nasOk = s?.nas == Nas.OK
-    // 全部が正常なら 1 行の小さな表示だけ（押すと広げる）。問題があるときはいつものチップ
-    val sp0 = model.speed
-    val allOk = s != null && s.network && model.speedError == null && (sp0 == null || sp0.down >= 1.0) &&
-        (!s.tailscale || s.vpn) && (s.nas == Nas.OK || s.nas == Nas.UNSET) && !model.safeMode && model.isDefaultHome &&
-        !(model.update.newer && model.update.latest != null)
-    var expanded by remember { mutableStateOf(false) }
-    if (allOk && !expanded) {
-        Row(
-            Modifier.fillMaxWidth().clickable(onClickLabel = "つながりを詳しく") { expanded = true }.padding(vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Box(Modifier.size(7.dp).clip(androidx.compose.foundation.shape.CircleShape).background(p.launch))
-            Text(
-                listOfNotNull(
-                    "ONLINE",
-                    sp0?.let { "↓${app.thetahatch.home.data.NetSpeed.label(it.down)}M" },
-                    if (s!!.tailscale) "Tailscale ON" else null,
-                    if (s.nas == Nas.OK) "NAS" else null,
-                ).joinToString(" · "),
-                color = p.muted, fontSize = 11.sp, fontFamily = Hud.mono, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-            )
-            Text("▸", color = p.faint, fontSize = 11.sp)
-        }
-        return
-    }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (allOk) chip("▾", "たたむ", null) { expanded = false }
             chip("NET", if (s == null) "----" else if (s.network) "ONLINE" else "OFFLINE", s?.network) { model.refreshStatus(force = true) }
             // 回線の速さ（押すと測り直す）。つながらない・とても遅いときは再接続
             val sp = model.speed
