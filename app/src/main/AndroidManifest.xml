@@ -301,6 +301,12 @@
             android:name=".hub.InstallResultReceiver"
             android:exported="false" />
 
+        <!-- PC から adb で設定を読む・変える（docs/DEV_ADB.md）。DUMP 権限なので adb の shell からしか送れない -->
+        <receiver
+            android:name=".debug.DebugReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP" />
+
         <!-- もう 1 つのハブ（KidsHome）からの「更新中」（共通の鍵で署名したアプリだけが送れる） -->
         <receiver
             android:name=".hub.BusyReceiver"

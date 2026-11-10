@@ -103,6 +103,7 @@ fun SettingsPanel(model: HomeModel) {
                 }
                 Toggle("自動で更新する（このホームと Hatch のアプリ。12 時間に 1 回）", model.autoUpdate) { model.changeAutoUpdate(it) }
                 Toggle("モバイル回線でも取得する", model.hubMobile) { model.changeHubMobile(it) }
+                Toggle("このホームの試験版（β）も受け取る", model.betaUpdates) { model.changeBetaUpdates(it) }
                 Note("新しい版があると、画面上部に「UPDATE」が出ます。取得したら SHA-256・署名（シリーズ共通の鍵）・パッケージ・版を確かめてから入れます。KidsHome が既定のホームアプリのときは、更新は KidsHome に任せます。")
                 Gap(18.dp)
                 SectionTitle("RESCUE / もしものとき", Modifier.padding(horizontal = 10.dp))

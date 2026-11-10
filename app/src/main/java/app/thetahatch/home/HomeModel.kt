@@ -1581,6 +1581,10 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     fun changeAutoUpdate(v: Boolean) { autoUpdate = v; store.autoUpdate = v }
 
+    /** このホームの試験版（β。Releases のプレリリース）も受け取る。 */
+    var betaUpdates by mutableStateOf(store.betaUpdates); private set
+    fun changeBetaUpdates(v: Boolean) { betaUpdates = v; store.betaUpdates = v; checkUpdate(force = true) }
+
     fun refreshHomeRole() {
         val rm = ctx.getSystemService(android.app.role.RoleManager::class.java)
         isDefaultHome = rm == null || !rm.isRoleAvailable(android.app.role.RoleManager.ROLE_HOME) || rm.isRoleHeld(android.app.role.RoleManager.ROLE_HOME)
@@ -1592,7 +1596,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         if (!force && (!autoUpdate || System.currentTimeMillis() - store.lastUpdateCheck < 3600_000)) return
         update = update.copy(checking = true, error = null)
         viewModelScope.launch {
-            val r = runCatching { UpdateHub.latest(SelfUpdate.REPO) }
+            val r = runCatching { if (betaUpdates) UpdateHub.newestWithBeta(SelfUpdate.REPO) else UpdateHub.latest(SelfUpdate.REPO) }
             store.lastUpdateCheck = System.currentTimeMillis()
             val latest = r.getOrNull()
             update = UpdateState(
@@ -1610,7 +1614,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         val me = Catalog.byPackage(ctx.packageName) ?: return
         update = update.copy(progress = 0f, error = null)
         viewModelScope.launch {
-            val ok = UpdateHub.update(ctx, me)
+            val ok = UpdateHub.update(ctx, me, if (betaUpdates) update.latest else null)
             update = update.copy(progress = null, error = if (ok) null else UpdateHub.get(me.id).error)
         }
     }

@@ -419,6 +419,11 @@ class Store(context: Context) {
     fun migrated(id: String) = prefs.getBoolean("migrated_$id", false)
     fun setMigrated(id: String, v: Boolean) = prefs.edit().putBoolean("migrated_$id", v).apply()
 
+    /** このホームの試験版（β）も受け取る（既定オフ）。 */
+    var betaUpdates: Boolean
+        get() = prefs.getBoolean("betaUpdates", false)
+        set(v) = prefs.edit().putBoolean("betaUpdates", v).apply()
+
     var lastUpdateCheck: Long
         get() = prefs.getLong("lastUpdateCheck", 0)
         set(v) = prefs.edit().putLong("lastUpdateCheck", v).apply()

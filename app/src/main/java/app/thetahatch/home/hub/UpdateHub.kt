@@ -129,6 +129,13 @@ object UpdateHub {
         fetch("$API/${Catalog.OWNER}/$repo/releases/latest")?.let { parseRelease(JSONObject(it)) }
     }
 
+    /** 試験版も含めていちばん新しい版（このホームの「試験版も受け取る」用）。 */
+    suspend fun newestWithBeta(repo: String): Release? = withContext(Dispatchers.IO) {
+        val text = fetch("$API/${Catalog.OWNER}/$repo/releases?per_page=10") ?: return@withContext null
+        val arr = JSONArray(text)
+        (0 until arr.length()).map { arr.getJSONObject(it) }.filter { !it.optBoolean("draft") }.firstNotNullOfOrNull { parseRelease(it) }
+    }
+
     /** 公開した版を新しい順に（試験版・下書きは除く）。移行の橋渡し版を探すのに使う。 */
     suspend fun releases(repo: String): List<Release> = withContext(Dispatchers.IO) {
         val text = fetch("$API/${Catalog.OWNER}/$repo/releases?per_page=15") ?: return@withContext emptyList()
@@ -270,9 +277,10 @@ object UpdateHub {
     }
 
     /** 1 つ更新する（取得済みならそれを使う）。結果を状態に書く。 */
-    suspend fun update(context: Context, a: CatalogApp): Boolean {
-        // 入れる直前に最新を読み直す（前に確かめた古い版を入れようとして「新しくありません」になるのを防ぐ）
-        val fresh = a.repo?.let { runCatching { latest(it) }.getOrNull() }
+    suspend fun update(context: Context, a: CatalogApp, release: Release? = null): Boolean {
+        // 入れる直前に最新を読み直す（前に確かめた古い版を入れようとして「新しくありません」になるのを防ぐ）。
+        // release を渡したら（このホームの試験版など）それを入れる
+        val fresh = release ?: a.repo?.let { runCatching { latest(it) }.getOrNull() }
         if (fresh != null) put(a.id) { it.copy(latest = fresh, ready = it.ready?.takeIf { f -> f.name == fresh.apkName }) }
         val s = get(a.id)
         val r = s.latest ?: return false

@@ -6,6 +6,8 @@ Android のホームアプリ（Kotlin + Compose）。シリーズの更新の�
 - 試験：`./gradlew :app:testDebugUnitTest`（Robolectric・Roborazzi）
 - リリース：Actions の `release`（版を入れて実行）。APK はコミットしない
 - 鍵・`keystore.properties`・API キー・パスワードはコミットしない
+- 端末で確かめる：PC に adb でつながっていれば `docs/DEV_ADB.md`（画面を撮る・設定を読む／変える・logcat）。端末の設定を変えたら、元の値を控えて最後に戻す
+- β 版：release に `1.x.y-beta.n` を入れて実行（プレリリース）。versionCode は正式版の手前の数
 
 ## Theta Hatch シリーズ共通（必ず参照）
 

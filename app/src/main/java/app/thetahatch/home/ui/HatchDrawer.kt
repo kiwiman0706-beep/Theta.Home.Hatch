@@ -190,7 +190,10 @@ private fun MigrationRow(model: HomeModel, a: CatalogApp, step: MigrationStep, z
     }
 }
 
-/** "1.10.0" と "1.9.2" のような版を数字ごとに比べる。"-alpha" などの後ろは無視する。 */
+/**
+ * "1.10.0" と "1.9.2" のような版を数字ごとに比べる。数字が同じなら、試験版（"-beta.2" など）より正式版が新しく、
+ * 試験版どうしは後ろの数字で比べる（1.4.0-beta.1 < 1.4.0-beta.2 < 1.4.0）。
+ */
 fun isNewer(latest: String, installed: String): Boolean {
     fun parts(v: String) = v.substringBefore('-').substringBefore(' ').split('.').map { it.toIntOrNull() ?: 0 }
     val a = parts(latest)
@@ -200,5 +203,10 @@ fun isNewer(latest: String, installed: String): Boolean {
         val y = b.getOrElse(i) { 0 }
         if (x != y) return x > y
     }
-    return false
+    val pa = latest.substringAfter('-', "")
+    val pb = installed.substringAfter('-', "")
+    if (pa.isEmpty()) return pb.isNotEmpty()
+    if (pb.isEmpty()) return false
+    fun n(v: String) = Regex("(\\d+)$").find(v)?.value?.toIntOrNull() ?: 0
+    return n(pa) > n(pb)
 }
