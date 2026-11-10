@@ -103,6 +103,10 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.HOME" />
         </intent>
+        <!-- Meishi・Chirashi の「撮って登録」 -->
+        <intent>
+            <action android:name="app.thetahatch.action.SCAN" />
+        </intent>
         <!-- 移行の書き出し・読み込み -->
         <intent>
             <action android:name="app.thetahatch.action.EXPORT" />

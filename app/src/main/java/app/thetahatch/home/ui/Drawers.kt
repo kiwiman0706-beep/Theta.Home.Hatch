@@ -486,7 +486,16 @@ private fun PeopleDrawer(model: HomeModel) {
     var expanded by remember { mutableStateOf<Long?>(null) }
     val list = model.people.filter { q.isBlank() || it.name.contains(q, ignoreCase = true) }
     val favorites = list.filter { it.starred }
+    var registering by remember { mutableStateOf(false) }
+    if (registering) RegisterDialog(model, "contact") { registering = false }
+    val meishi = remember { model.scanIntent("meishi") }
     DrawerList {
+        item {
+            FlowRow2 {
+                PillButton("＋ 貼り付けて登録", { registering = true }, primary = true)
+                if (meishi != null) PillButton("名刺を撮る（Meishi）", { actions.start(meishi) })
+            }
+        }
         item { Field(q, { q = it }, "名前で絞り込み", Modifier.padding(bottom = 8.dp)) }
         // スター付きの人は、顔写真を大きめに横へ並べる
         if (favorites.isNotEmpty()) item(key = "fav") {

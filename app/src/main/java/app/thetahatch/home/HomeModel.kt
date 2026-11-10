@@ -1015,6 +1015,24 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Gemini で連絡先・予定を読み取る（答えは JSON の文字）。キーが無ければ IOException。 */
+    suspend fun extractForRegister(kind: String, text: String, images: List<ByteArray>): String {
+        val key = store.geminiKey
+        if (key.isEmpty()) throw java.io.IOException("Gemini のキーがありません（設定 → アイコンの Gemini で入れます）")
+        return app.thetahatch.home.data.Gemini.generate(key, app.thetahatch.home.data.Extract.request(kind, text, images))
+    }
+
+    /**
+     * ほかの Hatch のアプリの「撮って登録」の入口（Meishi の名刺・Chirashi のチラシ）。
+     * Intent("app.thetahatch.action.SCAN") を受けるアプリが入っていれば、その Intent。無ければ null（ボタンを出さない）。
+     */
+    fun scanIntent(id: String): Intent? {
+        val a = Catalog.apps.value.firstOrNull { it.id == id } ?: return null
+        val pkg = a.installedPackage(UpdateHub.versionOf(ctx)) ?: return null
+        val i = Intent(SCAN).setPackage(pkg).putExtra("source", "home").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return i.takeIf { ctx.packageManager.resolveActivity(it, 0) != null }
+    }
+
     /** 入力の送り先に出す AI のアプリ（入っているものだけ）。 */
     fun aiTargets(): List<String> = AI_APPS.filter { (_, pkg) -> apps.any { it.packageName == pkg } }.map { it.key }
     var quickTargets by mutableStateOf(store.quickTargets); private set
@@ -2272,6 +2290,9 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         const val DSBOOKS = "jp.shinwakai.dsbooks.preview"
         const val MEMO = "jp.yaegaki.theta.memo"
         const val LINE = "jp.naver.line.android"
+
+        /** ほかの Hatch のアプリの「撮って登録」（Series の仕様に頼んでいる名前）。 */
+        const val SCAN = "app.thetahatch.action.SCAN"
 
         /** 入力の送り先にできる AI のアプリ。 */
         val AI_APPS = linkedMapOf("gemini" to "com.google.android.apps.bard", "claude" to "com.anthropic.claude", "chatgpt" to "com.openai.chatgpt")

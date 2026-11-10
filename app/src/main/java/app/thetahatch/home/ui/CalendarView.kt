@@ -120,7 +120,14 @@ fun CalendarDrawer(model: HomeModel) {
         else -> SimpleDateFormat("MM/dd EEE", Locale.US).format(Date(anchor)).uppercase(Locale.US)
     }
 
+    var registering by remember { mutableStateOf(false) }
+    if (registering) RegisterDialog(model, "event") { registering = false }
+    val chirashi = remember { model.scanIntent("chirashi") }
     Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            PillButton("＋ 貼り付けて登録", { registering = true }, primary = true)
+            if (chirashi != null) PillButton("チラシを撮る（Chirashi）", { actions.start(chirashi) })
+        }
         // 表示の切り替えと前後
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             listOf("month" to "MONTH", "week" to "WEEK", "day" to "DAY").forEach { (m, label) ->
