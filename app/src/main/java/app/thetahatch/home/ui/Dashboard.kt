@@ -156,6 +156,10 @@ private fun SectionView(model: HomeModel, s: HomeSection, filerHeight: Dp, openN
         }) { WeatherPanel(model) }
         HomeSection.STATUS -> StatusStrip(model, openNasSettings)
         HomeSection.QUICK -> QuickSection(model)
+        HomeSection.FAVPEOPLE -> Panel(model, "PEOPLE", "よく連絡する人", folded = {
+            Text(model.favPeople.joinToString("・") { f -> f.contactKey?.let { model.personByKey(it)?.name } ?: f.label }.ifEmpty { "＋ で足す" },
+                color = LocalPalette.current.muted, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }) { FavPeopleRow(model) }
         HomeSection.FILES -> Panel(model, "FILES", "ファイル") { FilesPanel(model) }
         HomeSection.FILER -> FilerSection(model, Modifier.fillMaxWidth().height(filerHeight), openNasSettings, openDriveSettings)
         HomeSection.DEVICE -> Panel(model, "DEVICE", "端末") { DevicePanel() }

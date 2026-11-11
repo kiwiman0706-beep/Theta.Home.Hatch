@@ -1,5 +1,8 @@
 package app.thetahatch.home
 
+import app.thetahatch.home.data.PeopleLinks
+import app.thetahatch.home.data.LineLink
+import app.thetahatch.home.data.FavPerson
 import android.Manifest
 import android.app.Application
 import android.content.Context
@@ -2081,7 +2084,67 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     /** そのアプリについて、置いているショートカットだけを固定にしておく。 */
     private fun repin(pkg: String) {
-        Shortcuts.setPinned(ctx, pkg, shortcuts.filter { it.packageName == pkg }.map { it.shortcutId }.distinct())
+        // LINE は、人に結んだトーク・よく連絡する人のトークも固定しておく（最近の一覧から消えても開けるように）
+        val extra = if (pkg == LINE) lineLinks.values.map { it.shortcutId } + favPeople.mapNotNull { it.lineId } else emptyList()
+        Shortcuts.setPinned(ctx, pkg, (shortcuts.filter { it.packageName == pkg }.map { it.shortcutId } + extra).distinct())
+    }
+
+    // ---- 人と LINE のトーク、よく連絡する人 ----
+
+    /** 連絡先の lookupKey → 結んだ LINE のトーク。 */
+    var lineLinks by mutableStateOf(PeopleLinks.linksFromJson(store.prefs.getString("lineLinks", null))); private set
+    var favPeople by mutableStateOf(PeopleLinks.favsFromJson(store.prefs.getString("favPeople", null))); private set
+
+    private fun saveLinks() {
+        store.prefs.edit()
+            .putString("lineLinks", PeopleLinks.linksToJson(lineLinks))
+            .putString("favPeople", PeopleLinks.favsToJson(favPeople)).apply()
+    }
+
+    /** 結べる LINE のトーク（最近のトーク・ホーム画面に追加したもの・もう結んだもの）。既定のホームのときだけ取れる。 */
+    fun lineRooms(): List<android.content.pm.ShortcutInfo> = Shortcuts.shareTargets(ctx, LINE)
+
+    fun linkLine(person: Person, s: android.content.pm.ShortcutInfo) {
+        Shortcuts.saveIcon(ctx, s, "line_" + s.id)
+        lineLinks = lineLinks + (person.lookupKey to LineLink(s.id, Shortcuts.label(s)))
+        saveLinks(); repin(LINE)
+        (ctx as HomeApp).toast("${person.name} と「${Shortcuts.label(s)}」を結びました")
+    }
+
+    fun unlinkLine(person: Person) {
+        lineLinks = lineLinks - person.lookupKey
+        saveLinks(); repin(LINE)
+    }
+
+    fun lineIcon(id: String): android.graphics.Bitmap? = Shortcuts.icon(ctx, "line_$id")
+
+    /** LINE のトークを開く。開けなければ LINE を開く。 */
+    fun openLine(id: String, start: (Intent) -> Unit) {
+        if (Shortcuts.start(ctx, LINE, id)) return
+        ctx.packageManager.getLaunchIntentForPackage(LINE)?.let(start) ?: (ctx as HomeApp).toast("LINE が入っていません")
+    }
+
+    fun personByKey(lookupKey: String): Person? = people.firstOrNull { it.lookupKey == lookupKey }
+
+    fun isFav(key: String) = favPeople.any { it.key == key }
+
+    fun toggleFav(f: FavPerson) {
+        favPeople = if (isFav(f.key)) favPeople.filter { it.key != f.key } else favPeople + f
+        saveLinks(); repin(LINE)
+    }
+
+    /** 連絡先に無い LINE のトーク（グループなど）をよく連絡する人に。 */
+    fun addFavLine(s: android.content.pm.ShortcutInfo) {
+        Shortcuts.saveIcon(ctx, s, "line_" + s.id)
+        toggleFav(FavPerson("line:" + s.id, Shortcuts.label(s)))
+    }
+
+    fun moveFav(key: String, delta: Int) {
+        val i = favPeople.indexOfFirst { it.key == key }
+        val j = i + delta
+        if (i < 0 || j !in favPeople.indices) return
+        favPeople = favPeople.toMutableList().also { it.add(j, it.removeAt(i)) }
+        saveLinks()
     }
 
     // ---- ふつうのタブ（BOARD）：ウィジェット・フォルダ・ファイル・ページを並べる ----

@@ -58,6 +58,12 @@ object Shortcuts {
         true
     }.getOrDefault(false)
 
+    /** パッケージとショートカットの ID で開く（LINE のトークなど。最近の一覧から消えていても、固定・保存されていれば開ける）。 */
+    fun start(ctx: Context, pkg: String, id: String): Boolean = runCatching {
+        la(ctx).startShortcut(pkg, id, null, null, Process.myUserHandle())
+        true
+    }.getOrDefault(false)
+
     fun start(ctx: Context, s: ShortcutInfo): Boolean = runCatching {
         la(ctx).startShortcut(s, null, null)
         true

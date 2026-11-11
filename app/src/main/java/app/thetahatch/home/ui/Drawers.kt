@@ -488,6 +488,8 @@ private fun PeopleDrawer(model: HomeModel) {
     val favorites = list.filter { it.starred }
     var registering by remember { mutableStateOf(false) }
     if (registering) RegisterDialog(model, "contact") { registering = false }
+    var linking by remember { mutableStateOf<Person?>(null) }
+    linking?.let { pe -> LineRoomDialog(model, pe) { linking = null } }
     val meishi = remember { model.scanIntent("meishi") }
     DrawerList {
         item {
@@ -498,6 +500,7 @@ private fun PeopleDrawer(model: HomeModel) {
                 if (meishi != null) MiniButton("📷⊕", "名刺を撮って登録（Meishi）") { actions.start(meishi) }
             }
         }
+        item(key = "favpeople") { Column(Modifier.padding(bottom = 10.dp)) { SectionTitle("よく連絡する人"); FavPeopleRow(model) } }
         // スター付きの人は、顔写真を大きめに横へ並べる
         if (favorites.isNotEmpty()) item(key = "fav") {
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -524,11 +527,15 @@ private fun PeopleDrawer(model: HomeModel) {
                     FlowRow2 {
                         person.phone?.let { PillButton("電話", { actions.start(Contacts.dialIntent(it)) }) }
                         person.email?.let { PillButton("メール", { actions.start(Contacts.mailIntent(it)) }) }
-                        PillButton("LINE", {
-                            val i = actions.activity.packageManager.getLaunchIntentForPackage(Contacts.LINE_PACKAGE)
-                            if (i != null) actions.start(i) else actions.toast("LINE が入っていません")
-                        })
+                        // LINE：結んだトークがあれば直接開く。無ければ結ぶ
+                        val link = model.lineLinks[person.lookupKey]
+                        if (link != null) {
+                            PillButton("LINE（${link.label}）", { model.openLine(link.shortcutId, actions.start) }, primary = true)
+                            PillButton("LINE を外す", { model.unlinkLine(person) })
+                        } else PillButton("LINE と結ぶ", { linking = person })
                         PillButton("詳細", { actions.start(Contacts.viewIntent(person)) })
+                        val fk = "c:" + person.lookupKey
+                        PillButton(if (model.isFav(fk)) "★ よく連絡する人" else "☆ よく連絡する人に", { model.toggleFav(app.thetahatch.home.data.FavPerson(fk, person.name)) })
                     }
                     Spacer(Modifier.height(8.dp))
                 }
@@ -540,7 +547,7 @@ private fun PeopleDrawer(model: HomeModel) {
 
 /** 連絡先の顔写真。無ければ頭文字。 */
 @Composable
-private fun Face(person: Person, size: androidx.compose.ui.unit.Dp, highlight: Boolean = false) {
+internal fun Face(person: Person, size: androidx.compose.ui.unit.Dp, highlight: Boolean = false) {
     val p = LocalPalette.current
     val ctx = LocalActions.current.activity
     val photo by produceState<android.graphics.Bitmap?>(null, person.photo) {

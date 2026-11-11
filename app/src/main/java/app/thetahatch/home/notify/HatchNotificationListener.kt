@@ -21,6 +21,8 @@ data class Notice(
     val intent: PendingIntent?,
     /** 通知に付いているボタン（既読・返信・アーカイブなど）。 */
     val actions: List<Notification.Action> = emptyList(),
+    /** 会話の通知なら、その会話のショートカット（LINE のトークなど）。よく連絡する人の未読に使う。 */
+    val shortcutId: String? = null,
 ) {
     /** 「既読にする」のボタン（アプリによって名前が違うので、よくある言い方で探す）。 */
     val readAction: Notification.Action?
@@ -90,7 +92,7 @@ class HatchNotificationListener : NotificationListenerService() {
                 val title = ex.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)
                     ?: ex.getCharSequence(Notification.EXTRA_TITLE) ?: return@mapNotNull null
                 val text = ex.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: ex.getCharSequence(Notification.EXTRA_TEXT) ?: ""
-                Notice(sbn.key, sbn.packageName, title.toString(), text.toString(), sbn.postTime, sbn.notification.contentIntent, sbn.notification.actions?.toList().orEmpty())
+                Notice(sbn.key, sbn.packageName, title.toString(), text.toString(), sbn.postTime, sbn.notification.contentIntent, sbn.notification.actions?.toList().orEmpty(), sbn.notification.shortcutId)
             }
             .sortedByDescending { it.time }
     }

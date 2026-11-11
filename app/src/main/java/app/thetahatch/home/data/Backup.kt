@@ -61,6 +61,8 @@ object Backup {
             .put("pinnedFiles", JSONArray(store.pinnedFiles.map { it.toJson() }))
             .put("startPins", JSONArray(store.startPins))
             .put("taskbarPins", JSONArray(store.taskbarPins))
+            .put("lineLinks", store.prefs.getString("lineLinks", "{}"))
+            .put("favPeople", store.prefs.getString("favPeople", "[]"))
             .put("appOrder", JSONObject(store.appOrder().mapValues { JSONArray(it.value) }))
             .put("tabOpts", JSONObject(store.prefs.getString("tabOpts", "{}") ?: "{}"))
             .put("nas", JSONObject().put("url", store.prefs.getString("nasUrl", "")).put("account", store.prefs.getString("nasAccount", "")))
@@ -112,6 +114,8 @@ object Backup {
         o.optJSONArray("pinnedFiles")?.let { e.putString("pinnedFiles", it.toString()) }
         o.optJSONArray("startPins")?.let { e.putString("startPins", it.toString()) }
         o.optJSONArray("taskbarPins")?.let { e.putString("taskbarPins", it.toString()) }
+        o.optString("lineLinks").takeIf { it.isNotEmpty() }?.let { e.putString("lineLinks", it) }
+        o.optString("favPeople").takeIf { it.isNotEmpty() }?.let { e.putString("favPeople", it) }
         e.putString("location", o.optString("location", ""))
         val nas = o.optJSONObject("nas")
         val nasUrl = nas?.optString("url").orEmpty()

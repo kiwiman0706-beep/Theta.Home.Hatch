@@ -900,12 +900,14 @@ data class HomeSection(val id: String, val narrow: Boolean = true, val wide: Boo
         const val FILER = "filer"
         const val DEVICE = "device"
         const val QUICK = "quick"
+        const val FAVPEOPLE = "favpeople"
 
         /** 初めの並び。開いた画面では左に時計・予定など、右にファイラー。閉じた画面ではファイラーの代わりにファイルへの入口。 */
         val DEFAULTS = listOf(
             HomeSection(CLOCK),
             HomeSection(SEARCH),
             HomeSection(QUICK),
+            HomeSection(FAVPEOPLE),
             HomeSection(TODAY),
             HomeSection(NOTICE),
             HomeSection(PINS),
@@ -919,7 +921,7 @@ data class HomeSection(val id: String, val narrow: Boolean = true, val wide: Boo
 
         val LABELS = mapOf(
             CLOCK to "時計", SEARCH to "検索", TODAY to "予定", NOTICE to "通知", PINS to "ピン留めのファイル", MUSIC to "再生中の音楽", WEATHER to "天気",
-            QUICK to "すぐ記録（撮る・録る・書く）", STATUS to "つながり（ネット・NAS など）", FILES to "ファイルへの入口", FILER to "ファイラー", DEVICE to "端末（電池・容量）",
+            QUICK to "すぐ記録（撮る・録る・描く・打つ）", FAVPEOPLE to "よく連絡する人", STATUS to "つながり（ネット・NAS など）", FILES to "ファイルへの入口", FILER to "ファイラー", DEVICE to "端末（電池・容量）",
         )
     }
 }
