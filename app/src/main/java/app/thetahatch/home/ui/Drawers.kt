@@ -491,12 +491,13 @@ private fun PeopleDrawer(model: HomeModel) {
     val meishi = remember { model.scanIntent("meishi") }
     DrawerList {
         item {
-            FlowRow2 {
-                PillButton("＋ 貼り付けて登録", { registering = true }, primary = true)
-                if (meishi != null) PillButton("名刺を撮る（Meishi）", { actions.start(meishi) })
+            // 絞り込みの横に、貼り付けて登録（Gemini）・名刺を撮る（Meishi）を絵文字で
+            Row(Modifier.padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Field(q, { q = it }, "名前で絞り込み", Modifier.weight(1f))
+                MiniButton("📃⊕", "貼り付けて連絡先に登録", primary = true) { registering = true }
+                if (meishi != null) MiniButton("📷⊕", "名刺を撮って登録（Meishi）") { actions.start(meishi) }
             }
         }
-        item { Field(q, { q = it }, "名前で絞り込み", Modifier.padding(bottom = 8.dp)) }
         // スター付きの人は、顔写真を大きめに横へ並べる
         if (favorites.isNotEmpty()) item(key = "fav") {
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {

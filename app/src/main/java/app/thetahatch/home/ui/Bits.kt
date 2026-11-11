@@ -1,5 +1,6 @@
 package app.thetahatch.home.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -73,6 +74,18 @@ fun RowButton(
 }
 
 /** 角を 1 つ落とした矩形のボタン。primary はオレンジで塗る。 */
+/** 絵文字などの短いボタン（場所を取らない）。description は読み上げ・長押しの説明。 */
+@Composable
+fun MiniButton(text: String, description: String, primary: Boolean = false, onClick: () -> Unit) {
+    val p = LocalPalette.current
+    Text(
+        text, color = if (primary) p.onAccent else p.fg, fontSize = 15.sp, maxLines = 1,
+        modifier = Modifier.background(if (primary) p.accent else Color.Transparent).border(1.dp, if (primary) p.accent else p.line)
+            .clickable(onClickLabel = description, onClick = onClick).padding(horizontal = 8.dp, vertical = 5.dp)
+            .semantics { contentDescription = description },
+    )
+}
+
 @Composable
 fun PillButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = false, enabled: Boolean = true) {
     val p = LocalPalette.current

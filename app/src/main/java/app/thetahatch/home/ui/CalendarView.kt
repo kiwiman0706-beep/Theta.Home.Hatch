@@ -124,22 +124,21 @@ fun CalendarDrawer(model: HomeModel) {
     if (registering) RegisterDialog(model, "event") { registering = false }
     val chirashi = remember { model.scanIntent("chirashi") }
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            PillButton("＋ 貼り付けて登録", { registering = true }, primary = true)
-            if (chirashi != null) PillButton("チラシを撮る（Chirashi）", { actions.start(chirashi) })
-        }
         // 表示の切り替えと前後
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            listOf("month" to "MONTH", "week" to "WEEK", "day" to "DAY").forEach { (m, label) ->
+            listOf("month" to "月", "week" to "週", "day" to "日").forEach { (m, label) ->
                 val on = m == mode
-                Text(label, color = if (on) p.onAccent else p.fg, fontSize = 12.sp, fontFamily = Hud.mono,
+                Text(label, color = if (on) p.onAccent else p.fg, fontSize = 14.sp, maxLines = 1,
                     modifier = Modifier.background(if (on) p.accent else Color.Transparent).border(1.dp, if (on) p.accent else p.line)
-                        .clickable(onClickLabel = "$label で見る") { model.changeCalendarMode(m) }.padding(horizontal = 10.dp, vertical = 7.dp))
+                        .clickable(onClickLabel = "${label}で見る") { model.changeCalendarMode(m) }.padding(horizontal = 10.dp, vertical = 6.dp))
             }
             Spacer(Modifier.weight(1f))
+            // 貼り付けて登録（Gemini）・チラシを撮る（Chirashi）。場所を取らないよう絵文字で
+            MiniButton("📃⊕", "貼り付けて予定に登録", primary = true) { registering = true }
+            if (chirashi != null) MiniButton("📷⊕", "チラシを撮って登録（Chirashi）") { actions.start(chirashi) }
             GlyphButton(Glyph.GEAR, "表示するカレンダー", { picking = true })
-            Text("TODAY", color = p.accent, fontSize = 12.sp, fontFamily = Hud.mono,
-                modifier = Modifier.border(1.dp, p.accent).clickable(onClickLabel = "今日へ") { anchor = today }.padding(horizontal = 8.dp, vertical = 7.dp))
+            Text("今", color = p.accent, fontSize = 14.sp, maxLines = 1,
+                modifier = Modifier.border(1.dp, p.accent).clickable(onClickLabel = "今日へ") { anchor = today }.padding(horizontal = 10.dp, vertical = 6.dp))
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             GlyphButton(Glyph.BACK, "前へ", { move(-1) })
