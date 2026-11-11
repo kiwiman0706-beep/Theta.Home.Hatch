@@ -1150,6 +1150,8 @@ class ScreenshotTest {
         launch { app ->
             app.store.launchRecent = listOf("com.example.music", "com.example.chat")
             app.store.launchCounts = mapOf("com.example.notes" to 9, "com.example.maps" to 4, "com.example.chat" to 3)
+            // ピン留めしたものが先、最近使ったものはその後ろ
+            app.store.taskbarPins = listOf("pkg:com.example.notes")
         }
         compose.waitForIdle()
         compose.onNodeWithContentDescription("Music（最近）").assertExists()

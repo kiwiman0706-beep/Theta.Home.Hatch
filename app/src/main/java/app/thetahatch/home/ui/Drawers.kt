@@ -574,6 +574,7 @@ private fun AppMenu(model: HomeModel, app: AppEntry, expanded: Boolean, close: (
         DropdownMenuItem(text = { Text("ショートカット（タブに置く）") }, onClick = { close(); shortcuts() })
         DropdownMenuItem(text = { Text(model.nicknamesOf(app).let { if (it.isEmpty()) "呼び名をつける（声で開く・検索）" else "呼び名：" + it.joinToString("、") }) }, onClick = { close(); naming = true })
         DropdownMenuItem(text = { Text(if (model.isStartPinned(app)) "スタートから外す" else "スタートにピン留め") }, onClick = { close(); model.toggleStartPin(app.key) })
+        DropdownMenuItem(text = { Text(if (model.isTaskbarPinned(app.key)) "タスクバーから外す" else "タスクバーにピン留め") }, onClick = { close(); model.toggleTaskbarPin(app.key) })
         DropdownMenuItem(text = { Text(if (model.isPinned(app)) "端の下のピン留めを外す" else "端の下にピン留め") }, onClick = { close(); model.toggleDockApp(app) })
         DropdownMenuItem(text = { Text("カテゴリーを変える") }, onClick = { close(); move() })
         DropdownMenuItem(text = { Text("アプリ情報") }, onClick = { actions.start(Apps.infoIntent(app.packageName)); close() })
@@ -608,6 +609,7 @@ private fun NicknameDialog(model: HomeModel, app: AppEntry, onDismiss: () -> Uni
 private fun ShortcutMenu(model: HomeModel, sc: PinnedShortcut, expanded: Boolean, close: () -> Unit, rename: () -> Unit) {
     DropdownMenu(expanded = expanded, onDismissRequest = close) {
         DropdownMenuItem(text = { Text(if ("sc:" + sc.id in model.startPins) "スタートから外す" else "スタートにピン留め") }, onClick = { close(); model.toggleStartPin("sc:" + sc.id) })
+        DropdownMenuItem(text = { Text(if (model.isTaskbarPinned("sc:" + sc.id)) "タスクバーから外す" else "タスクバーにピン留め") }, onClick = { close(); model.toggleTaskbarPin("sc:" + sc.id) })
         DropdownMenuItem(text = { Text(if ("sc:" + sc.id in model.favoriteApps) "端の下のピン留めを外す" else "端の下にピン留め") }, onClick = { close(); model.toggleDock("sc:" + sc.id) })
         DropdownMenuItem(text = { Text("名前を変える") }, onClick = { close(); rename() })
         DropdownMenuItem(text = { Text("このショートカットを外す") }, onClick = { close(); model.removeShortcut(sc.id) })

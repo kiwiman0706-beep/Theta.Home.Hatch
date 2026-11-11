@@ -1904,6 +1904,24 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         store.startPins = startPins
     }
 
+    // ---- 下のタスクバーのピン留め：よく使うアプリを好きに並べる（入りきらなければ横にスクロール） ----
+
+    var taskbarPins by mutableStateOf(store.taskbarPins); private set
+    fun taskbarItems(): List<Pair<String, Any>> = itemsFor(taskbarPins)
+    fun isTaskbarPinned(key: String) = key in taskbarPins
+    fun toggleTaskbarPin(key: String) {
+        taskbarPins = if (key in taskbarPins) taskbarPins - key else taskbarPins + key
+        store.taskbarPins = taskbarPins
+        (ctx as HomeApp).toast(if (key in taskbarPins) "タスクバーにピン留めしました" else "タスクバーから外しました")
+    }
+    fun moveTaskbarPin(key: String, delta: Int) {
+        val i = taskbarPins.indexOf(key)
+        val j = i + delta
+        if (i < 0 || j !in taskbarPins.indices) return
+        taskbarPins = taskbarPins.toMutableList().also { it.add(j, it.removeAt(i)) }
+        store.taskbarPins = taskbarPins
+    }
+
     /** ピン留めのキー（アプリ・"pkg:"・"sc:"・"act:"）から、出すもの（アプリ・ショートカット・機能）へ。無くなったものは飛ばす。 */
     private fun itemsFor(keys: List<String>): List<Pair<String, Any>> = keys.mapNotNull { key ->
         when {

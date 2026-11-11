@@ -655,6 +655,11 @@ class Store(context: Context) {
         get() = strings("startPins")
         set(v) = putStrings("startPins", v)
 
+    /** 下のタスクバーにピン留めしたもの（アプリ・ショートカット）。 */
+    var taskbarPins: List<String>
+        get() = strings("taskbarPins")
+        set(v) = putStrings("taskbarPins", v)
+
     /** ピン留めしたファイル（並べた順）。 */
     var pinnedFiles: List<PinnedFile>
         get() = objects("pinnedFiles") { PinnedFile.fromJson(it) }

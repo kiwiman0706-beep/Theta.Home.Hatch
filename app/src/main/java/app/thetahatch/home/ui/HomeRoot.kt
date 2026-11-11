@@ -1,5 +1,6 @@
 package app.thetahatch.home.ui
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -426,43 +427,65 @@ private fun Taskbar(model: HomeModel) {
         val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
         runCatching { ctx.packageManager.queryIntentActivities(home, 0).map { it.activityInfo.packageName } }.getOrDefault(emptyList()).toSet() + ctx.packageName
     }
-    var label by remember { mutableStateOf<String?>(null) }
+    var menu by remember { mutableStateOf<String?>(null) }
+    val pins = model.taskbarItems()
+    val pinnedPkgs = pins.mapNotNull { (it.second as? AppEntry)?.packageName }.toSet()
     Column(Modifier.fillMaxWidth().background(p.panel)) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-        BoxWithConstraints(Modifier.fillMaxWidth().height(50.dp).padding(horizontal = 6.dp), contentAlignment = Alignment.Center) {
-            val cell = 44.dp
-            val total = ((maxWidth - 10.dp) / cell).toInt().coerceAtLeast(1)
-            val known = model.apps.map { it.packageName }.toSet()
-            val (recent, frequent) = AppUsage.pick(model.usageRecent, model.usageCounts, known, skip, recentMax = (total + 1) / 2, total = total)
-            fun app(pkg: String) = model.apps.firstOrNull { it.packageName == pkg }
-            if (recent.isEmpty() && frequent.isEmpty()) {
-                Text(
-                    "最近使ったアプリをここに出す（使用状況へのアクセスを許可）", color = p.muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.clickable { actions.start(Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
-                )
-            } else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                @Composable
-                fun Cell(pkg: String, running: Boolean) {
-                    val a = app(pkg) ?: return
+        // ピン留めしたもの（好きな順）→ 区切り → 最近使ったもの（ピン留めに無いもの）。入りきらなければ横にスクロール
+        val known = model.apps.map { it.packageName }.toSet()
+        val (recent, _) = AppUsage.pick(model.usageRecent, model.usageCounts, known, skip + pinnedPkgs, recentMax = if (pins.isEmpty()) 8 else 4, total = if (pins.isEmpty()) 8 else 4)
+        val cell = 44.dp
+        if (pins.isEmpty() && recent.isEmpty()) {
+            Text(
+                "START でアイコンを長押し →「タスクバーにピン留め」でここに並びます", color = p.muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth().height(50.dp).wrapContentHeight().padding(horizontal = 10.dp),
+            )
+        } else Row(
+            Modifier.fillMaxWidth().height(50.dp).horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            pins.forEachIndexed { i, (key, item) ->
+                Box {
+                    Box(
+                        Modifier.size(cell).combinedClickable(
+                            onClick = { dockLaunch(model, actions, item) },
+                            onLongClick = { menu = key },
+                            onClickLabel = "開く", onLongClickLabel = "並べ替え・外す",
+                        ).semantics { contentDescription = dockLabel(item) },
+                        contentAlignment = Alignment.Center,
+                    ) { DockIcon(model, item, 30.dp) }
+                    DropdownMenu(expanded = menu == key, onDismissRequest = { menu = null }) {
+                        Text(dockLabel(item), color = p.muted, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+                        if (i > 0) DropdownMenuItem(text = { Text("◀ 前へ") }, onClick = { model.moveTaskbarPin(key, -1) })
+                        if (i < pins.lastIndex) DropdownMenuItem(text = { Text("▶ 後ろへ") }, onClick = { model.moveTaskbarPin(key, 1) })
+                        DropdownMenuItem(text = { Text("タスクバーから外す") }, onClick = { menu = null; model.toggleTaskbarPin(key) })
+                    }
+                }
+            }
+            if (pins.isNotEmpty() && recent.isNotEmpty()) Box(Modifier.padding(horizontal = 4.dp).width(1.dp).height(24.dp).background(p.line))
+            recent.forEach { pkg ->
+                val a = model.apps.firstOrNull { it.packageName == pkg } ?: return@forEach
+                Box {
                     Box(
                         Modifier.size(cell).combinedClickable(
                             onClick = { actions.start(Apps.launchIntent(a)) },
-                            onLongClick = { label = a.label },
-                            onClickLabel = "開く",
-                        ).semantics { contentDescription = a.label + if (running) "（最近）" else "" },
+                            onLongClick = { menu = "recent:" + a.key },
+                            onClickLabel = "開く", onLongClickLabel = "ピン留め",
+                        ).semantics { contentDescription = a.label + "（最近）" },
                         contentAlignment = Alignment.Center,
                     ) {
                         AppIcon(a, 30.dp)
-                        if (running) Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp).width(12.dp).height(3.dp).background(p.accent))
+                        Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp).width(12.dp).height(3.dp).background(p.accent))
+                    }
+                    DropdownMenu(expanded = menu == "recent:" + a.key, onDismissRequest = { menu = null }) {
+                        Text(a.label, color = p.muted, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+                        DropdownMenuItem(text = { Text("タスクバーにピン留め") }, onClick = { menu = null; model.toggleTaskbarPin(a.key) })
                     }
                 }
-                recent.forEach { Cell(it, running = true) }
-                if (recent.isNotEmpty() && frequent.isNotEmpty()) Box(Modifier.padding(horizontal = 4.dp).width(1.dp).height(24.dp).background(p.line))
-                frequent.forEach { Cell(it, running = false) }
             }
         }
     }
-    label?.let { l -> LaunchedEffect(l) { actions.toast(l); label = null } }
 }
 
 /** 端の下に固定のよく使うアプリ・ショートカット。押すと開く、長押しで並べ替え・外す・選ぶ。 */

@@ -60,6 +60,7 @@ object Backup {
             // ピン留めしたファイル（端末のファイルは、読み込んだ端末で開けないことがある）
             .put("pinnedFiles", JSONArray(store.pinnedFiles.map { it.toJson() }))
             .put("startPins", JSONArray(store.startPins))
+            .put("taskbarPins", JSONArray(store.taskbarPins))
             .put("appOrder", JSONObject(store.appOrder().mapValues { JSONArray(it.value) }))
             .put("tabOpts", JSONObject(store.prefs.getString("tabOpts", "{}") ?: "{}"))
             .put("nas", JSONObject().put("url", store.prefs.getString("nasUrl", "")).put("account", store.prefs.getString("nasAccount", "")))
@@ -110,6 +111,7 @@ object Backup {
         o.optJSONArray("queries")?.let { e.putString("queries", it.toString()).putBoolean("queriesSeeded", true) }
         o.optJSONArray("pinnedFiles")?.let { e.putString("pinnedFiles", it.toString()) }
         o.optJSONArray("startPins")?.let { e.putString("startPins", it.toString()) }
+        o.optJSONArray("taskbarPins")?.let { e.putString("taskbarPins", it.toString()) }
         e.putString("location", o.optString("location", ""))
         val nas = o.optJSONObject("nas")
         val nasUrl = nas?.optString("url").orEmpty()
