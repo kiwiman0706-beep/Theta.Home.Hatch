@@ -516,6 +516,15 @@ private fun PeopleDrawer(model: HomeModel) {
                 }
             }
         }
+        // 上の顔から選んだ人の連絡（下の一覧まで探しに行かなくていいように、すぐ下に出す）
+        favorites.firstOrNull { it.id == expanded }?.let { person ->
+            item(key = "favActions") {
+                Column(Modifier.padding(bottom = 10.dp)) {
+                    Text(person.name, color = p.fg, fontSize = 14.sp, modifier = Modifier.padding(bottom = 4.dp))
+                    PersonActions(model, person) { linking = person }
+                }
+            }
+        }
         itemsIndexed(list, key = { _, it -> it.id }) { zi, person ->
             Column {
                 RowButton(zebra = zi, onClick = { expanded = if (expanded == person.id) null else person.id }) {
@@ -524,24 +533,31 @@ private fun PeopleDrawer(model: HomeModel) {
                     if (person.starred) Text("★", color = p.accent, fontSize = 13.sp)
                 }
                 if (expanded == person.id) {
-                    FlowRow2 {
-                        person.phone?.let { PillButton("電話", { actions.start(Contacts.dialIntent(it)) }) }
-                        person.email?.let { PillButton("メール", { actions.start(Contacts.mailIntent(it)) }) }
-                        // LINE：結んだトークがあれば直接開く。無ければ結ぶ
-                        val link = model.lineLinks[person.lookupKey]
-                        if (link != null) {
-                            PillButton("LINE（${link.label}）", { model.openLine(link.shortcutId, actions.start) }, primary = true)
-                            PillButton("LINE を外す", { model.unlinkLine(person) })
-                        } else PillButton("LINE と結ぶ", { linking = person })
-                        PillButton("詳細", { actions.start(Contacts.viewIntent(person)) })
-                        val fk = "c:" + person.lookupKey
-                        PillButton(if (model.isFav(fk)) "★ よく連絡する人" else "☆ よく連絡する人に", { model.toggleFav(app.thetahatch.home.data.FavPerson(fk, person.name)) })
-                    }
+                    PersonActions(model, person) { linking = person }
                     Spacer(Modifier.height(8.dp))
                 }
             }
         }
         if (list.isEmpty()) item { Note("連絡先がありません") }
+    }
+}
+
+/** 人を選んだときの連絡：電話・メール・LINE（結んだトーク、無ければ「LINE と結ぶ」）・詳細・よく連絡する人。 */
+@Composable
+private fun PersonActions(model: HomeModel, person: Person, link: () -> Unit) {
+    val actions = LocalActions.current
+    FlowRow2 {
+        person.phone?.let { PillButton("電話", { actions.start(Contacts.dialIntent(it)) }) }
+        person.email?.let { PillButton("メール", { actions.start(Contacts.mailIntent(it)) }) }
+        // LINE：結んだトークがあれば直接開く。無ければ結ぶ
+        val l = model.lineLinks[person.lookupKey]
+        if (l != null) {
+            PillButton("LINE（${l.label}）", { model.openLine(l.shortcutId, actions.start) }, primary = true)
+            PillButton("LINE を外す", { model.unlinkLine(person) })
+        } else PillButton("LINE と結ぶ", link, primary = true)
+        PillButton("詳細", { actions.start(Contacts.viewIntent(person)) })
+        val fk = "c:" + person.lookupKey
+        PillButton(if (model.isFav(fk)) "★ よく連絡する人" else "☆ よく連絡する人に", { model.toggleFav(app.thetahatch.home.data.FavPerson(fk, person.name)) })
     }
 }
 

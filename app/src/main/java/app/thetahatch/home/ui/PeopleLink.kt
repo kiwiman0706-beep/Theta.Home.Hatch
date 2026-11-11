@@ -123,6 +123,8 @@ fun FavPeopleRow(model: HomeModel) {
     val notices by HatchNotificationListener.notices.collectAsState()
     var menu by remember { mutableStateOf<String?>(null) }
     var adding by remember { mutableStateOf(false) }
+    var linking by remember { mutableStateOf<Person?>(null) }
+    linking?.let { pe -> LineRoomDialog(model, pe) { linking = null } }
     val favs = model.favPeople
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         favs.forEachIndexed { i, f ->
@@ -154,6 +156,8 @@ fun FavPeopleRow(model: HomeModel) {
                 DropdownMenu(expanded = menu == f.key, onDismissRequest = { menu = null }) {
                     Text(person?.name ?: f.label, color = p.muted, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
                     link?.let { l -> DropdownMenuItem(text = { Text("LINE（${l.label}）") }, onClick = { menu = null; model.openLine(l.shortcutId, actions.start) }) }
+                    if (person != null && link == null) DropdownMenuItem(text = { Text("LINE と結ぶ") }, onClick = { menu = null; linking = person })
+                    if (person != null && model.lineLinks.containsKey(person.lookupKey)) DropdownMenuItem(text = { Text("LINE を外す") }, onClick = { menu = null; model.unlinkLine(person) })
                     person?.phone?.let { ph ->
                         DropdownMenuItem(text = { Text("電話") }, onClick = { menu = null; actions.start(Contacts.dialIntent(ph)) })
                         DropdownMenuItem(text = { Text("SMS") }, onClick = { menu = null; actions.start(Intent(Intent.ACTION_SENDTO, Uri.fromParts("smsto", ph, null))) })
