@@ -759,6 +759,8 @@ fun AddTabDialog(model: HomeModel, onWidget: () -> Unit, onDismiss: () -> Unit) 
                         onDismiss()
                         model.toggle(t.id)
                     })
+                    // Google の文書・表・スライド（ドライブ。最近開いた順）
+                    PillButton("＋ Google 文書・表・スライド", { val t = model.addGoogleDocsTab(); onDismiss(); model.toggle(t.id) })
                     // 端末の写真・動画（フォルダを選ばずに、端末全体を新しい順に。アルバムからも）
                     PillButton("＋ 写真・動画（端末）", {
                         val (t, item) = model.addBoardTab(BoardItem.FOLDER, Files.MEDIA_ALL)

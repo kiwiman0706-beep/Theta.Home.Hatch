@@ -858,6 +858,24 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     fun tabWith(type: String): TabSpec? = tabs.firstOrNull { t -> boardItems(t.id).any { it.type == type } }
 
     /** 中身を 1 つ置いたタブを作る。名前は中身の種類から。 */
+    /** Google の文書・表・スライドのタブ（ドライブの仮想フォルダ。最近開いた順）を作る。 */
+    fun addGoogleDocsTab(): TabSpec {
+        if (query(app.thetahatch.home.data.SavedQuery.GOOGLE_DOCS.id) == null) saveQuery(app.thetahatch.home.data.SavedQuery.GOOGLE_DOCS)
+        val (t, item) = addBoardTab(BoardItem.FOLDER, Store.GDOCS_TAB.folderUri!!)
+        renameTab(t.id, "DOCS")
+        updateBoardItem(item.copy(label = "DOCS"))
+        return t
+    }
+
+    /** Theta Camera Hatch を開く（入っていなければ false）。 */
+    fun openCamera(start: (Intent) -> Unit): Boolean {
+        val a = Catalog.apps.value.firstOrNull { it.id == "camera" }
+        val pkg = a?.installedPackage(UpdateHub.versionOf(ctx)) ?: CAMERA_HATCH.takeIf { p -> apps.any { it.packageName == p } } ?: return false
+        val i = ctx.packageManager.getLaunchIntentForPackage(pkg) ?: return false
+        start(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        return true
+    }
+
     fun addBoardTab(type: String, ref: String = "", fill: Boolean = true): Pair<TabSpec, BoardItem> {
         val label = (BoardItem.PANELS[type] ?: when (type) {
             BoardItem.FOLDER -> TabKind.FOLDER
@@ -2570,6 +2588,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         const val APPS_ID = "@apps"
         /** ホーム（タブではないところ）に置くウィジェット・アプリ・ショートカットの置き場所。タブと同じ仕組みで持つ。 */
         const val HOME_BOARD = "@home"
+        const val CAMERA_HATCH = "app.thetahatch.camera"
 
         /** フォルダの読み込みの誤り：「すべてのファイルへのアクセス」が要る（Download など）。 */
         const val NEED_ALL_FILES = "NEED_ALL_FILES"

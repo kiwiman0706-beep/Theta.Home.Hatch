@@ -272,7 +272,8 @@ private fun QuickSection(model: HomeModel) {
             if (rec != null) record() else memo("audio") { if (!model.transcribing) record() }
         }
         Box(Modifier.weight(1f)) {
-            Row { Big(Glyph.CAMERA, false, "写真のメモ（MemoHatch）。長押しで名刺・チラシ", onLongClick = { shootMenu = true }) { memo("photo") { model.quickOpen = "photo" } } }
+            // カメラは Theta Camera Hatch を開く（無ければ MemoHatch の写真のメモ、それも無ければこのホーム）
+            Row { Big(Glyph.CAMERA, false, "カメラ（Theta Camera Hatch）。長押しで名刺・チラシ", onLongClick = { shootMenu = true }) { if (!model.openCamera(actions.start)) memo("photo") { model.quickOpen = "photo" } } }
             // 長押し：名刺（Meishi）・チラシ（Chirashi）を撮る、それぞれを開く
             androidx.compose.material3.DropdownMenu(expanded = shootMenu, onDismissRequest = { shootMenu = false }) {
                 listOf("meishi" to "名刺", "chirashi" to "チラシ").forEach { (id, what) ->

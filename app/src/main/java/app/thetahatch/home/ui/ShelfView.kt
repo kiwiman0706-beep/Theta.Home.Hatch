@@ -27,6 +27,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -61,6 +63,26 @@ fun ShelfView(model: HomeModel, id: String) {
             if (pkg != null) {
                 PillButton("開く", { ctx.packageManager.getLaunchIntentForPackage(pkg)?.let(actions.start) }, primary = true)
                 MiniButton("↻", "読み直す") { tick++ }
+            }
+        }
+        // MemoHatch のタブ：いちばん上に、新しいメモのボタン（MemoHatch の入力の段と同じ）
+        if (id == "memo" && pkg != null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf(
+                    Triple(Glyph.FILE, "文字のメモ", "text"), Triple(Glyph.LIST, "チェックリスト", "list"),
+                    Triple(Glyph.PENCIL, "手書き", "ink"), Triple(Glyph.MIC, "声のメモ", "audio"),
+                ).forEach { (g, desc, type) ->
+                    Box(
+                        Modifier.weight(1f).height(44.dp).background(p.accent).clickable(onClickLabel = desc) { model.memoNew(type, actions.start) }
+                            .semantics { contentDescription = desc },
+                        contentAlignment = Alignment.Center,
+                    ) { GlyphIcon(g, p.onAccent, 22.dp) }
+                }
+                Box(
+                    Modifier.weight(1f).height(44.dp).background(p.accent).clickable(onClickLabel = "カメラ") { if (!model.openCamera(actions.start)) model.memoNew("photo", actions.start) }
+                        .semantics { contentDescription = "カメラ（Theta Camera Hatch）" },
+                    contentAlignment = Alignment.Center,
+                ) { GlyphIcon(Glyph.CAMERA, p.onAccent, 22.dp) }
             }
         }
         when {

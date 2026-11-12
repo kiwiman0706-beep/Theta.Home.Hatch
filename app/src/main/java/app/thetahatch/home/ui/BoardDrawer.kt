@@ -55,10 +55,15 @@ fun BoardDrawer(model: HomeModel, t: TabSpec, editing: Boolean, inline: Boolean 
     var adding by remember { mutableStateOf(false) }
     // inline はカテゴリーのタブのアプリの上：アプリと一緒にスクロールするので、縦いっぱいは使わない。置いていなければ何も出さない
     if (inline && items.isEmpty() && !editing) return
-    // 縦いっぱいのものがあれば、それが残りの高さを分け合う（全体はスクロールしない）。無ければ中身の高さで、はみ出たらスクロール
-    val fills = !inline && items.any { it.fill }
+    // 縦いっぱいのもの（フォルダなど）だけなら、それが高さを使い切る（全体はスクロールしない）。
+    // ほかにウィジェットなども置いたときは、全体をスクロールし、縦いっぱいのものは画面の高さぶんにする（ウィジェットを何個置いても見られるように）
+    val allRows = rows(items)
+    val fillsOnly = !inline && items.any { it.fill } && allRows.size == 1
+    val scrollFill = !inline && items.any { it.fill } && allRows.size > 1
+    BoxWithConstraints(if (inline) Modifier.fillMaxWidth() else Modifier.fillMaxSize()) {
+    val viewport = maxHeight
     Column(
-        (if (fills) Modifier.fillMaxSize() else if (inline) Modifier.fillMaxWidth() else Modifier.verticalScroll(rememberScrollState()))
+        (if (fillsOnly) Modifier.fillMaxSize() else if (inline) Modifier.fillMaxWidth() else Modifier.verticalScroll(rememberScrollState()))
             .padding(if (inline) 0.dp else 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -66,9 +71,14 @@ fun BoardDrawer(model: HomeModel, t: TabSpec, editing: Boolean, inline: Boolean 
             if (inline) "このカテゴリーのアプリの上に、ウィジェット・フォルダ・予定などを置けます。"
             else "ウィジェット・フォルダ・画像や PDF・Web ページ・予定・通知などを、このタブに好きな数だけ並べられます。",
         )
-        rows(items).forEach { row ->
+        allRows.forEach { row ->
             val fillRow = !inline && row.any { it.fill }
-            Row(if (fillRow) Modifier.weight(1f) else Modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val rowMod = when {
+                fillRow && scrollFill -> Modifier.height((viewport - 16.dp).coerceAtLeast(320.dp))
+                fillRow -> Modifier.weight(1f)
+                else -> Modifier
+            }
+            Row(rowMod, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { item ->
                     Box(Modifier.weight(1f).then(if (fillRow) Modifier.fillMaxHeight() else Modifier)) {
                         ItemView(model, t, item, items.indexOf(item), items.size, editing, fillRow, allowFill = !inline)
@@ -77,6 +87,7 @@ fun BoardDrawer(model: HomeModel, t: TabSpec, editing: Boolean, inline: Boolean 
             }
         }
         if (editing || items.isEmpty()) FlowRow2 { PillButton("＋ 足す", { adding = true }, primary = true) }
+    }
     }
     if (adding) AddItemDialog(model, t.id) { adding = false }
 }
