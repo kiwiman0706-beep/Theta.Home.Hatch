@@ -85,6 +85,21 @@ fun ShelfView(model: HomeModel, id: String) {
                 ) { GlyphIcon(Glyph.CAMERA, p.onAccent, 22.dp) }
             }
         }
+        // MemoHatch のタブ：検索。打つと、ピン留めに関係なく全部のメモから探す（空ならピン留めだけ）
+        var q by remember { mutableStateOf("") }
+        val notes by produceState<List<HatchShelf.Item>?>(null, pkg, q.isNotBlank(), model.resumeTick) {
+            value = if (id == "memo" && pkg != null && q.isNotBlank()) withContext(Dispatchers.IO) { HatchShelf.memoNotes(ctx, pkg) } else null
+        }
+        if (id == "memo" && pkg != null) Field(q, { q = it }, "メモを探す（全部のメモから）")
+        if (q.isNotBlank()) {
+            val hits = notes?.let { HatchShelf.filter(it, q) }
+            when {
+                notes == null -> Note("探しています…（MemoHatch が古いと探せません）")
+                hits.isNullOrEmpty() -> Note("「$q」に合うメモはありません")
+                else -> { SectionTitle("検索結果 ${hits.size}"); ShelfTiles(pkg!!, hits) }
+            }
+            return@Column
+        }
         when {
             app == null -> Note("シリーズの一覧に無いアプリです")
             pkg == null -> FlowRow2 { PillButton("入れる（Hatch の一覧）", { model.showHatch(id) }) }
@@ -92,18 +107,7 @@ fun ShelfView(model: HomeModel, id: String) {
             items!!.isEmpty() -> Note("出すものがありません（${app.name} でピン留め・お気に入りにすると出ます）")
             else -> items!!.groupBy { it.sectionTitle.ifEmpty { it.section } }.forEach { (title, list) ->
                 if (title.isNotEmpty()) SectionTitle(title)
-                // タイル：幅に合わせて 2〜4 列。画像・題名・本文がその場で読める（横スクロールはしない）
-                androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
-                    val cols = (maxWidth / 170.dp).toInt().coerceIn(2, 4)
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        list.chunked(cols).forEach { row ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
-                                row.forEach { item -> Box(Modifier.weight(1f)) { ShelfTile(pkg, item) } }
-                                repeat(cols - row.size) { Box(Modifier.weight(1f)) }
-                            }
-                        }
-                    }
-                }
+                ShelfTiles(pkg, list)
             }
         }
     }
@@ -127,6 +131,22 @@ fun ShelfStrip(pkg: String, list: List<HatchShelf.Item>, size: androidx.compose.
                 }
                 Text(item.title, color = p.fg, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))
                 if (item.subtitle.isNotEmpty()) Text(item.subtitle, color = p.faint, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+/** タイル：幅に合わせて 2〜4 列。画像・題名・本文がその場で読める（横スクロールはしない）。 */
+@Composable
+private fun ShelfTiles(pkg: String, list: List<HatchShelf.Item>) {
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val cols = (maxWidth / 170.dp).toInt().coerceIn(2, 4)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            list.chunked(cols).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
+                    row.forEach { item -> Box(Modifier.weight(1f)) { ShelfTile(pkg, item) } }
+                    repeat(cols - row.size) { Box(Modifier.weight(1f)) }
+                }
             }
         }
     }

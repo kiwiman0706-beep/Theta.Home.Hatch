@@ -37,6 +37,34 @@ object HatchShelf {
         }
     }.getOrNull()
 
+    /**
+     * MemoHatch の全部のメモ（/notes、新しい順・ピン留めが先、500 件まで）を棚と同じ形で。検索に使う。
+     * 押すとそのメモを開く（MemoHatch の起動の画面に「open」でメモの id を渡す。棚の action と同じ）。
+     */
+    fun memoNotes(context: Context, pkg: String): List<Item>? = runCatching {
+        val main = context.packageManager.getLaunchIntentForPackage(pkg)?.component ?: return@runCatching null
+        context.contentResolver.query(Uri.parse("content://$pkg.theta/notes?limit=500"), null, null, null, null)?.use { c ->
+            fun col(name: String) = c.getColumnIndex(name).takeIf { it >= 0 }?.let { c.getString(it) }.orEmpty()
+            val out = ArrayList<Item>()
+            while (c.moveToNext()) {
+                val id = col("id")
+                val cover = col("cover")
+                val image = if (cover.matches(Regex("(?i).*\\.(jpe?g|png|gif|webp|heic|heif)$"))) "content://$pkg.theta/image/$cover" else ""
+                val action = Intent(Intent.ACTION_VIEW, Uri.parse("memo-note://$id")).setComponent(main).putExtra("open", id)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).toUri(Intent.URI_INTENT_SCHEME)
+                out += Item("search", "", id, col("title").ifEmpty { "メモ" }, "", col("snippet"), image, action, col("color"))
+            }
+            out
+        }
+    }.getOrNull()
+
+    /** 言葉に合うメモ（題名・本文の頭。空白で区切った言葉が全部入っているもの）。 */
+    fun filter(list: List<Item>, q: String): List<Item> {
+        val words = q.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }.map { it.lowercase() }
+        if (words.isEmpty()) return list
+        return list.filter { i -> val t = (i.title + "\n" + i.text).lowercase(); words.all { t.contains(it) } }
+    }
+
     fun image(context: Context, item: Item, max: Int = 256): Bitmap? = item.image.takeIf { it.isNotEmpty() }?.let { u ->
         runCatching {
             context.contentResolver.openInputStream(Uri.parse(u))?.use { BitmapFactory.decodeStream(it) }?.let { b ->

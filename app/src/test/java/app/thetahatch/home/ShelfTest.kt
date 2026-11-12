@@ -44,3 +44,14 @@ class MediaTest {
         org.junit.Assert.assertTrue(app.thetahatch.home.data.Files.listMedia(ctx, list.first().uri).isEmpty())
     }
 }
+
+class ShelfFilterTest {
+    @org.junit.Test
+    fun wordsMustAllMatch() {
+        fun i(t: String, b: String) = HatchShelf.Item("search", "", t, t, "", b, "", "", "")
+        val list = listOf(i("買い物", "牛乳 卵"), i("仕事", "会議の資料"), i("メモ", "牛乳を買う"))
+        assertEquals(listOf("買い物", "メモ"), HatchShelf.filter(list, "牛乳").map { it.title })
+        assertEquals(listOf("買い物"), HatchShelf.filter(list, "牛乳 卵").map { it.title })
+        assertEquals(3, HatchShelf.filter(list, "  ").size)
+    }
+}
