@@ -62,7 +62,7 @@ fun MusicCard(model: HomeModel) {
     if (n == null) {
         val enabled = HatchNotificationListener.isEnabled(ctx)
         // 何も流れていないとき：Theta Music の棚（お気に入り・最近のアルバム）を横に並べ、押すと再生
-        val shelf by androidx.compose.runtime.produceState<List<app.thetahatch.home.hub.HatchShelf.Item>?>(null, musicApp?.packageName) {
+        val shelf by androidx.compose.runtime.produceState<List<app.thetahatch.home.hub.HatchShelf.Item>?>(null, musicApp?.packageName, model.resumeTick) {
             value = musicApp?.let { a -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { app.thetahatch.home.hub.HatchShelf.read(ctx, a.packageName) } }
         }
         val items = shelf

@@ -348,6 +348,9 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     var hatchFocus by mutableStateOf<String?>(null)
     var hubMobile by mutableStateOf(store.hubMobile); private set
     private var hatchCheckedAt = 0L
+    /** ホームに戻ったときに増える（棚など、ほかのアプリの中身を読み直すきっかけ）。 */
+    var resumeTick by mutableStateOf(0)
+
     /** 移行の段階を読み直すきっかけ。 */
     var migrationTick by mutableStateOf(0)
 

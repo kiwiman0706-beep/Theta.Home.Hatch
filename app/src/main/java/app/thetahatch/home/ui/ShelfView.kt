@@ -51,7 +51,7 @@ fun ShelfView(model: HomeModel, id: String) {
     val app = Catalog.apps.value.firstOrNull { it.id == id }
     val pkg = app?.installedPackage(UpdateHub.versionOf(ctx))
     var tick by remember { mutableStateOf(0) }
-    val items by produceState<List<HatchShelf.Item>?>(null, pkg, tick) {
+    val items by produceState<List<HatchShelf.Item>?>(null, pkg, tick, model.resumeTick) {
         value = pkg?.let { withContext(Dispatchers.IO) { HatchShelf.read(ctx, it) } }
     }
     Column(Modifier.verticalScroll(rememberScrollState()).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -79,7 +79,7 @@ fun ShelfView(model: HomeModel, id: String) {
 
 /** 画像（ジャケットなど）を横に並べる。押すとそのアプリで開く・再生する。 */
 @Composable
-fun ShelfStrip(pkg: String, list: List<HatchShelf.Item>, size: androidx.compose.ui.unit.Dp = 84.dp) {
+fun ShelfStrip(pkg: String, list: List<HatchShelf.Item>, size: androidx.compose.ui.unit.Dp = 84.dp, tall: Boolean = false) {
     val p = LocalPalette.current
     val actions = LocalActions.current
     val ctx = actions.activity
@@ -87,8 +87,10 @@ fun ShelfStrip(pkg: String, list: List<HatchShelf.Item>, size: androidx.compose.
         list.forEach { item ->
             val bmp by produceState<android.graphics.Bitmap?>(null, item.image) { value = withContext(Dispatchers.IO) { HatchShelf.image(ctx, item) } }
             Column(Modifier.width(size).clickable(onClickLabel = "開く") { HatchShelf.intent(pkg, item)?.let(actions.start) }) {
-                Box(Modifier.size(size).background(p.raised).border(lineWidth, p.line), contentAlignment = Alignment.Center) {
-                    bmp?.let { Image(it.asImageBitmap(), item.title, Modifier.size(size), contentScale = ContentScale.Crop) }
+                // 本の表紙は縦長（2:3）
+                val h = if (tall) size * 1.45f else size
+                Box(Modifier.width(size).height(h).background(p.raised).border(lineWidth, p.line), contentAlignment = Alignment.Center) {
+                    bmp?.let { Image(it.asImageBitmap(), item.title, Modifier.width(size).height(h), contentScale = ContentScale.Crop) }
                         ?: Text(item.title.take(2), color = p.muted, fontSize = 16.sp)
                 }
                 Text(item.title, color = p.fg, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))

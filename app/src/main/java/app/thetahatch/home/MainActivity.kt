@@ -38,6 +38,7 @@ class MainActivity : ComponentActivity() {
         override fun onReceive(context: Context, intent: Intent) {
             model.refreshApps()
             model.refreshHatchInstalled()
+        model.resumeTick++
         }
     }
 

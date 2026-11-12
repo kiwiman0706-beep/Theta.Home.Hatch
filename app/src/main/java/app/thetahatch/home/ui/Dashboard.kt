@@ -148,6 +148,7 @@ private fun SectionView(model: HomeModel, s: HomeSection, filerHeight: Dp, openN
         HomeSection.NOTICE -> NoticePanel(model)
         HomeSection.PINS -> PinsPanel(model)
         HomeSection.MUSIC -> MusicPanel(model)
+        HomeSection.BOOKS -> BooksPanel(model)
         HomeSection.WEATHER -> Panel(model, "WEATHER", "天気", folded = {
             val f = model.forecast
             val warn = model.alerts?.list.orEmpty().joinToString("・") { it.name }
@@ -274,6 +275,35 @@ private fun QuickSection(model: HomeModel) {
         Big(Glyph.LIST, "打つ", false, "文字で入れて送る") { model.quickOpen = "text" }
     }
     if (inking) InkDialog(onDismiss = { inking = false }) { file -> inking = false; model.refreshCaptures(); actions.toast("保存しました：${file.name}") }
+}
+
+/**
+ * 本：Theta Book Hatch の棚（読みかけ・お気に入り・最近など）を表紙で横に並べ、押すとその本を開く。
+ * Book が入っていない・棚に対応していない・何も無いときは出さない。
+ */
+@Composable
+private fun BooksPanel(model: HomeModel) {
+    val ctx = LocalActions.current.activity
+    val actions = LocalActions.current
+    val book = app.thetahatch.home.hub.Catalog.apps.collectAsState().value.firstOrNull { it.id == "book" } ?: return
+    val pkg = book.installedPackage(app.thetahatch.home.hub.UpdateHub.versionOf(ctx)) ?: return
+    val items by androidx.compose.runtime.produceState<List<app.thetahatch.home.hub.HatchShelf.Item>?>(null, pkg, model.resumeTick) {
+        value = withContext(Dispatchers.IO) { app.thetahatch.home.hub.HatchShelf.read(ctx, pkg) }
+    }
+    val list = items
+    if (list.isNullOrEmpty()) return
+    Panel(model, "BOOKS", "本", folded = {
+        Text(list.take(3).joinToString("・") { it.title }, color = LocalPalette.current.muted, fontSize = 13.sp, maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+    }) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            list.groupBy { it.sectionTitle.ifEmpty { it.section } }.forEach { (title, l) ->
+                if (title.isNotEmpty()) Text(title, color = LocalPalette.current.faint, fontSize = 11.sp)
+                ShelfStrip(pkg, l, 72.dp, tall = true)
+            }
+            FlowRow2 { PillButton("${book.nickname ?: book.name} を開く", { ctx.packageManager.getLaunchIntentForPackage(pkg)?.let(actions.start) }) }
+        }
+    }
 }
 
 /** ピン留めしたファイルの区画。留めたものが無ければ出さない。押すと開く。 */
