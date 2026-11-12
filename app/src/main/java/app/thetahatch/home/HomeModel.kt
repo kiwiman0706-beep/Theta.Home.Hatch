@@ -1036,6 +1036,13 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         return i.takeIf { ctx.packageManager.resolveActivity(it, 0) != null }
     }
 
+    /** シリーズのアプリ（Meishi・Chirashi など）をふつうに開く Intent。入っていなければ null。 */
+    fun hatchLaunch(id: String): Intent? {
+        val a = Catalog.apps.value.firstOrNull { it.id == id } ?: return null
+        val pkg = a.installedPackage(UpdateHub.versionOf(ctx)) ?: return null
+        return ctx.packageManager.getLaunchIntentForPackage(pkg)
+    }
+
     /** 入力の送り先に出す AI のアプリ（入っているものだけ）。 */
     fun aiTargets(): List<String> = AI_APPS.filter { (_, pkg) -> apps.any { it.packageName == pkg } }.map { it.key }
     var quickTargets by mutableStateOf(store.quickTargets); private set

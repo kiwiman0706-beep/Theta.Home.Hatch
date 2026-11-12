@@ -497,7 +497,7 @@ private fun PeopleDrawer(model: HomeModel) {
             Row(Modifier.padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Field(q, { q = it }, "名前で絞り込み", Modifier.weight(1f))
                 MiniButton("📃⊕", "貼り付けて連絡先に登録", primary = true) { registering = true }
-                if (meishi != null) MiniButton("📷⊕", "名刺を撮って登録（Meishi）") { actions.start(meishi) }
+                if (meishi != null) MiniButton("📷⊕", "名刺を撮って登録（Meishi）", onLongClick = { model.hatchLaunch("meishi")?.let(actions.start) }, longDescription = "Meishi を開く") { actions.start(meishi) }
             }
         }
         item(key = "favpeople") { Column(Modifier.padding(bottom = 10.dp)) { SectionTitle("よく連絡する人"); FavPeopleRow(model) } }

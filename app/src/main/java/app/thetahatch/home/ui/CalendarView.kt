@@ -135,7 +135,7 @@ fun CalendarDrawer(model: HomeModel) {
             Spacer(Modifier.weight(1f))
             // 貼り付けて登録（Gemini）・チラシを撮る（Chirashi）。場所を取らないよう絵文字で
             MiniButton("📃⊕", "貼り付けて予定に登録", primary = true) { registering = true }
-            if (chirashi != null) MiniButton("📷⊕", "チラシを撮って登録（Chirashi）") { actions.start(chirashi) }
+            if (chirashi != null) MiniButton("📷⊕", "チラシを撮って登録（Chirashi）", onLongClick = { model.hatchLaunch("chirashi")?.let(actions.start) }, longDescription = "Chirashi を開く") { actions.start(chirashi) }
             GlyphButton(Glyph.GEAR, "表示するカレンダー", { picking = true })
             Text("今", color = p.accent, fontSize = 14.sp, maxLines = 1,
                 modifier = Modifier.border(1.dp, p.accent).clickable(onClickLabel = "今日へ") { anchor = today }.padding(horizontal = 10.dp, vertical = 6.dp))

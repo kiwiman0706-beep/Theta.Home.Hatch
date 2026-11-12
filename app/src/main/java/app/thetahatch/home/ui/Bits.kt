@@ -76,12 +76,13 @@ fun RowButton(
 /** 角を 1 つ落とした矩形のボタン。primary はオレンジで塗る。 */
 /** 絵文字などの短いボタン（場所を取らない）。description は読み上げ・長押しの説明。 */
 @Composable
-fun MiniButton(text: String, description: String, primary: Boolean = false, onClick: () -> Unit) {
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+fun MiniButton(text: String, description: String, primary: Boolean = false, onLongClick: (() -> Unit)? = null, longDescription: String? = null, onClick: () -> Unit) {
     val p = LocalPalette.current
     Text(
         text, color = if (primary) p.onAccent else p.fg, fontSize = 15.sp, maxLines = 1,
         modifier = Modifier.background(if (primary) p.accent else Color.Transparent).border(1.dp, if (primary) p.accent else p.line)
-            .clickable(onClickLabel = description, onClick = onClick).padding(horizontal = 8.dp, vertical = 5.dp)
+            .combinedClickable(onClickLabel = description, onClick = onClick, onLongClick = onLongClick, onLongClickLabel = longDescription).padding(horizontal = 8.dp, vertical = 5.dp)
             .semantics { contentDescription = description },
     )
 }

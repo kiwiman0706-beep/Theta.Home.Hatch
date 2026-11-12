@@ -1,5 +1,6 @@
 package app.thetahatch.home.ui
 
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.runtime.collectAsState
 
 import android.Manifest
@@ -218,6 +219,7 @@ private fun QuickSection(model: HomeModel) {
     var now by remember { mutableStateOf(System.currentTimeMillis()) }
     var wasRecording by remember { mutableStateOf(false) }
     var inking by remember { mutableStateOf(false) }
+    var shootMenu by remember { mutableStateOf(false) }
     LaunchedEffect(recording) {
         if (recording != null) wasRecording = true
         while (recording != null) { now = System.currentTimeMillis(); delay(1000) }
@@ -241,11 +243,11 @@ private fun QuickSection(model: HomeModel) {
     }
     val shape = androidx.compose.foundation.shape.RoundedCornerShape(if (p.pop) p.radius else 0.dp)
     @Composable
-    fun androidx.compose.foundation.layout.RowScope.Big(glyph: Glyph, label: String, on: Boolean, desc: String, onClick: () -> Unit) {
+    fun androidx.compose.foundation.layout.RowScope.Big(glyph: Glyph, label: String, on: Boolean, desc: String, onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {
         val bg = if (on) p.accent2 else p.accent
         Column(
             Modifier.weight(1f).height(60.dp).popShadow(p, shape).clip(shape).background(bg)
-                .clickable(onClickLabel = desc, onClick = onClick),
+                .combinedClickable(onClickLabel = desc, onClick = onClick, onLongClick = onLongClick, onLongClickLabel = if (onLongClick != null) "名刺・チラシ" else null),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
         ) {
             GlyphIcon(glyph, p.onAccent, 20.dp)
@@ -253,7 +255,18 @@ private fun QuickSection(model: HomeModel) {
         }
     }
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Big(Glyph.CAMERA, "撮る", false, "写真を撮って残す") { model.quickOpen = "photo" }
+        Box(Modifier.weight(1f)) {
+            Row { Big(Glyph.CAMERA, "撮る", false, "写真を撮って残す", onLongClick = { shootMenu = true }) { model.quickOpen = "photo" } }
+            // 長押し：名刺（Meishi）・チラシ（Chirashi）を撮る、それぞれを開く
+            androidx.compose.material3.DropdownMenu(expanded = shootMenu, onDismissRequest = { shootMenu = false }) {
+                listOf("meishi" to "名刺", "chirashi" to "チラシ").forEach { (id, what) ->
+                    model.scanIntent(id)?.let { i -> androidx.compose.material3.DropdownMenuItem(text = { Text("📷 ${what}を撮って登録") }, onClick = { shootMenu = false; actions.start(i) }) }
+                    model.hatchLaunch(id)?.let { i -> androidx.compose.material3.DropdownMenuItem(text = { Text(if (id == "meishi") "Meishi を開く" else "Chirashi を開く") }, onClick = { shootMenu = false; actions.start(i) }) }
+                }
+                if (model.hatchLaunch("meishi") == null && model.hatchLaunch("chirashi") == null)
+                    androidx.compose.material3.DropdownMenuItem(text = { Text("Meishi・Chirashi が入っていません") }, onClick = { shootMenu = false })
+            }
+        }
         val rec = recording
         Big(Glyph.MIC, when { rec != null -> "■ ${(now - rec) / 1000}秒"; model.transcribing -> "文字起こし…"; else -> "録る" }, rec != null || model.transcribing,
             if (rec != null) "録音を止めて文字起こし" else "録音する（止めると文字起こし）") { if (!model.transcribing) record() }
