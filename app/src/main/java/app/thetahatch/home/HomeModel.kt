@@ -1129,6 +1129,19 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         return i.takeIf { ctx.packageManager.resolveActivity(it, 0) != null }
     }
 
+    /**
+     * MemoHatch で新しいメモを始める（type：text・list・ink・audio・photo。MemoHatch の入力の段のボタンと同じ）。
+     * 入っていなければ false（呼んだ側が代わりのことをする）。
+     */
+    fun memoNew(type: String, start: (Intent) -> Unit): Boolean {
+        if (!memoInstalled()) return false
+        val pkg = memo
+        val i = listOf("$pkg.NEW", "$MEMO.NEW").map { Intent(it).setPackage(pkg).putExtra("type", type).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+            .firstOrNull { ctx.packageManager.resolveActivity(it, 0) != null } ?: return false
+        start(i)
+        return true
+    }
+
     /** シリーズのアプリ（Meishi・Chirashi など）をふつうに開く Intent。入っていなければ null。 */
     fun hatchLaunch(id: String): Intent? {
         val a = Catalog.apps.value.firstOrNull { it.id == id } ?: return null

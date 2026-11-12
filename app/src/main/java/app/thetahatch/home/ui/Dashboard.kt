@@ -1,5 +1,7 @@
 package app.thetahatch.home.ui
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.runtime.collectAsState
 
@@ -208,8 +210,8 @@ private fun MusicPanel(model: HomeModel) {
 }
 
 /**
- * すぐ記録：撮る（写真に言葉を添えて残す）・録る（録音。止めると Gemini で文字起こしして入力を開く）・描く（手書き）・打つ（文字）。
- * 撮る・打つは「入力」と同じで、MemoHatch に残してから送り先（LINE・メール・AI・コピー）を選べる。録音と手書きは記録（CAPTURE）に残る。
+ * すぐ記録：MemoHatch の入力の段と同じ 5 つ（文字・チェックリスト・手書き・声・写真）を絵だけで。押すと MemoHatch でそのメモを始める。
+ * MemoHatch が入っていなければ、このホームの機能（入力・録音と文字起こし・手書き）で代わりにする。写真は長押しで名刺・チラシ。
  */
 @Composable
 private fun QuickSection(model: HomeModel) {
@@ -243,21 +245,33 @@ private fun QuickSection(model: HomeModel) {
         }
     }
     val shape = androidx.compose.foundation.shape.RoundedCornerShape(if (p.pop) p.radius else 0.dp)
+    // 絵だけのボタン。読み上げ・長押しの説明は desc
     @Composable
-    fun androidx.compose.foundation.layout.RowScope.Big(glyph: Glyph, label: String, on: Boolean, desc: String, onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {
+    fun androidx.compose.foundation.layout.RowScope.Big(glyph: Glyph, on: Boolean, desc: String, extra: String? = null, onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {
         val bg = if (on) p.accent2 else p.accent
-        Column(
-            Modifier.weight(1f).height(60.dp).popShadow(p, shape).clip(shape).background(bg)
-                .combinedClickable(onClickLabel = desc, onClick = onClick, onLongClick = onLongClick, onLongClickLabel = if (onLongClick != null) "名刺・チラシ" else null),
-            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+        Box(
+            Modifier.weight(1f).height(52.dp).popShadow(p, shape).clip(shape).background(bg)
+                .combinedClickable(onClickLabel = desc, onClick = onClick, onLongClick = onLongClick, onLongClickLabel = if (onLongClick != null) "名刺・チラシ" else null)
+                .semantics { contentDescription = desc },
+            contentAlignment = Alignment.Center,
         ) {
-            GlyphIcon(glyph, p.onAccent, 20.dp)
-            Text(label, color = p.onAccent, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            GlyphIcon(glyph, p.onAccent, 24.dp)
+            extra?.let { Text(it, color = p.onAccent, fontSize = 10.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp)) }
         }
     }
+    // MemoHatch の入力の段（打つ・チェック・手書き・声・写真）と同じ並び。MemoHatch が無ければこのホームの機能で
+    fun memo(type: String, fallback: () -> Unit) { if (!model.memoNew(type, actions.start)) fallback() }
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Big(Glyph.FILE, false, "文字のメモ（MemoHatch）") { memo("text") { model.quickOpen = "text" } }
+        Big(Glyph.LIST, false, "チェックリスト（MemoHatch）") { memo("list") { model.quickOpen = "text" } }
+        Big(Glyph.PENCIL, false, "手書き（MemoHatch）") { memo("ink") { inking = true } }
+        val rec = recording
+        Big(Glyph.MIC, rec != null || model.transcribing, if (rec != null) "録音を止めて文字起こし" else "声のメモ（MemoHatch）",
+            extra = when { rec != null -> "${(now - rec) / 1000}s"; model.transcribing -> "…"; else -> null }) {
+            if (rec != null) record() else memo("audio") { if (!model.transcribing) record() }
+        }
         Box(Modifier.weight(1f)) {
-            Row { Big(Glyph.CAMERA, "撮る", false, "写真を撮って残す", onLongClick = { shootMenu = true }) { model.quickOpen = "photo" } }
+            Row { Big(Glyph.CAMERA, false, "写真のメモ（MemoHatch）。長押しで名刺・チラシ", onLongClick = { shootMenu = true }) { memo("photo") { model.quickOpen = "photo" } } }
             // 長押し：名刺（Meishi）・チラシ（Chirashi）を撮る、それぞれを開く
             androidx.compose.material3.DropdownMenu(expanded = shootMenu, onDismissRequest = { shootMenu = false }) {
                 listOf("meishi" to "名刺", "chirashi" to "チラシ").forEach { (id, what) ->
@@ -268,11 +282,6 @@ private fun QuickSection(model: HomeModel) {
                     androidx.compose.material3.DropdownMenuItem(text = { Text("Meishi・Chirashi が入っていません") }, onClick = { shootMenu = false })
             }
         }
-        val rec = recording
-        Big(Glyph.MIC, when { rec != null -> "■ ${(now - rec) / 1000}秒"; model.transcribing -> "文字起こし…"; else -> "録る" }, rec != null || model.transcribing,
-            if (rec != null) "録音を止めて文字起こし" else "録音する（止めると文字起こし）") { if (!model.transcribing) record() }
-        Big(Glyph.PENCIL, "描く", false, "手書きで残す") { inking = true }
-        Big(Glyph.LIST, "打つ", false, "文字で入れて送る") { model.quickOpen = "text" }
     }
     if (inking) InkDialog(onDismiss = { inking = false }) { file -> inking = false; model.refreshCaptures(); actions.toast("保存しました：${file.name}") }
 }
