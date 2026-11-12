@@ -54,7 +54,12 @@ class EdgeActivity : ComponentActivity() {
         when (purpose) {
             QUICK -> {
                 model.onHome()
-                model.quickOpen = intent?.getStringExtra(EXTRA_MODE)?.takeIf { it in MODES } ?: "voice"
+                // MemoHatch があればそちらで始めて、このエッジは閉じる
+                val mode = intent?.getStringExtra(EXTRA_MODE)?.takeIf { it in MODES } ?: "voice"
+                if (model.memoInstalled()) {
+                    model.openQuick(mode) { startActivity(it) }
+                    if (model.quickOpen == null) { finish(); return }
+                } else model.quickOpen = mode
             }
             VOICE_APP -> {
                 model.onHome()

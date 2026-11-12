@@ -1137,9 +1137,21 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         if (!memoInstalled()) return false
         val pkg = memo
         val i = listOf("$pkg.NEW", "$MEMO.NEW").map { Intent(it).setPackage(pkg).putExtra("type", type).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-            .firstOrNull { ctx.packageManager.resolveActivity(it, 0) != null } ?: return false
-        start(i)
-        return true
+            .firstOrNull { ctx.packageManager.resolveActivity(it, 0) != null }
+        if (i == null) {
+            (ctx as HomeApp).toast("MemoHatch の「新しいメモ」の入口が見つかりません（このホームの入力で代わりにします）")
+            return false
+        }
+        return runCatching { start(i) }.isSuccess
+    }
+
+    /**
+     * 入力（声・文字・写真）を始める。MemoHatch があればそちらで（voice は声のメモ）、無ければこのホームの入力。
+     * すぐ記録・端の下の ✎・「入力」のショートカット・エッジから。
+     */
+    fun openQuick(mode: String, start: (Intent) -> Unit) {
+        val type = when (mode) { "voice" -> "audio"; "photo" -> "photo"; else -> "text" }
+        if (!memoNew(type, start)) quickOpen = mode
     }
 
     /** シリーズのアプリ（Meishi・Chirashi など）をふつうに開く Intent。入っていなければ null。 */
@@ -2074,7 +2086,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
                 else start(Intent(android.speech.RecognizerIntent.ACTION_WEB_SEARCH).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
             // 入力：声・文字・写真を入れてから、送り先を選ぶ
-            "quick" -> quickOpen = "voice"
+            "quick" -> openQuick("voice", start)
             // 声でアプリを開く（呼び名でも）：すべてのアプリを開いて聞き取る
             "voice-app" -> openApps(voice = true)
             // MemoHatch：新しい音声メモ（録音から）
