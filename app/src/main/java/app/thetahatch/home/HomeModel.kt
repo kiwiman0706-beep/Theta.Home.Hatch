@@ -2435,6 +2435,11 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         val d = ctx.resources.displayMetrics.density
         val item = BoardItem(Store.newId(), BoardItem.WIDGET, id.toString(), h = mapOf(profile to (info.minHeight / d).toInt().coerceIn(120, 600)))
         val into = store.pendingBoard.also { store.pendingBoard = "" }
+        // ホームに置くとき（タブではない）は、ドロワーを開かない
+        if (into == HOME_BOARD) {
+            addBoardItem(HOME_BOARD, item)
+            return
+        }
         val tabId = into.takeIf { t -> tabs.any { it.id == t } } ?: run {
             val t = TabSpec(Store.newId(), TabKind.BOARD, host.label(info).take(14))
             updateTabs(tabs + t)
@@ -2553,6 +2558,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
 
     companion object {
         const val APPS_ID = "@apps"
+        /** ホーム（タブではないところ）に置くウィジェット・アプリ・ショートカットの置き場所。タブと同じ仕組みで持つ。 */
+        const val HOME_BOARD = "@home"
 
         /** フォルダの読み込みの誤り：「すべてのファイルへのアクセス」が要る（Download など）。 */
         const val NEED_ALL_FILES = "NEED_ALL_FILES"

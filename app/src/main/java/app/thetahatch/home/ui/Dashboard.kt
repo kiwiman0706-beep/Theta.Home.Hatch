@@ -151,6 +151,7 @@ private fun SectionView(model: HomeModel, s: HomeSection, filerHeight: Dp, openN
         HomeSection.PINS -> PinsPanel(model)
         HomeSection.MUSIC -> MusicPanel(model)
         HomeSection.BOOKS -> BooksPanel(model)
+        HomeSection.WIDGETS -> HomeWidgets(model)
         HomeSection.WEATHER -> Panel(model, "WEATHER", "天気", folded = {
             val f = model.forecast
             val warn = model.alerts?.list.orEmpty().joinToString("・") { it.name }
@@ -311,6 +312,43 @@ private fun BooksPanel(model: HomeModel) {
                 ShelfStrip(pkg, l, 72.dp, tall = true)
             }
             FlowRow2 { PillButton("${book.nickname ?: book.name} を開く", { ctx.packageManager.getLaunchIntentForPackage(pkg)?.let(actions.start) }) }
+        }
+    }
+}
+
+/**
+ * ホームに置いたウィジェット・アプリ・ショートカット。タブと同じ仕組み（置き場所 [HomeModel.HOME_BOARD]）。
+ * 何も置いていなければ「＋ ホームに置く」の 1 行だけ。⚙ で編集（高さ・半分・並べ替え・外す・足す）。
+ */
+@Composable
+private fun HomeWidgets(model: HomeModel) {
+    val p = LocalPalette.current
+    var editing by remember { mutableStateOf(false) }
+    var placing by remember { mutableStateOf(false) }
+    var adding by remember { mutableStateOf(false) }
+    val id = HomeModel.HOME_BOARD
+    val tab = remember { app.thetahatch.home.data.TabSpec(id, app.thetahatch.home.data.TabKind.BOARD, "HOME") }
+    val empty = model.boardItems(id).isEmpty() && model.opts(id).apps.isEmpty() && model.shortcuts.none { it.catId == "tab:$id" }
+    if (placing) TabAppsDialog(model, id) { placing = false }
+    if (adding) AddItemDialog(model, id) { adding = false }
+    if (empty && !editing) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("ホームに置く：", color = p.faint, fontSize = 12.sp)
+            MiniButton("＋ ウィジェットなど", "ウィジェット・フォルダ・予定などをホームに置く") { adding = true }
+            MiniButton("＋ アプリ", "アプリ・ショートカットをホームに置く") { placing = true }
+        }
+        return
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        TabAppsStrip(model, id)
+        BoardDrawer(model, tab, editing, inline = true)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Spacer(Modifier.weight(1f))
+            if (editing) {
+                MiniButton("＋ アプリ", "アプリ・ショートカットをホームに置く") { placing = true }
+                MiniButton("＋ ウィジェットなど", "ウィジェットなどを足す") { adding = true }
+            }
+            MiniButton(if (editing) "✓" else "⚙", if (editing) "編集を終える" else "ホームのウィジェット・アプリを編集") { editing = !editing }
         }
     }
 }

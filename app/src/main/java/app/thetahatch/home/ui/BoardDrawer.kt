@@ -188,7 +188,7 @@ private fun WidgetView(model: HomeModel, item: BoardItem, h: Int) {
 
 /** 足すものを選ぶ：ウィジェット・端末のフォルダ・ほかのタブと同じフォルダ・画像や PDF・Web ページ・予定や通知など。 */
 @Composable
-private fun AddItemDialog(model: HomeModel, tabId: String, onDismiss: () -> Unit) {
+internal fun AddItemDialog(model: HomeModel, tabId: String, onDismiss: () -> Unit) {
     val actions = LocalActions.current
     var widget by remember { mutableStateOf(false) }
     if (widget) {
