@@ -2140,15 +2140,30 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         toggleFav(FavPerson("line:" + s.id, Shortcuts.label(s)))
     }
 
-    /** ほかのアプリ（LINE WORKS など）のトーク：アプリ → トークの一覧。既定のホームのときだけ取れる。 */
-    fun talkRooms(): Map<String, List<android.content.pm.ShortcutInfo>> = Shortcuts.allShareTargets(ctx).filterKeys { it != LINE }
+    /** よく連絡する人に足せるトーク。pinned はホーム画面に追加したもの（このホームのショートカット）の id。 */
+    data class TalkRoom(val pkg: String, val id: String, val label: String, val info: android.content.pm.ShortcutInfo? = null, val pinned: String? = null)
 
-    fun addFavTalk(s: android.content.pm.ShortcutInfo) {
-        Shortcuts.saveIcon(ctx, s, talkIconId(s.`package`, s.id))
-        val f = FavPerson("talk:${s.`package`}|${s.id}", Shortcuts.label(s))
+    /**
+     * ほかのアプリ（LINE WORKS など）のトーク：アプリ → トーク。
+     * そのアプリで「ホーム画面に追加」したもの（このホームが受け取ったショートカット）と、端末が保存した会話（通知のトーク）。
+     */
+    fun talkRooms(): Map<String, List<TalkRoom>> {
+        val pinned = shortcuts.filter { it.packageName != LINE }.map { TalkRoom(it.packageName, it.shortcutId, it.label, pinned = it.id) }
+        val convo = Shortcuts.conversations(ctx).filterKeys { it != LINE }.values.flatten()
+            .map { TalkRoom(it.`package`, it.id, Shortcuts.label(it), info = it) }
+        return (pinned + convo).distinctBy { it.pkg to it.id }.groupBy { it.pkg }
+    }
+
+    fun addFavTalk(r: TalkRoom) {
+        val icon = Shortcuts.iconFile(ctx, talkIconId(r.pkg, r.id))
+        when {
+            r.info != null -> Shortcuts.saveIcon(ctx, r.info, talkIconId(r.pkg, r.id))
+            r.pinned != null -> runCatching { Shortcuts.iconFile(ctx, r.pinned).takeIf { it.exists() }?.copyTo(icon, overwrite = true) }
+        }
+        val f = FavPerson("talk:${r.pkg}|${r.id}", r.label)
         val adding = !isFav(f.key)
         toggleFav(f)
-        if (adding) repin(s.`package`)
+        if (adding) repin(r.pkg)
     }
 
     fun talkIconId(pkg: String, id: String) = if (pkg == LINE) "line_$id" else "talk_${pkg}_$id".replace(Regex("[^A-Za-z0-9_.-]"), "_")

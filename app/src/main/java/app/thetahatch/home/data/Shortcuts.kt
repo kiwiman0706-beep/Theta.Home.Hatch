@@ -51,14 +51,16 @@ object Shortcuts {
         la(ctx).getShortcuts(q, Process.myUserHandle()).orEmpty().filter { it.isEnabled }.distinctBy { it.id }.sortedBy { it.rank }
     }.getOrDefault(emptyList())
 
-    /** すべてのアプリの、会話・共有の宛先のショートカット（LINE WORKS・Slack などのトーク）。アプリごとに。 */
-    fun allShareTargets(ctx: Context): Map<String, List<ShortcutInfo>> = runCatching {
-        var flags = LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC or LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED
-        if (android.os.Build.VERSION.SDK_INT >= 30) flags = flags or LauncherApps.ShortcutQuery.FLAG_MATCH_CACHED
-        la(ctx).getShortcuts(LauncherApps.ShortcutQuery().setQueryFlags(flags), Process.myUserHandle()).orEmpty()
-            .filter { it.isEnabled && it.categories?.isNotEmpty() == true }
+    /**
+     * 会話のショートカット（通知の会話として端末が保存したもの：LINE WORKS・Slack・メッセージなどのトーク）。アプリごとに。
+     * Android 11 から。検索・お気に入りなど、会話でないショートカットは入らない。
+     */
+    fun conversations(ctx: Context): Map<String, List<ShortcutInfo>> = runCatching {
+        if (android.os.Build.VERSION.SDK_INT < 30) return@runCatching emptyMap()
+        la(ctx).getShortcuts(LauncherApps.ShortcutQuery().setQueryFlags(LauncherApps.ShortcutQuery.FLAG_MATCH_CACHED), Process.myUserHandle()).orEmpty()
+            .filter { it.isEnabled }
             .groupBy { it.`package` }
-            .mapValues { (_, v) -> v.distinctBy { it.id }.sortedBy { it.rank } }
+            .mapValues { (_, v) -> v.distinctBy { it.id } }
     }.getOrDefault(emptyMap())
 
     fun label(s: ShortcutInfo): String = (s.shortLabel ?: s.longLabel ?: s.id).toString()

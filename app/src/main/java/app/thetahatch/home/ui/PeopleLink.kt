@@ -255,22 +255,32 @@ private fun TalkDialog(model: HomeModel, onDismiss: () -> Unit) {
             Column(Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 if (rooms.isEmpty()) Note(
                     if (!Shortcuts.available(ctx)) "このホームが既定のホームアプリのときだけ、トークを読めます。"
-                    else "トークが見つかりません。そのアプリで一度やりとりすると出ることがあります（アプリが会話のショートカットを出していないと出ません）。",
+                    else "トークが見つかりません。そのアプリのトークで「ホーム画面に追加」をすると、ここに出ます（LINE WORKS はトークの設定 →「ホーム画面に追加」）。",
                 )
                 rooms.forEach { (pkg, list) ->
                     SectionTitle(appName(pkg))
-                    list.forEachIndexed { zi, s ->
-                        val on = model.isFav("talk:$pkg|${s.id}")
-                        RowButton(zebra = zi, onClick = { model.addFavTalk(s) }) {
-                            TalkIcon(model, pkg, s.id, Shortcuts.label(s), 32.dp, s)
-                            Text(Shortcuts.label(s), color = p.fg, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    list.forEachIndexed { zi, r ->
+                        val on = model.isFav("talk:$pkg|${r.id}")
+                        RowButton(zebra = zi, onClick = { model.addFavTalk(r) }) {
+                            if (r.pinned != null) ShortcutIconOf(r.pinned, r.label) else TalkIcon(model, pkg, r.id, r.label, 32.dp, r.info)
+                            Text(r.label, color = p.fg, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                             Text(if (on) "✓" else "＋", color = p.accent, fontSize = 16.sp)
                         }
                     }
                 }
-                Note("出るのは、そのアプリが最近のトークとして出しているものです。足したトークは、一覧から消えても開けるように残します。")
+                Note("出るのは、そのアプリで「ホーム画面に追加」したトークと、通知が来た会話です。足したトークは、一覧から消えても開けるように残します。")
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("閉じる") } },
     )
+}
+
+
+/** このホームが受け取ったショートカットのアイコン。 */
+@Composable
+private fun ShortcutIconOf(id: String, label: String) {
+    val ctx = LocalActions.current.activity
+    val bmp = remember(id) { Shortcuts.icon(ctx, id) }
+    if (bmp != null) Image(bmp.asImageBitmap(), null, Modifier.size(32.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+    else Initial(label.take(1).ifEmpty { "?" }, 32.dp)
 }
