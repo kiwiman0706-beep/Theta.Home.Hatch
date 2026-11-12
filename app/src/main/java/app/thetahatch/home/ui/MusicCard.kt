@@ -61,6 +61,21 @@ fun MusicCard(model: HomeModel) {
     val n = now
     if (n == null) {
         val enabled = HatchNotificationListener.isEnabled(ctx)
+        // 何も流れていないとき：Theta Music の棚（お気に入り・最近のアルバム）を横に並べ、押すと再生
+        val shelf by androidx.compose.runtime.produceState<List<app.thetahatch.home.hub.HatchShelf.Item>?>(null, musicApp?.packageName) {
+            value = musicApp?.let { a -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { app.thetahatch.home.hub.HatchShelf.read(ctx, a.packageName) } }
+        }
+        val items = shelf
+        if (enabled && musicApp != null && !items.isNullOrEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                items.groupBy { it.sectionTitle.ifEmpty { it.section } }.forEach { (title, list) ->
+                    if (title.isNotEmpty()) Text(title, color = p.faint, fontSize = 11.sp)
+                    ShelfStrip(musicApp.packageName, list, 72.dp)
+                }
+                FlowRow2 { PillButton("${musicApp.label} を開く", { actions.start(Apps.launchIntent(musicApp)) }) }
+            }
+            return
+        }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
                 if (enabled) "再生中の音楽はありません" else "通知へのアクセスを許可すると、再生中の曲（どの音楽アプリでも）がここに出て、操作できます。",

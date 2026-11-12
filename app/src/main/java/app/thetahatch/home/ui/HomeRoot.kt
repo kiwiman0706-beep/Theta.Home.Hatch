@@ -139,6 +139,15 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity, edgeExit: (() -> Uni
         model.driveConsent = null
         runCatching { consent.launch(androidx.activity.result.IntentSenderRequest.Builder(pi.intentSender).build()) }
     }
+    // Gmail の許可の画面（メールのタブで Gmail の検索を使うとき）
+    val gmailConsent = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
+        model.gmailConsentResult(it.resultCode == android.app.Activity.RESULT_OK, it.data)
+    }
+    LaunchedEffect(model.gmailConsent) {
+        val pi = model.gmailConsent ?: return@LaunchedEffect
+        model.gmailConsent = null
+        runCatching { gmailConsent.launch(androidx.activity.result.IntentSenderRequest.Builder(pi.intentSender).build()) }
+    }
     val p = LocalPalette.current
 
     val here = model.place(model.location.removePrefix("tab:"))
@@ -763,6 +772,15 @@ fun AddTabDialog(model: HomeModel, onWidget: () -> Unit, onDismiss: () -> Unit) 
                         }
                     })
                     BoardItem.PANELS.forEach { (type, kind) -> PillButton("＋ " + kind.defaultLabel, { create(type) }) }
+                    // Hatch のアプリのタブ（MemoHatch のピン留めメモなど）
+                    hatchShelfApps(model).forEach { a ->
+                        PillButton("＋ " + (a.nickname ?: a.name), {
+                            val (t, _) = model.addBoardTab(BoardItem.SHELF, a.id)
+                            model.renameTab(t.id, (a.nickname ?: a.name).take(12))
+                            onDismiss()
+                            model.toggle(t.id)
+                        })
+                    }
                     PillButton("＋ 空のタブ", { val t = model.addTab(TabKind.BOARD); onDismiss(); model.toggle(t.id) })
                 }
                 SectionTitle("PINNED / ピン留め（端の下・すべてのアプリの上）")

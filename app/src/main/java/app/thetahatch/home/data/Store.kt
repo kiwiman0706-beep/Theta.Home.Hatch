@@ -124,6 +124,8 @@ data class BoardItem(
         const val FOLDER = "folder"
         const val FILE = "file"
         const val WEB = "web"
+        /** Hatch のアプリの棚（ref に catalog の id）。 */
+        const val SHELF = "shelf"
 
         /** 今までの専用のタブの中身。置くとそのドロワーと同じものが出る。 */
         val PANELS = mapOf(

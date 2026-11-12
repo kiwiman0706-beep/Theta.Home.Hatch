@@ -117,6 +117,7 @@ private fun ItemView(model: HomeModel, t: TabSpec, item: BoardItem, index: Int, 
                 BoardItem.FILE -> FileDrawer(model, model.specOf(item))
                 BoardItem.WEB -> WebDrawer(model, model.specOf(item))
                 in BoardItem.PANELS -> PanelView(model, item.type)
+                BoardItem.SHELF -> ShelfView(model, item.ref)
                 else -> Note("この版では表示できないものです")
             }
         }
@@ -161,6 +162,7 @@ private fun kindName(type: String) = when (type) {
     BoardItem.FOLDER -> "FOLDER"
     BoardItem.FILE -> "FILE"
     BoardItem.WEB -> "WEB"
+    BoardItem.SHELF -> "HATCH"
     else -> type.uppercase()
 }
 
@@ -233,8 +235,21 @@ private fun AddItemDialog(model: HomeModel, tabId: String, onDismiss: () -> Unit
                 FlowRow2 {
                     BoardItem.PANELS.forEach { (type, kind) -> PillButton("＋ " + kind.defaultLabel, { add(type); onDismiss() }) }
                 }
+                SectionTitle("HATCH・シリーズのアプリ（ピン留め・お気に入りなど）")
+                FlowRow2 {
+                    hatchShelfApps(model).forEach { a -> PillButton("＋ " + (a.nickname ?: a.name), { add(BoardItem.SHELF, a.id, a.nickname ?: a.name); onDismiss() }) }
+                }
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("閉じる") } },
     )
+}
+
+
+/** 棚のタブに置けるシリーズのアプリ（Android 版が入っているもの。このホーム自身は除く）。 */
+@Composable
+internal fun hatchShelfApps(model: HomeModel): List<app.thetahatch.home.hub.CatalogApp> {
+    val ctx = LocalActions.current.activity
+    val v = app.thetahatch.home.hub.UpdateHub.versionOf(ctx)
+    return app.thetahatch.home.hub.Catalog.android.filter { it.installedPackage(v) != null && it.id != "home" }
 }

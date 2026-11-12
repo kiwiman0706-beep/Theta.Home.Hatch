@@ -1,5 +1,6 @@
 package app.thetahatch.home
 
+import app.thetahatch.home.drive.Gmail
 import app.thetahatch.home.data.PeopleLinks
 import app.thetahatch.home.data.LineLink
 import app.thetahatch.home.data.FavPerson
@@ -253,6 +254,36 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     var driveOn by mutableStateOf(drive.enabled); private set
     /** 出してほしい Google の許可の画面。画面側が開いて null に戻す。 */
     var driveConsent by mutableStateOf<PendingIntent?>(null)
+
+    // ---- メールのタブ：通知か、Gmail の検索（重要など） ----
+
+    val gmail = Gmail(app)
+    var gmailConsent by mutableStateOf<PendingIntent?>(null)
+    /** "notice"（届いた通知）か "gmail"（Gmail の検索）。 */
+    var mailSource by mutableStateOf(store.prefs.getString("mailSource", "notice") ?: "notice"); private set
+    var gmailQuery by mutableStateOf(store.prefs.getString("gmailQuery", null) ?: Gmail.PRESETS[0].second); private set
+    var gmailList by mutableStateOf<List<Gmail.Mail>>(emptyList()); private set
+    var gmailLoading by mutableStateOf(false); private set
+    var gmailError by mutableStateOf<String?>(null); private set
+
+    fun changeMailSource(v: String) { mailSource = v; store.prefs.edit().putString("mailSource", v).apply(); if (v == "gmail") refreshGmail() }
+    fun changeGmailQuery(q: String) { gmailQuery = q.trim().ifEmpty { Gmail.PRESETS[0].second }; store.prefs.edit().putString("gmailQuery", gmailQuery).apply(); refreshGmail() }
+
+    fun refreshGmail() {
+        if (gmailLoading) return
+        gmailLoading = true; gmailError = null
+        viewModelScope.launch {
+            val r = runCatching { gmail.search(gmailQuery) }
+            gmailLoading = false
+            r.onSuccess { gmailList = it }.onFailure { e ->
+                if (e is Gmail.NeedConsent) gmailConsent = e.intent else gmailError = e.message
+            }
+        }
+    }
+
+    fun gmailConsentResult(ok: Boolean, data: android.content.Intent?) {
+        if (ok && gmail.acceptResult(data)) refreshGmail() else gmailError = "Gmail の許可がありません"
+    }
     var checking by mutableStateOf(false); private set
 
     /** ウィジェットの設定は画面ごと："narrow"（幅 600dp 未満）・"wide"。 */

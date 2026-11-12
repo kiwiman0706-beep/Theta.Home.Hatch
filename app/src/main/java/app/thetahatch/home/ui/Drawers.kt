@@ -438,7 +438,9 @@ private fun NoticeDrawer(model: HomeModel, mail: Boolean) {
     val all by HatchNotificationListener.notices.collectAsState()
     val list = all.filter { if (mail) it.packageName in Notice.MAIL else it.isLine }
     val enabled = HatchNotificationListener.isEnabled(ctx)
+    if (mail && model.mailSource == "gmail") { GmailList(model); return }
     DrawerList {
+        if (mail) item { MailSourceRow(model) }
         if (!enabled) {
             item {
                 NeedPermission(
@@ -467,6 +469,76 @@ private fun NoticeDrawer(model: HomeModel, mail: Boolean) {
                 }
             }
         }
+    }
+}
+
+/** メールのタブの上：届いた通知か、Gmail の検索（重要など）か。 */
+@Composable
+private fun MailSourceRow(model: HomeModel) {
+    Row(Modifier.padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        MiniButton("通知", "届いた通知を出す", primary = model.mailSource != "gmail") { model.changeMailSource("notice") }
+        MiniButton("Gmail", "Gmail の検索に合うメールを出す（重要など）", primary = model.mailSource == "gmail") { model.changeMailSource("gmail") }
+    }
+}
+
+/** Gmail の検索に合うメール（既定は「重要」）。押すと Gmail で開く。 */
+@Composable
+private fun GmailList(model: HomeModel) {
+    val p = LocalPalette.current
+    val actions = LocalActions.current
+    var editing by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { if (model.gmailList.isEmpty()) model.refreshGmail() }
+    DrawerList {
+        item { MailSourceRow(model) }
+        item {
+            Row(Modifier.padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                val preset = app.thetahatch.home.drive.Gmail.PRESETS.firstOrNull { it.second == model.gmailQuery }?.first
+                Text(preset ?: model.gmailQuery, color = p.fg, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                MiniButton("⚙", "絞り込みを変える") { editing = true }
+                MiniButton("↻", "読み直す") { model.refreshGmail() }
+            }
+        }
+        if (model.gmailLoading) item { Note("読み込んでいます…") }
+        model.gmailError?.let { e -> item { Text(e, color = p.accent, fontSize = 13.sp) } }
+        if (!model.gmailLoading && model.gmailError == null && model.gmailList.isEmpty()) item { Note("合うメールはありません") }
+        itemsIndexed(model.gmailList, key = { _, m -> m.id }) { zi, m ->
+            RowButton(zebra = zi, onClick = {
+                val i = Intent(Intent.ACTION_VIEW, Uri.parse("https://mail.google.com/mail/u/0/#all/${m.threadId}"))
+                if (actions.activity.packageManager.getLaunchIntentForPackage(app.thetahatch.home.drive.Gmail.GMAIL_PACKAGE) != null) i.setPackage(app.thetahatch.home.drive.Gmail.GMAIL_PACKAGE)
+                runCatching { actions.start(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.onFailure { actions.start(Intent(Intent.ACTION_VIEW, Uri.parse("https://mail.google.com/mail/u/0/#all/${m.threadId}"))) }
+            }) {
+                Column(Modifier.weight(1f)) {
+                    Row {
+                        Text(m.from, color = p.fg, fontSize = 13.sp, fontWeight = if (m.unread) androidx.compose.ui.text.font.FontWeight.Bold else null, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Text(java.text.SimpleDateFormat("M/d H:mm", java.util.Locale.JAPAN).format(java.util.Date(m.date)), color = p.faint, fontSize = 11.sp)
+                    }
+                    Text(m.subject, color = p.fg, fontSize = 14.sp, fontWeight = if (m.unread) androidx.compose.ui.text.font.FontWeight.Bold else null, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(m.snippet, color = p.muted, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+        item {
+            FlowRow2 {
+                PillButton("Gmail を開く", { actions.activity.packageManager.getLaunchIntentForPackage(app.thetahatch.home.drive.Gmail.GMAIL_PACKAGE)?.let(actions.start) ?: actions.toast("Gmail が入っていません") })
+                PillButton("作成", { actions.start(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"))) })
+            }
+        }
+    }
+    if (editing) {
+        var q by remember { mutableStateOf(model.gmailQuery) }
+        AlertDialog(
+            onDismissRequest = { editing = false },
+            title = { Text("Gmail の絞り込み") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow2 { app.thetahatch.home.drive.Gmail.PRESETS.forEach { (label, query) -> PillButton(label, { q = query }, primary = q == query) } }
+                    Field(q, { q = it }, "Gmail の検索の書き方（例 is:important label:仕事）")
+                    Note("Gmail の検索窓と同じ書き方です。is:important（重要）・is:unread（未読）・is:starred（スター）・from:・label:・newer_than:7d など。")
+                }
+            },
+            confirmButton = { TextButton(onClick = { model.changeGmailQuery(q); editing = false }) { Text("決める") } },
+            dismissButton = { TextButton(onClick = { editing = false }) { Text("やめる") } },
+        )
     }
 }
 
