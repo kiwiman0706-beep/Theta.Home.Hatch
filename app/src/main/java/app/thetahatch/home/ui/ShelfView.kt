@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -69,9 +70,18 @@ fun ShelfView(model: HomeModel, id: String) {
             items!!.isEmpty() -> Note("出すものがありません（${app.name} でピン留め・お気に入りにすると出ます）")
             else -> items!!.groupBy { it.sectionTitle.ifEmpty { it.section } }.forEach { (title, list) ->
                 if (title.isNotEmpty()) SectionTitle(title)
-                // 文が主なもの（メモ）は縦に、画像があるもの（アルバムなど）は横に並べる
-                if (list.any { it.image.isNotEmpty() }) ShelfStrip(pkg, list)
-                else list.forEach { ShelfCard(pkg, it) }
+                // タイル：幅に合わせて 2〜4 列。画像・題名・本文がその場で読める（横スクロールはしない）
+                androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val cols = (maxWidth / 170.dp).toInt().coerceIn(2, 4)
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        list.chunked(cols).forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
+                                row.forEach { item -> Box(Modifier.weight(1f)) { ShelfTile(pkg, item) } }
+                                repeat(cols - row.size) { Box(Modifier.weight(1f)) }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -100,18 +110,26 @@ fun ShelfStrip(pkg: String, list: List<HatchShelf.Item>, size: androidx.compose.
     }
 }
 
-/** 文が主なもの（メモなど）：色の帯・題名・本文の頭。押すとそのアプリで開く。 */
+/** タイル 1 つ：上に色の帯、画像（あれば）、題名、本文（8 行まで）。押すとそのアプリで開く。 */
 @Composable
-private fun ShelfCard(pkg: String, item: HatchShelf.Item) {
+private fun ShelfTile(pkg: String, item: HatchShelf.Item) {
     val p = LocalPalette.current
     val actions = LocalActions.current
-    val band = runCatching { Color(android.graphics.Color.parseColor(item.color)) }.getOrNull() ?: p.accent
-    Row(Modifier.fillMaxWidth().background(p.raised).clickable(onClickLabel = "開く") { HatchShelf.intent(pkg, item)?.let(actions.start) }) {
-        Box(Modifier.width(4.dp).height(56.dp).background(band))
-        Column(Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
-            if (item.title.isNotEmpty()) Text(item.title, color = p.fg, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    val ctx = actions.activity
+    val band = runCatching { Color(android.graphics.Color.parseColor(item.color)) }.getOrNull() ?: p.line
+    val bmp by produceState<android.graphics.Bitmap?>(null, item.image) { value = withContext(Dispatchers.IO) { HatchShelf.image(ctx, item, 480) } }
+    Column(
+        Modifier.fillMaxWidth().background(p.raised).border(lineWidth, p.line)
+            .clickable(onClickLabel = "開く") { HatchShelf.intent(pkg, item)?.let(actions.start) },
+    ) {
+        Box(Modifier.fillMaxWidth().height(3.dp).background(band))
+        bmp?.let { b ->
+            Image(b.asImageBitmap(), item.title, Modifier.fillMaxWidth().heightIn(max = 160.dp), contentScale = ContentScale.FillWidth)
+        }
+        Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (item.title.isNotEmpty()) Text(item.title, color = p.fg, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
             val body = item.text.ifEmpty { item.subtitle }
-            if (body.isNotEmpty()) Text(body, color = p.muted, fontSize = 12.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            if (body.isNotEmpty() && body != item.title) Text(body, color = p.muted, fontSize = 12.sp, lineHeight = 16.sp, maxLines = 8, overflow = TextOverflow.Ellipsis)
         }
     }
 }
