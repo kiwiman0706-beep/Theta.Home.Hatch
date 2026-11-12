@@ -32,3 +32,25 @@ class UpdateWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         }
     }
 }
+
+
+/** 毎日 1 回：新しいアプリに Gemini で読みを付け、アイコンを作る（設定でオンのとき・Wi-Fi・充電中）。 */
+class AutoWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+    override suspend fun doWork(): Result {
+        val app = applicationContext as HomeApp
+        runCatching {
+            if (app.model.apps.isEmpty()) kotlinx.coroutines.delay(3000)
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { app.model.runAuto() }
+        }
+        return Result.success()
+    }
+
+    companion object {
+        fun schedule(context: Context) {
+            val req = PeriodicWorkRequestBuilder<AutoWorker>(24, TimeUnit.HOURS)
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.UNMETERED).setRequiresCharging(true).build())
+                .build()
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork("hatch-auto", ExistingPeriodicWorkPolicy.KEEP, req)
+        }
+    }
+}

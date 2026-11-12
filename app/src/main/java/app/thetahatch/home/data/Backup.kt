@@ -63,6 +63,7 @@ object Backup {
             .put("taskbarPins", JSONArray(store.taskbarPins))
             .put("lineLinks", store.prefs.getString("lineLinks", "{}"))
             .put("favPeople", store.prefs.getString("favPeople", "[]"))
+            .put("autoNicknames", store.prefs.getString("autoNicknames", "{}"))
             .put("appOrder", JSONObject(store.appOrder().mapValues { JSONArray(it.value) }))
             .put("tabOpts", JSONObject(store.prefs.getString("tabOpts", "{}") ?: "{}"))
             .put("nas", JSONObject().put("url", store.prefs.getString("nasUrl", "")).put("account", store.prefs.getString("nasAccount", "")))
@@ -116,6 +117,7 @@ object Backup {
         o.optJSONArray("taskbarPins")?.let { e.putString("taskbarPins", it.toString()) }
         o.optString("lineLinks").takeIf { it.isNotEmpty() }?.let { e.putString("lineLinks", it) }
         o.optString("favPeople").takeIf { it.isNotEmpty() }?.let { e.putString("favPeople", it) }
+        o.optString("autoNicknames").takeIf { it.isNotEmpty() }?.let { e.putString("autoNicknames", it) }
         e.putString("location", o.optString("location", ""))
         val nas = o.optJSONObject("nas")
         val nasUrl = nas?.optString("url").orEmpty()

@@ -730,6 +730,33 @@ class Store(context: Context) {
         get() = strings("collapsedPanels").toSet()
         set(v) = putStrings("collapsedPanels", v.toList())
 
+    /**
+     * Gemini が付けたアプリの読み（声で開く・検索で使う）。キーは AppEntry.key。
+     * 値が空のリストは「付けてみたが要らなかった」（次から聞かない）。label は付けたときの名前（名前が変わったら付け直す）。
+     */
+    var autoNicknames: Map<String, Pair<String, List<String>>>
+        get() = runCatching {
+            val o = JSONObject(prefs.getString("autoNicknames", "{}") ?: "{}")
+            o.keys().asSequence().associateWith { k ->
+                val e = o.getJSONObject(k)
+                val a = e.getJSONArray("r")
+                e.optString("label") to (0 until a.length()).map { a.getString(it) }
+            }
+        }.getOrDefault(emptyMap())
+        set(v) {
+            val o = JSONObject()
+            v.forEach { (k, e) -> o.put(k, JSONObject().put("label", e.first).put("r", JSONArray(e.second))) }
+            prefs.edit().putString("autoNicknames", o.toString()).apply()
+        }
+
+    /** 新しいアプリに、Gemini で読みを付ける・アイコンを作る（毎日と、アプリを入れたとき）。 */
+    var autoReadings: Boolean
+        get() = prefs.getBoolean("autoReadings", true)
+        set(v) = prefs.edit().putBoolean("autoReadings", v).apply()
+    var autoIcons: Boolean
+        get() = prefs.getBoolean("autoIcons", true)
+        set(v) = prefs.edit().putBoolean("autoIcons", v).apply()
+
     /** アプリの呼び名（声で開く・検索で使う）。キーは AppEntry.key、値は呼び名（いくつでも）。 */
     var nicknames: Map<String, List<String>>
         get() = runCatching {

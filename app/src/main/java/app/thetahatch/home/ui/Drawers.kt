@@ -692,6 +692,7 @@ private fun NicknameDialog(model: HomeModel, app: AppEntry, onDismiss: () -> Uni
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Note("声で開くとき・検索で、この名前でも見つかります。ひらがなで入れておくと聞き取りと合いやすいです。いくつか付けるときは「、」で区切ります。")
+                model.autoNicknamesOf(app).takeIf { it.isNotEmpty() }?.let { auto -> Note("Gemini が付けた読み：" + auto.joinToString("、") + "（こちらも使います）") }
                 Field(text, { text = it }, "例：かけいぼ、おかね")
             }
         },

@@ -29,6 +29,8 @@ class HomeApp : Application() {
         app.thetahatch.home.hub.Catalog.load(this)
         // 更新のハブ：12 時間に 1 回（試験の環境などで WorkManager が無いときは何もしない）
         runCatching { app.thetahatch.home.hub.UpdateWorker.schedule(this) }
+        // 毎日：新しいアプリの読み・アイコン（Gemini）
+        runCatching { app.thetahatch.home.hub.AutoWorker.schedule(this) }
     }
 
     fun toast(message: String) {

@@ -189,12 +189,66 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         store.nicknames = nicknames
     }
 
-    /** アプリの名前と呼び名。 */
-    fun namesOf(app: AppEntry): List<String> = listOf(app.label) + nicknamesOf(app)
+    /** Gemini が付けた読み（自動）。 */
+    var autoNicknames by mutableStateOf(store.autoNicknames); private set
+    fun autoNicknamesOf(app: AppEntry): List<String> = autoNicknames[app.key]?.second.orEmpty()
+    var autoReadings by mutableStateOf(store.autoReadings); private set
+    var autoIcons by mutableStateOf(store.autoIcons); private set
+    fun changeAutoReadings(v: Boolean) { autoReadings = v; store.autoReadings = v; if (v) autoForNewApps() }
+    fun changeAutoIcons(v: Boolean) { autoIcons = v; store.autoIcons = v; if (v) autoForNewApps() }
+    var readingJob by mutableStateOf<String?>(null); private set
+
+    /** アプリの名前と呼び名（決めたもの・自動の読み）。 */
+    fun namesOf(app: AppEntry): List<String> = listOf(app.label) + nicknamesOf(app) + autoNicknamesOf(app)
 
     /** 検索の言葉がアプリの名前か呼び名に合うか。 */
     fun appMatches(app: AppEntry, q: String): Boolean =
-        q.isBlank() || app.label.contains(q, ignoreCase = true) || nicknamesOf(app).any { VoiceMatch.contains(it, q) }
+        q.isBlank() || app.label.contains(q, ignoreCase = true) || (nicknamesOf(app) + autoNicknamesOf(app)).any { VoiceMatch.contains(it, q) }
+
+    /**
+     * まだ読みの無いアプリ（名前が変わったものも）に、Gemini で読みを付ける。40 個ずつ。all なら全部付け直す。
+     * 付けたアプリの数を返す。キーが無ければ 0。
+     */
+    suspend fun generateReadings(all: Boolean = false): Int {
+        val key = store.geminiKey
+        if (key.isEmpty()) return 0
+        val have = autoNicknames
+        val targets = apps.filter { a -> all || have[a.key]?.first != a.label }.filter { it.packageName != ctx.packageName }
+        if (targets.isEmpty()) return 0
+        var done = 0
+        targets.chunked(40).forEachIndexed { i, chunk ->
+            readingJob = "読みを付けています ${i * 40 + chunk.size}/${targets.size}"
+            val labels = chunk.associate { it.key to it.label }
+            val got = runCatching {
+                app.thetahatch.home.data.Readings.parse(
+                    app.thetahatch.home.data.Gemini.generate(key, app.thetahatch.home.data.Readings.request(chunk.map { Triple(it.key, it.label, it.packageName) })),
+                    labels,
+                )
+            }.getOrNull() ?: return@forEachIndexed
+            // 答えの無かったアプリも「付けてみた」にして、次から聞かない
+            val merged = autoNicknames + chunk.associate { a -> a.key to (a.label to (got[a.key] ?: emptyList())) }
+            autoNicknames = merged
+            store.autoNicknames = merged
+            done += chunk.size
+        }
+        readingJob = null
+        return done
+    }
+
+    /** 新しいアプリに、読み（オンなら）とアイコン（Gemini のアイコンを使っていてオンなら）を。アプリを入れたときと毎日。 */
+    fun autoForNewApps() {
+        viewModelScope.launch { runAuto() }
+    }
+
+    /** 読みとアイコンを作り終えるまで待つ（毎日の裏の仕事から）。 */
+    suspend fun runAuto() {
+        if (store.geminiKey.isEmpty()) return
+        if (autoReadings) generateReadings()
+        if (autoIcons && iconMode == IconStyle.GEMINI) {
+            startGeminiIcons(quiet = true)
+            iconWork?.join()
+        }
+    }
 
     /** アプリの一覧を開いたら、すぐ音声で聞き取る（一覧の側が始めたら false に戻す）。 */
     var voicePending by mutableStateOf(false)
@@ -314,7 +368,12 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         place(location.removePrefix("tab:"))?.let { showFolder(it, closeDrawer = false) }
     }
 
-    fun refreshApps() = io { Apps.load(ctx) }.then { apps = it }
+    fun refreshApps() = io { Apps.load(ctx) }.then { list ->
+        val added = apps.isNotEmpty() && list.any { a -> apps.none { it.key == a.key } }
+        apps = list
+        // アプリを入れたら、その分の読み・アイコンを作る
+        if (added) autoForNewApps()
+    }
 
     fun refreshPeople() {
         if (!has(Manifest.permission.READ_CONTACTS)) return
@@ -1773,11 +1832,11 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     fun geminiLegacy(): Int = apps.count { !IconStyle.cacheFile(ctx, it.key).exists() && IconStyle.legacyFile(ctx, it.key).exists() }
 
     /** まだ型の無いアプリ（only を渡せばそれだけ）を、1 つずつ Gemini で加工する。 */
-    fun startGeminiIcons(only: AppEntry? = null, upgrade: Boolean = false) {
+    fun startGeminiIcons(only: AppEntry? = null, upgrade: Boolean = false, quiet: Boolean = false) {
         if (iconWork?.isActive == true) return
         val key = store.geminiKey
         if (key.isEmpty()) {
-            (ctx as HomeApp).toast("先に Gemini の API キーを入れてください"); return
+            if (!quiet) (ctx as HomeApp).toast("先に Gemini の API キーを入れてください"); return
         }
         val family = iconFamily()
         val targets = only?.let { listOf(it) } ?: apps.filter {
@@ -1787,7 +1846,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             !done && (if (upgrade) legacy else !legacy)
         }
         if (targets.isEmpty()) {
-            (ctx as HomeApp).toast("すべてのアプリを加工済みです"); return
+            if (!quiet) (ctx as HomeApp).toast("すべてのアプリを加工済みです"); return
         }
         iconWork = viewModelScope.launch {
             var failed = 0

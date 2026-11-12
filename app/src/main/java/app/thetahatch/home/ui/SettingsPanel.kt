@@ -1,5 +1,7 @@
 package app.thetahatch.home.ui
 
+import kotlinx.coroutines.launch
+
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.clickable
@@ -336,6 +338,21 @@ fun SettingsPanel(model: HomeModel) {
                         }
                         PillButton("加工した型をすべて消す", { model.clearGeminiIcons() })
                     }
+                    Toggle("新しいアプリのアイコンを自動で加工する（毎日・入れたとき）", model.autoIcons) { model.changeAutoIcons(it) }
+                }
+                Gap(18.dp)
+                SectionTitle("VOICE / アプリの読み（声で開く）", Modifier.padding(horizontal = 10.dp))
+                Note("英語の名前のアプリは、声で呼んでも見つかりにくいので、Gemini に読み方（じぇみに・すらっく・ようつべ など）を付けてもらいます。名前だけを送ります。付けた読みは、アプリの長押し →「呼び名」で見られます。")
+                Toggle("新しいアプリに読みを自動で付ける（毎日・入れたとき）", model.autoReadings) { model.changeAutoReadings(it) }
+                val scope = androidx.compose.runtime.rememberCoroutineScope()
+                model.readingJob?.let { Text(it, color = p.accent, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 10.dp)) }
+                FlowRow2 {
+                    PillButton("読みの無いアプリに付ける", {
+                        scope.launch { val n = model.generateReadings(); actions.toast(if (n == 0) (if (model.hasGeminiKey) "付けるアプリはありません" else "先に Gemini の API キーを入れてください") else "${n} 個のアプリに読みを付けました") }
+                    }, enabled = model.hasGeminiKey && model.readingJob == null)
+                    PillButton("全部付け直す", {
+                        scope.launch { val n = model.generateReadings(all = true); actions.toast("${n} 個のアプリに読みを付け直しました") }
+                    }, enabled = model.hasGeminiKey && model.readingJob == null)
                 }
                 Gap(18.dp)
                 SectionTitle("端のタブ（押すと名前の変更・並べ替え）", Modifier.padding(horizontal = 10.dp))
