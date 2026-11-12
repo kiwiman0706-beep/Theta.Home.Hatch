@@ -79,8 +79,10 @@ object MediaWatch {
     }
 
     private fun pick() {
-        val live = controllers.filter { it.metadata != null }
-        val playing = live.filter { it.playbackState?.state == PlaybackState.STATE_PLAYING }
+        // 再生中（読み込み中も）なら、曲の情報がまだ無くても選ぶ（Theta Music が情報を出す前でも出るように）
+        fun on(c: MediaController) = c.playbackState?.state in setOf(PlaybackState.STATE_PLAYING, PlaybackState.STATE_BUFFERING, PlaybackState.STATE_CONNECTING)
+        val live = controllers.filter { it.metadata != null || on(it) }
+        val playing = live.filter { on(it) }
         val c = playing.firstOrNull { it.packageName in THETA_MUSIC_IDS } ?: playing.firstOrNull()
             ?: live.firstOrNull { it.packageName in THETA_MUSIC_IDS } ?: live.firstOrNull()
         current = c

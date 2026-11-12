@@ -184,3 +184,28 @@ private fun clock(ms: Long): String {
     val s = ms / 1000
     return "%d:%02d".format(s / 60, s % 60)
 }
+
+
+/**
+ * Theta Music の棚（お気に入り・最近のアルバム）。何か流れているときも、カードの下に出す。
+ * 何も流れていないときは [MusicCard] の中で出すので、ここでは出さない。
+ */
+@Composable
+fun MusicShelf(model: HomeModel) {
+    val p = LocalPalette.current
+    val ctx = LocalActions.current.activity
+    val now by MediaWatch.now.collectAsState()
+    if (now == null) return
+    val musicApp = model.apps.firstOrNull { it.packageName in MediaWatch.THETA_MUSIC_IDS } ?: return
+    val shelf by androidx.compose.runtime.produceState<List<app.thetahatch.home.hub.HatchShelf.Item>?>(null, musicApp.packageName, model.resumeTick) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { app.thetahatch.home.hub.HatchShelf.read(ctx, musicApp.packageName) }
+    }
+    val items = shelf
+    if (items.isNullOrEmpty()) return
+    Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        items.groupBy { it.sectionTitle.ifEmpty { it.section } }.forEach { (title, list) ->
+            if (title.isNotEmpty()) Text(title, color = p.faint, fontSize = 11.sp)
+            ShelfStrip(musicApp.packageName, list, 64.dp)
+        }
+    }
+}

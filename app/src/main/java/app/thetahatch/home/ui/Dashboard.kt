@@ -207,7 +207,7 @@ private fun MusicPanel(model: HomeModel) {
     Panel(model, "MUSIC", "音楽", folded = {
         now?.let { n -> Text((if (n.playing) "▶ " else "❚❚ ") + listOf(n.title, n.artist).filter { it.isNotBlank() }.joinToString(" — "),
             color = LocalPalette.current.muted, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
-    }) { MusicCard(model) }
+    }) { MusicCard(model); MusicShelf(model) }
 }
 
 /**
