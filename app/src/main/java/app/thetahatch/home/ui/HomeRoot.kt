@@ -389,13 +389,10 @@ private fun Rail(model: HomeModel, width: Dp, main: Boolean = true, filter: ((St
         horizontalAlignment = if (left) Alignment.Start else Alignment.End,
         verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
-        var lastGroup = -1
         val reorder = rememberReorderState()
-        // この画面（閉じた／開いた）では出さないタブは飛ばす
+        // この画面（閉じた／開いた）では出さないタブは飛ばす。種類（フォルダ・中身・起動）の違いは左の色の帯で分かるので、間は空けない
         model.tabs.filter { model.shownHere(it.id) && (filter == null || filter(it.id)) }.forEach { t ->
             val group = model.groupOf(t)
-            if (lastGroup != -1 && group != lastGroup) Spacer(Modifier.height(12.dp))
-            lastGroup = group
             RailTab(model, reorder, t.id, t.label, group, active = railActive(model, t), shortcut = shortcut(model, t), left = left)
         }
         var adding by remember { mutableStateOf(false) }
