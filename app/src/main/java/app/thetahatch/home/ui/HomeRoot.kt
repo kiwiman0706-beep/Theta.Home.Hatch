@@ -428,6 +428,7 @@ private fun Taskbar(model: HomeModel) {
         runCatching { ctx.packageManager.queryIntentActivities(home, 0).map { it.activityInfo.packageName } }.getOrDefault(emptyList()).toSet() + ctx.packageName
     }
     var menu by remember { mutableStateOf<String?>(null) }
+    val taskReorder = rememberReorderState()
     val pins = model.taskbarItems()
     val pinnedPkgs = pins.mapNotNull { (it.second as? AppEntry)?.packageName }.toSet()
     Column(Modifier.fillMaxWidth().background(p.panel)) {
@@ -448,17 +449,15 @@ private fun Taskbar(model: HomeModel) {
             pins.forEachIndexed { i, (key, item) ->
                 Box {
                     Box(
-                        Modifier.size(cell).combinedClickable(
-                            onClick = { dockLaunch(model, actions, item) },
-                            onLongClick = { menu = key },
-                            onClickLabel = "開く", onLongClickLabel = "並べ替え・外す",
-                        ).semantics { contentDescription = dockLabel(item) },
+                        // 長押しのままドラッグで並べ替え、動かさずに離すとメニュー
+                        Modifier.size(cell)
+                            .reorderable(taskReorder, key, "taskbar", p.accent, onMenu = { menu = key }) { from, to -> model.moveTaskbarPinTo(from, to) }
+                            .clickable(onClickLabel = "開く") { dockLaunch(model, actions, item) }
+                            .semantics { contentDescription = dockLabel(item) },
                         contentAlignment = Alignment.Center,
                     ) { DockIcon(model, item, 30.dp) }
                     DropdownMenu(expanded = menu == key, onDismissRequest = { menu = null }) {
                         Text(dockLabel(item), color = p.muted, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
-                        if (i > 0) DropdownMenuItem(text = { Text("◀ 前へ") }, onClick = { model.moveTaskbarPin(key, -1) })
-                        if (i < pins.lastIndex) DropdownMenuItem(text = { Text("▶ 後ろへ") }, onClick = { model.moveTaskbarPin(key, 1) })
                         DropdownMenuItem(text = { Text("タスクバーから外す") }, onClick = { menu = null; model.toggleTaskbarPin(key) })
                     }
                 }

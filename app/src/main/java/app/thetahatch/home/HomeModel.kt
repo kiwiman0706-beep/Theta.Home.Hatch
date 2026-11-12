@@ -1906,6 +1906,14 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         store.startPins = startPins
         (ctx as HomeApp).toast(if (key in startPins) "スタートにピン留めしました" else "スタートから外しました")
     }
+    fun moveStartPinTo(from: String, to: String) {
+        val i = startPins.indexOf(from)
+        val j = startPins.indexOf(to)
+        if (i < 0 || j < 0) return
+        startPins = startPins.toMutableList().also { it.add(j, it.removeAt(i)) }
+        store.startPins = startPins
+    }
+
     fun moveStartPin(key: String, delta: Int) {
         val i = startPins.indexOf(key)
         val j = i + delta
@@ -1924,6 +1932,14 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         store.taskbarPins = taskbarPins
         (ctx as HomeApp).toast(if (key in taskbarPins) "タスクバーにピン留めしました" else "タスクバーから外しました")
     }
+    fun moveTaskbarPinTo(from: String, to: String) {
+        val i = taskbarPins.indexOf(from)
+        val j = taskbarPins.indexOf(to)
+        if (i < 0 || j < 0) return
+        taskbarPins = taskbarPins.toMutableList().also { it.add(j, it.removeAt(i)) }
+        store.taskbarPins = taskbarPins
+    }
+
     fun moveTaskbarPin(key: String, delta: Int) {
         val i = taskbarPins.indexOf(key)
         val j = i + delta
@@ -2180,6 +2196,15 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     fun openTalk(pkg: String, id: String, start: (Intent) -> Unit) {
         if (Shortcuts.start(ctx, pkg, id)) return
         ctx.packageManager.getLaunchIntentForPackage(pkg)?.let(start) ?: (ctx as HomeApp).toast("アプリが入っていません")
+    }
+
+    /** ドラッグで並べ替え：from を to の位置へ。 */
+    fun moveFavTo(from: String, to: String) {
+        val i = favPeople.indexOfFirst { it.key == from }
+        val j = favPeople.indexOfFirst { it.key == to }
+        if (i < 0 || j < 0) return
+        favPeople = favPeople.toMutableList().also { it.add(j, it.removeAt(i)) }
+        saveLinks()
     }
 
     fun moveFav(key: String, delta: Int) {

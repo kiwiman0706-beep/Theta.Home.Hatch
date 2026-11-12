@@ -812,7 +812,9 @@ private fun AppsDrawer(model: HomeModel, only: String? = null, split: Boolean = 
                             Box {
                                 Column(
                                     Modifier.width(76.dp)
-                                        .combinedClickable(onClick = { dockLaunch(model, actions, item) }, onLongClick = { menu = true }, onClickLabel = "開く", onLongClickLabel = "並べ替え・外す")
+                                        // 長押しのままドラッグで並べ替え、動かさずに離すとメニュー
+                                        .reorderable(reorder, "start:$key", "start", p.accent, onMenu = { menu = true }) { from, to -> model.moveStartPinTo(from.removePrefix("start:"), to.removePrefix("start:")) }
+                                        .clickable(onClickLabel = "開く") { dockLaunch(model, actions, item) }
                                         .padding(vertical = 4.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -822,8 +824,6 @@ private fun AppsDrawer(model: HomeModel, only: String? = null, split: Boolean = 
                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(horizontal = 2.dp))
                                 }
                                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                                    if (i > 0) DropdownMenuItem(text = { Text("◀ 前へ") }, onClick = { model.moveStartPin(key, -1) })
-                                    if (i < starts.lastIndex) DropdownMenuItem(text = { Text("▶ 後ろへ") }, onClick = { model.moveStartPin(key, 1) })
                                     DropdownMenuItem(text = { Text("スタートから外す") }, onClick = { menu = false; model.toggleStartPin(key) })
                                 }
                             }

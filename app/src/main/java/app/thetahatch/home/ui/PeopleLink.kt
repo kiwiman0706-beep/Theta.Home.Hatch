@@ -124,6 +124,7 @@ fun FavPeopleRow(model: HomeModel) {
     val notices by HatchNotificationListener.notices.collectAsState()
     var menu by remember { mutableStateOf<String?>(null) }
     var adding by remember { mutableStateOf(false) }
+    val reorder = rememberReorderState()
     var linking by remember { mutableStateOf<Person?>(null) }
     linking?.let { pe -> LineRoomDialog(model, pe) { linking = null } }
     val favs = model.favPeople
@@ -143,7 +144,10 @@ fun FavPeopleRow(model: HomeModel) {
             }
             Box {
                 Column(
-                    Modifier.width(64.dp).combinedClickable(onClick = ::primary, onLongClick = { menu = f.key }, onClickLabel = if (link != null) "LINE を開く" else "電話", onLongClickLabel = "ほかの連絡・並べ替え")
+                    // 押すと連絡、長押しで動かさずに離すとメニュー、長押しのままドラッグで並べ替え
+                    Modifier.width(64.dp)
+                        .reorderable(reorder, f.key, "favpeople", p.accent, onMenu = { menu = f.key }) { from, to -> model.moveFavTo(from, to) }
+                        .clickable(onClickLabel = if (link != null) "トークを開く" else "電話", onClick = ::primary)
                         .semantics { contentDescription = f.label + if (unread > 0) "（未読 $unread）" else "" },
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
@@ -167,8 +171,6 @@ fun FavPeopleRow(model: HomeModel) {
                     }
                     person?.email?.let { m -> DropdownMenuItem(text = { Text("メール") }, onClick = { menu = null; actions.start(Contacts.mailIntent(m)) }) }
                     person?.let { pe -> DropdownMenuItem(text = { Text("連絡先を開く") }, onClick = { menu = null; actions.start(Contacts.viewIntent(pe)) }) }
-                    if (i > 0) DropdownMenuItem(text = { Text("◀ 前へ") }, onClick = { model.moveFav(f.key, -1) })
-                    if (i < favs.lastIndex) DropdownMenuItem(text = { Text("▶ 後ろへ") }, onClick = { model.moveFav(f.key, 1) })
                     DropdownMenuItem(text = { Text("よく連絡する人から外す") }, onClick = { menu = null; model.toggleFav(f) })
                 }
             }
