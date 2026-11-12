@@ -107,6 +107,7 @@ private fun FavFace(model: HomeModel, f: FavPerson, size: Dp) {
     when {
         person != null -> Face(person, size)
         f.lineId != null -> LineIcon(model, f.lineId!!, size)
+        f.talk != null -> TalkIcon(model, f.talk!!.first, f.talk!!.second, f.label, size)
         else -> Initial(f.label.take(1).ifEmpty { "?" }, size)
     }
 }
@@ -129,11 +130,13 @@ fun FavPeopleRow(model: HomeModel) {
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         favs.forEachIndexed { i, f ->
             val person = f.contactKey?.let { model.personByKey(it) }
-            val link = person?.let { model.lineLinks[it.lookupKey] } ?: f.lineId?.let { app.thetahatch.home.data.LineLink(it, f.label) }
-            val unread = PeopleLinks.unread(notices, link)
+            // 人なら結んだ LINE、トークならそのアプリ（LINE・LINE WORKS など）
+            val talkPkg = f.talk?.first ?: Contacts.LINE_PACKAGE
+            val link = person?.let { model.lineLinks[it.lookupKey] } ?: f.talk?.let { app.thetahatch.home.data.LineLink(it.second, f.label) }
+            val unread = PeopleLinks.unread(notices, link, talkPkg)
             fun primary() {
                 when {
-                    link != null -> model.openLine(link.shortcutId, actions.start)
+                    link != null -> model.openTalk(talkPkg, link.shortcutId, actions.start)
                     person?.phone != null -> actions.start(Contacts.dialIntent(person.phone))
                     person != null -> actions.start(Contacts.viewIntent(person))
                 }
@@ -155,7 +158,7 @@ fun FavPeopleRow(model: HomeModel) {
                 }
                 DropdownMenu(expanded = menu == f.key, onDismissRequest = { menu = null }) {
                     Text(person?.name ?: f.label, color = p.muted, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
-                    link?.let { l -> DropdownMenuItem(text = { Text("LINE（${l.label}）") }, onClick = { menu = null; model.openLine(l.shortcutId, actions.start) }) }
+                    link?.let { l -> DropdownMenuItem(text = { Text("${appName(talkPkg)}（${l.label}）") }, onClick = { menu = null; model.openTalk(talkPkg, l.shortcutId, actions.start) }) }
                     if (person != null && link == null) DropdownMenuItem(text = { Text("LINE と結ぶ") }, onClick = { menu = null; linking = person })
                     if (person != null && model.lineLinks.containsKey(person.lookupKey)) DropdownMenuItem(text = { Text("LINE を外す") }, onClick = { menu = null; model.unlinkLine(person) })
                     person?.phone?.let { ph ->
@@ -184,14 +187,19 @@ private fun AddFavDialog(model: HomeModel, onDismiss: () -> Unit) {
     val p = LocalPalette.current
     var q by remember { mutableStateOf("") }
     var line by remember { mutableStateOf(false) }
+    var other by remember { mutableStateOf(false) }
     if (line) { LineRoomDialog(model, null) { line = false; onDismiss() }; return }
+    if (other) { TalkDialog(model) { other = false; onDismiss() }; return }
     val list = model.people.filter { q.isBlank() || it.name.contains(q, true) }.sortedBy { !it.starred }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("よく連絡する人を足す") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                FlowRow2 { PillButton("LINE のトーク（グループなど）から", { line = true }) }
+                FlowRow2 {
+                    PillButton("LINE のトーク（グループなど）から", { line = true })
+                    PillButton("ほかのアプリのトーク（LINE WORKS など）", { other = true })
+                }
                 Field(q, { q = it }, "連絡先を名前で絞り込み")
                 Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
                     if (list.isEmpty()) Note("連絡先がありません（PEOPLE のタブで連絡先の読み取りを許可）")
@@ -206,6 +214,61 @@ private fun AddFavDialog(model: HomeModel, onDismiss: () -> Unit) {
                         }
                     }
                 }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("閉じる") } },
+    )
+}
+
+
+/** アプリの名前（入っていなければパッケージ名）。 */
+@Composable
+private fun appName(pkg: String): String {
+    val ctx = LocalActions.current.activity
+    return remember(pkg) { runCatching { ctx.packageManager.getApplicationLabel(ctx.packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg) }
+}
+
+/** ほかのアプリのトークのアイコン（保存したもの、無ければ頭文字）。 */
+@Composable
+private fun TalkIcon(model: HomeModel, pkg: String, id: String, label: String, size: Dp, info: android.content.pm.ShortcutInfo? = null) {
+    val ctx = LocalActions.current.activity
+    val bmp = remember(pkg, id) {
+        model.talkIcon(pkg, id) ?: info?.let { s -> Shortcuts.saveIcon(ctx, s, model.talkIconId(pkg, id)); model.talkIcon(pkg, id) }
+    }
+    if (bmp != null) Image(bmp.asImageBitmap(), null, Modifier.size(size).clip(CircleShape), contentScale = ContentScale.Crop)
+    else Initial(label.take(1).ifEmpty { "?" }, size)
+}
+
+/**
+ * ほかのアプリ（LINE WORKS・Slack・メッセージなど）のトークを、よく連絡する人に足す。
+ * 出るのは、そのアプリが会話のショートカット（共有の宛先）として出しているトークだけ。
+ */
+@Composable
+private fun TalkDialog(model: HomeModel, onDismiss: () -> Unit) {
+    val p = LocalPalette.current
+    val ctx = LocalActions.current.activity
+    val rooms = remember { model.talkRooms() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("ほかのアプリのトーク") },
+        text = {
+            Column(Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                if (rooms.isEmpty()) Note(
+                    if (!Shortcuts.available(ctx)) "このホームが既定のホームアプリのときだけ、トークを読めます。"
+                    else "トークが見つかりません。そのアプリで一度やりとりすると出ることがあります（アプリが会話のショートカットを出していないと出ません）。",
+                )
+                rooms.forEach { (pkg, list) ->
+                    SectionTitle(appName(pkg))
+                    list.forEachIndexed { zi, s ->
+                        val on = model.isFav("talk:$pkg|${s.id}")
+                        RowButton(zebra = zi, onClick = { model.addFavTalk(s) }) {
+                            TalkIcon(model, pkg, s.id, Shortcuts.label(s), 32.dp, s)
+                            Text(Shortcuts.label(s), color = p.fg, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            Text(if (on) "✓" else "＋", color = p.accent, fontSize = 16.sp)
+                        }
+                    }
+                }
+                Note("出るのは、そのアプリが最近のトークとして出しているものです。足したトークは、一覧から消えても開けるように残します。")
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("閉じる") } },

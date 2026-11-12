@@ -16,6 +16,13 @@ data class LineLink(val shortcutId: String, val label: String)
 data class FavPerson(val key: String, val label: String) {
     val contactKey: String? get() = key.removePrefix("c:").takeIf { key.startsWith("c:") }
     val lineId: String? get() = key.removePrefix("line:").takeIf { key.startsWith("line:") }
+
+    /** トークのアプリとショートカットの ID。"line:<id>"（LINE）か "talk:<パッケージ>|<id>"（LINE WORKS などほかのアプリ）。 */
+    val talk: Pair<String, String>? get() = when {
+        key.startsWith("line:") -> Contacts.LINE_PACKAGE to key.removePrefix("line:")
+        key.startsWith("talk:") -> key.removePrefix("talk:").let { it.substringBefore('|') to it.substringAfter('|') }
+        else -> null
+    }
 }
 
 object PeopleLinks {
@@ -47,8 +54,8 @@ object PeopleLinks {
     }
 
     /** 未読：LINE の通知のうち、そのトークのもの（ショートカット ID が同じか、題名がトークの名前）。 */
-    fun unread(notices: List<app.thetahatch.home.notify.Notice>, link: LineLink?): Int {
+    fun unread(notices: List<app.thetahatch.home.notify.Notice>, link: LineLink?, pkg: String = Contacts.LINE_PACKAGE): Int {
         link ?: return 0
-        return notices.count { n -> n.packageName == Contacts.LINE_PACKAGE && (n.shortcutId == link.shortcutId || n.title == link.label) }
+        return notices.count { n -> n.packageName == pkg && (n.shortcutId == link.shortcutId || n.title == link.label) }
     }
 }

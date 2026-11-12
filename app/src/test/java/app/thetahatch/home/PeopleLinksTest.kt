@@ -24,6 +24,9 @@ class PeopleLinksTest {
         assertEquals("abc", favs[0].contactKey)
         assertEquals("g1", favs[1].lineId)
         assertEquals(emptyMap<String, LineLink>(), PeopleLinks.linksFromJson("壊れた"))
+        // LINE WORKS などほかのアプリのトーク
+        assertEquals("com.example.works" to "room|7", FavPerson("talk:com.example.works|room|7", "チーム").talk)
+        assertEquals("jp.naver.line.android" to "g1", favs[1].talk)
     }
 
     @Test
@@ -45,5 +48,6 @@ class PeopleLinksTest {
         assertEquals(2, PeopleLinks.unread(n, LineLink("g1", "家族")))
         assertEquals(1, PeopleLinks.unread(n, LineLink("mid123", "やまだ")))
         assertEquals(0, PeopleLinks.unread(n, null))
+        assertEquals(1, PeopleLinks.unread(n, LineLink("x", "家族"), "com.example"))
     }
 }

@@ -2085,7 +2085,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     /** そのアプリについて、置いているショートカットだけを固定にしておく。 */
     private fun repin(pkg: String) {
         // LINE は、人に結んだトーク・よく連絡する人のトークも固定しておく（最近の一覧から消えても開けるように）
-        val extra = if (pkg == LINE) lineLinks.values.map { it.shortcutId } + favPeople.mapNotNull { it.lineId } else emptyList()
+        val extra = (if (pkg == LINE) lineLinks.values.map { it.shortcutId } else emptyList()) +
+            favPeople.mapNotNull { f -> f.talk?.takeIf { it.first == pkg }?.second }
         Shortcuts.setPinned(ctx, pkg, (shortcuts.filter { it.packageName == pkg }.map { it.shortcutId } + extra).distinct())
     }
 
@@ -2137,6 +2138,26 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     fun addFavLine(s: android.content.pm.ShortcutInfo) {
         Shortcuts.saveIcon(ctx, s, "line_" + s.id)
         toggleFav(FavPerson("line:" + s.id, Shortcuts.label(s)))
+    }
+
+    /** ほかのアプリ（LINE WORKS など）のトーク：アプリ → トークの一覧。既定のホームのときだけ取れる。 */
+    fun talkRooms(): Map<String, List<android.content.pm.ShortcutInfo>> = Shortcuts.allShareTargets(ctx).filterKeys { it != LINE }
+
+    fun addFavTalk(s: android.content.pm.ShortcutInfo) {
+        Shortcuts.saveIcon(ctx, s, talkIconId(s.`package`, s.id))
+        val f = FavPerson("talk:${s.`package`}|${s.id}", Shortcuts.label(s))
+        val adding = !isFav(f.key)
+        toggleFav(f)
+        if (adding) repin(s.`package`)
+    }
+
+    fun talkIconId(pkg: String, id: String) = if (pkg == LINE) "line_$id" else "talk_${pkg}_$id".replace(Regex("[^A-Za-z0-9_.-]"), "_")
+    fun talkIcon(pkg: String, id: String): android.graphics.Bitmap? = Shortcuts.icon(ctx, talkIconId(pkg, id))
+
+    /** トークを開く（どのアプリのでも）。開けなければそのアプリを開く。 */
+    fun openTalk(pkg: String, id: String, start: (Intent) -> Unit) {
+        if (Shortcuts.start(ctx, pkg, id)) return
+        ctx.packageManager.getLaunchIntentForPackage(pkg)?.let(start) ?: (ctx as HomeApp).toast("アプリが入っていません")
     }
 
     fun moveFav(key: String, delta: Int) {

@@ -51,6 +51,16 @@ object Shortcuts {
         la(ctx).getShortcuts(q, Process.myUserHandle()).orEmpty().filter { it.isEnabled }.distinctBy { it.id }.sortedBy { it.rank }
     }.getOrDefault(emptyList())
 
+    /** すべてのアプリの、会話・共有の宛先のショートカット（LINE WORKS・Slack などのトーク）。アプリごとに。 */
+    fun allShareTargets(ctx: Context): Map<String, List<ShortcutInfo>> = runCatching {
+        var flags = LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC or LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED
+        if (android.os.Build.VERSION.SDK_INT >= 30) flags = flags or LauncherApps.ShortcutQuery.FLAG_MATCH_CACHED
+        la(ctx).getShortcuts(LauncherApps.ShortcutQuery().setQueryFlags(flags), Process.myUserHandle()).orEmpty()
+            .filter { it.isEnabled && it.categories?.isNotEmpty() == true }
+            .groupBy { it.`package` }
+            .mapValues { (_, v) -> v.distinctBy { it.id }.sortedBy { it.rank } }
+    }.getOrDefault(emptyMap())
+
     fun label(s: ShortcutInfo): String = (s.shortLabel ?: s.longLabel ?: s.id).toString()
 
     fun start(ctx: Context, s: PinnedShortcut): Boolean = runCatching {
