@@ -28,3 +28,13 @@ class DevTest {
         assertFalse(DebugReceiver.secret("weatherDetail"))
     }
 }
+
+class ViewSpecTest {
+    @org.junit.Test
+    fun sortIsKeptAndDefaultsToNew() {
+        org.junit.Assert.assertEquals("new", app.thetahatch.home.data.ViewSpec.decode("grid:2")!!.sort)
+        val v = app.thetahatch.home.data.ViewSpec(false, 1, "name")
+        org.junit.Assert.assertEquals(v, app.thetahatch.home.data.ViewSpec.decode(v.encode()))
+        org.junit.Assert.assertEquals("new", app.thetahatch.home.data.ViewSpec.decode("list:1:へん")!!.sort)
+    }
+}

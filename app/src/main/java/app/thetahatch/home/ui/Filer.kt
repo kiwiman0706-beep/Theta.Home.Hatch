@@ -752,6 +752,7 @@ internal fun FolderView(
                     if (i > 0) DropdownMenuItem(text = { Text("▲ 上へ") }, onClick = { close(); model.movePinnedFile(r.key, -1) })
                     if (i in 0 until pins.lastIndex) DropdownMenuItem(text = { Text("▼ 下へ") }, onClick = { close(); model.movePinnedFile(r.key, 1) })
                 },
+                sortable = false,
                 empty = "ファイルを長押し →「ピン留め」で、ここといつものホームに並びます（端末・NAS・ドライブのどれでも）",
             )
         }
@@ -777,6 +778,7 @@ internal fun FolderView(
                 onOpen = { r -> r.entry?.let { openFile(model, actions, ViewItem(it.uri, it.name, it.mime), rows.mapNotNull { x -> x.entry?.let { e -> ViewItem(e.uri, e.name, e.mime) } }) } },
                 onShare = ::share,
                 extraMenu = { _, _ -> },
+                sortable = false,
                 empty = "フォルダから開いたファイルがここに並びます",
             )
         }
@@ -956,13 +958,23 @@ private fun Listing(
     extraMenu: @Composable (Row, () -> Unit) -> Unit,
     footer: (@Composable () -> Unit)? = null,
     empty: String = "空のフォルダです",
+    /** 並べ替えを出すか（最近・ピン留めは自分の順なので出さない）。 */
+    sortable: Boolean = true,
 ) {
     val p = LocalPalette.current
     val actions = LocalActions.current
     var menuFor by remember { mutableStateOf<String?>(null) }
+    var sortMenu by remember { mutableStateOf(false) }
     val files = rows.filter { !it.isDir }
     val mostlyMedia = files.isNotEmpty() && files.count { Thumbs.kind(it.name, it.mime).let { k -> k == "image" || k == "video" } } * 10 >= files.size * 6
     val spec = model.viewFor(viewKeys, mostlyMedia)
+    // 並べ方（フォルダはいつも先）。日時の分からないもの（0）は後ろ
+    val shown = if (!sortable) rows else when (spec.sort) {
+        "old" -> rows.sortedWith(compareBy<Row>({ !it.isDir }, { if (it.modified > 0) it.modified else Long.MAX_VALUE }, { it.name.lowercase() }))
+        "name" -> rows.sortedWith(compareBy<Row>({ !it.isDir }, { it.name.lowercase() }))
+        "size" -> rows.sortedWith(compareBy<Row>({ !it.isDir }, { -it.size }, { it.name.lowercase() }))
+        else -> rows.sortedWith(compareBy<Row>({ !it.isDir }, { -it.modified }, { it.name.lowercase() }))
+    }
     val full: androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
     Column(Modifier.fillMaxSize()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -975,6 +987,15 @@ private fun Listing(
                 }
             }
             if (loading) Text("読み込み中…", color = p.faint, fontSize = 12.sp)
+            if (sortable) Box {
+                Text(ViewSpec.SORTS.firstOrNull { it.first == spec.sort }?.second ?: "新しい順", color = p.muted, fontSize = 12.sp,
+                    modifier = Modifier.clickable(onClickLabel = "並べ方を変える") { sortMenu = true }.border(1.dp, p.line).padding(horizontal = 6.dp, vertical = 4.dp))
+                DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
+                    ViewSpec.SORTS.forEach { (k, label) ->
+                        DropdownMenuItem(text = { Text((if (k == spec.sort) "● " else "○ ") + label) }, onClick = { sortMenu = false; model.setView(viewKeys.first(), spec.copy(sort = k)) })
+                    }
+                }
+            }
             GlyphButton(if (spec.grid) Glyph.LIST else Glyph.GRID, if (spec.grid) "一覧で見る" else "グリッドで見る", { model.setView(viewKeys.first(), spec.copy(grid = !spec.grid)) })
             Box(
                 Modifier.size(44.dp).clickable(onClickLabel = "大きさを変える（今 ${ViewSpec.NAMES[spec.size]}）") {
@@ -1000,7 +1021,7 @@ private fun Listing(
                 }
             }
             if (!loading && error == null && rows.isEmpty()) item(span = full) { Note(empty) }
-            itemsIndexed(rows, key = { _, it -> it.key }) { zi, r ->
+            itemsIndexed(shown, key = { _, it -> it.key }) { zi, r ->
                 val sub = r.note ?: if (r.isDir) null else listOfNotNull(if (r.modified > 0) shortTime(r.modified) else null, if (r.size > 0) Files.sizeText(r.size) else null).joinToString(" · ")
                 val chosen = preview && selected?.key == r.key
                 Box {

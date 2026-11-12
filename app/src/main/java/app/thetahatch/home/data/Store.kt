@@ -196,9 +196,11 @@ data class TabOpts(
     }
 }
 
-/** フォルダの見せ方：一覧（LIST）かグリッド（GRID）か、大きさ 0〜3（S・M・L・XL）。 */
-data class ViewSpec(val grid: Boolean, val size: Int) {
-    fun encode() = (if (grid) "grid" else "list") + ":" + size
+/**
+ * フォルダの見せ方：一覧（LIST）かグリッド（GRID）か、大きさ 0〜3（S・M・L・XL）、並べ方（[SORTS]。既定は新しい順）。
+ */
+data class ViewSpec(val grid: Boolean, val size: Int, val sort: String = "new") {
+    fun encode() = (if (grid) "grid" else "list") + ":" + size + ":" + sort
 
     companion object {
         const val SIZES = 4
@@ -206,10 +208,14 @@ data class ViewSpec(val grid: Boolean, val size: Int) {
         val LIST = ViewSpec(false, 1)
         val GRID = ViewSpec(true, 1)
 
+        /** 並べ方：新しい順・古い順・名前・大きい順。フォルダはいつも先。 */
+        val SORTS = listOf("new" to "新しい順", "old" to "古い順", "name" to "名前", "size" to "大きい順")
+
         fun decode(s: String?): ViewSpec? {
             val parts = s?.split(':') ?: return null
-            if (parts.size != 2 || parts[0] !in setOf("grid", "list")) return null
-            return ViewSpec(parts[0] == "grid", (parts[1].toIntOrNull() ?: 1).coerceIn(0, SIZES - 1))
+            if (parts.size !in 2..3 || parts[0] !in setOf("grid", "list")) return null
+            val sort = parts.getOrNull(2)?.takeIf { v -> SORTS.any { it.first == v } } ?: "new"
+            return ViewSpec(parts[0] == "grid", (parts[1].toIntOrNull() ?: 1).coerceIn(0, SIZES - 1), sort)
         }
     }
 }
