@@ -775,7 +775,9 @@ private fun AppsDrawer(model: HomeModel, only: String? = null, split: Boolean = 
         .filter { (id, _) -> filter == null || filter == id }
         .map { (id, name) -> Triple(id, name, model.ordered(id, visible.filter { (model.appCategories[it.key] ?: "") == id || id == "" && model.categoryOf(it) == null }.distinct())) }
         .filter { g -> g.third.isNotEmpty() || model.shortcuts.any { it.catId == g.first } }
-    val shortcutsOf = { catId: String -> model.shortcuts.filter { it.catId == catId && (q.isBlank() || it.label.contains(q, ignoreCase = true)) } }
+    // START（すべてのアプリ）で「ショートカットを隠す」なら出さない（カテゴリーのタブはそのまま）
+    val hideSc = only == null && model.appsHideShortcuts
+    val shortcutsOf = { catId: String -> if (hideSc) emptyList() else model.shortcuts.filter { it.catId == catId && (q.isBlank() || it.label.contains(q, ignoreCase = true)) } }
     var scMenu by remember { mutableStateOf<String?>(null) }
     var scRenaming by remember { mutableStateOf<PinnedShortcut?>(null) }
     var shortcutsFor by remember { mutableStateOf<Pair<AppEntry, String>?>(null) }
@@ -948,19 +950,30 @@ private fun AppsDrawer(model: HomeModel, only: String? = null, split: Boolean = 
             Note("このタブのカテゴリーは消されました。タブを長押しして外してください。")
         }
         if (only == null) item {
-            FlowRow(Modifier.padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                @Composable
-                fun chip(label: String, id: String?) {
-                    val on = filter == id
-                    Text(
-                        label, color = if (on) p.onAccent else p.fg, fontSize = 12.sp,
-                        modifier = Modifier.background(if (on) p.accent else Color.Transparent).border(1.dp, if (on) p.accent else p.line)
-                            .clickable { filter = if (on && id != null) null else id }.padding(horizontal = 10.dp, vertical = 7.dp),
-                    )
+            // カテゴリーの札：文字を 90 度倒した細い札を横に並べ、入りきらなければ横にスクロール（場所を取らないように）
+            Row(Modifier.padding(bottom = 8.dp), verticalAlignment = Alignment.Top) {
+                Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Top) {
+                    @Composable
+                    fun chip(label: String, id: String?) {
+                        val on = filter == id
+                        Box(
+                            Modifier.background(if (on) p.accent else Color.Transparent).border(1.dp, if (on) p.accent else p.line)
+                                .clickable(onClickLabel = "${label}で絞り込む") { filter = if (on && id != null) null else id }
+                                .padding(horizontal = 6.dp, vertical = 8.dp),
+                        ) { VerticalLabel(label, if (on) p.onAccent else p.fg, 12) }
+                    }
+                    chip("ALL %d".format(model.apps.size), null)
+                    model.categories.forEach { c -> chip("${c.name} ${model.appCategories.count { it.value == c.id }}", c.id) }
+                    if (unsorted > 0) chip("未分類 $unsorted", "")
                 }
-                chip("ALL %d".format(model.apps.size), null)
-                model.categories.forEach { c -> chip("${c.name} ${model.appCategories.count { it.value == c.id }}", c.id) }
-                if (unsorted > 0) chip("未分類 $unsorted", "")
+                // 札の右に、ショートカットを隠すチェック（縦に詰めて）
+                Column(
+                    Modifier.padding(start = 6.dp).clickable(onClickLabel = "ショートカットを隠す・出す") { model.changeAppsHideShortcuts(!model.appsHideShortcuts) },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    androidx.compose.material3.Checkbox(checked = model.appsHideShortcuts, onCheckedChange = { model.changeAppsHideShortcuts(it) })
+                    Text("SC を\n隠す", color = p.muted, fontSize = 10.sp, lineHeight = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
             }
         }
         if (only == null && model.categories.isEmpty()) {

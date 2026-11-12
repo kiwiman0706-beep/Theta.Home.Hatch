@@ -177,6 +177,10 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     var noticeOrder by mutableStateOf(store.noticeOrder); private set
     fun changeNoticeOrder(v: String) { noticeOrder = v; store.noticeOrder = v }
 
+    /** START（すべてのアプリ）でショートカットを隠す。 */
+    var appsHideShortcuts by mutableStateOf(store.prefs.getBoolean("appsHideShortcuts", false)); private set
+    fun changeAppsHideShortcuts(v: Boolean) { appsHideShortcuts = v; store.prefs.edit().putBoolean("appsHideShortcuts", v).apply() }
+
     /** アプリの呼び名（声で開く・検索）。 */
     var nicknames by mutableStateOf(store.nicknames); private set
 
