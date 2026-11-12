@@ -30,3 +30,17 @@ class ShelfTest {
         assertEquals("taro@example.com", Gmail.fromName("<taro@example.com>"))
     }
 }
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
+class MediaTest {
+    @Test
+    fun mediaRootHasAlbumsFirst() {
+        val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val list = app.thetahatch.home.data.Files.listMedia(ctx, android.net.Uri.parse(app.thetahatch.home.data.Files.MEDIA_ALL))
+        assertEquals("アルバム", list.first().name)
+        org.junit.Assert.assertTrue(app.thetahatch.home.data.Files.isMedia(list.first().uri))
+        // アルバムの一覧（試験の環境では空）
+        org.junit.Assert.assertTrue(app.thetahatch.home.data.Files.listMedia(ctx, list.first().uri).isEmpty())
+    }
+}

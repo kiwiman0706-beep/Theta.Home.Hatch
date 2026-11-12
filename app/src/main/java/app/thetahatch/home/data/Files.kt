@@ -107,6 +107,66 @@ object Files {
     /** パスで読むフォルダ（file://）か。 */
     fun isPath(uri: Uri) = uri.scheme == "file"
 
+    // ---- 端末の写真・動画（MediaStore）：フォルダを選ばずに、端末全体の画像と動画を新しい順に ----
+
+    /** 端末の写真・動画の場所。"media:all"（すべて）・"media:albums"（アルバムの一覧）・"media:album/<id>"（そのアルバム）。 */
+    const val MEDIA_ALL = "media:all"
+    fun isMedia(uri: Uri) = uri.scheme == "media"
+
+    fun listMedia(context: Context, where: Uri): List<Entry> {
+        val spec = where.schemeSpecificPart.orEmpty()
+        if (spec == "albums") return mediaAlbums(context)
+        val bucket = spec.removePrefix("album/").takeIf { spec.startsWith("album/") }
+        val out = ArrayList<Entry>()
+        // すべての写真・動画のときは、先頭に「アルバム」（入ると端末のアルバムの一覧）
+        if (bucket == null) out += Entry(Uri.parse("media:albums"), "アルバム", null, true, 0, Long.MAX_VALUE)
+        listOf(
+            android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+        ).forEach { base ->
+            val cols = arrayOf(
+                android.provider.MediaStore.MediaColumns._ID, android.provider.MediaStore.MediaColumns.DISPLAY_NAME,
+                android.provider.MediaStore.MediaColumns.MIME_TYPE, android.provider.MediaStore.MediaColumns.SIZE,
+                android.provider.MediaStore.MediaColumns.DATE_MODIFIED,
+            )
+            val sel = bucket?.let { "${android.provider.MediaStore.MediaColumns.BUCKET_ID} = ?" }
+            runCatching {
+                context.contentResolver.query(base, cols, sel, bucket?.let { arrayOf(it) }, "${android.provider.MediaStore.MediaColumns.DATE_MODIFIED} DESC")?.use { c ->
+                    while (c.moveToNext() && out.size < 3000) {
+                        out += Entry(
+                            android.content.ContentUris.withAppendedId(base, c.getLong(0)), c.getString(1) ?: "", c.getString(2),
+                            false, c.getLong(3), c.getLong(4) * 1000,
+                        )
+                    }
+                }
+            }
+        }
+        return out
+    }
+
+    /** 端末のアルバム（写真・動画の入ったフォルダ）。新しいものがあるアルバムから。 */
+    private fun mediaAlbums(context: Context): List<Entry> {
+        val latest = HashMap<String, Pair<String, Long>>()
+        listOf(
+            android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+        ).forEach { base ->
+            runCatching {
+                context.contentResolver.query(
+                    base, arrayOf(android.provider.MediaStore.MediaColumns.BUCKET_ID, android.provider.MediaStore.MediaColumns.BUCKET_DISPLAY_NAME, android.provider.MediaStore.MediaColumns.DATE_MODIFIED),
+                    null, null, null,
+                )?.use { c ->
+                    while (c.moveToNext()) {
+                        val id = c.getString(0) ?: continue
+                        val t = c.getLong(2) * 1000
+                        if ((latest[id]?.second ?: -1) < t) latest[id] = (c.getString(1) ?: "（名前なし）") to t
+                    }
+                }
+            }
+        }
+        return latest.entries.sortedByDescending { it.value.second }.map { (id, v) -> Entry(Uri.parse("media:album/$id"), v.first, null, true, 0, v.second) }
+    }
+
     /** 端末の Download フォルダ。 */
     fun downloadsUri(): Uri = Uri.fromFile(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS))
 

@@ -675,6 +675,7 @@ private fun TabMenu(model: HomeModel, id: String, expanded: Boolean, close: () -
         val only = model.boardItems(id).singleOrNull()
         if (only?.type == BoardItem.FOLDER) DropdownMenuItem(text = { Text("端末のフォルダを選び直す") }, onClick = { close(); actions.pickFolder(only.id) })
         if (only?.type == BoardItem.FOLDER) DropdownMenuItem(text = { Text("ダウンロード（Download）にする") }, onClick = { close(); model.assignDownloads(only.id) })
+        if (only?.type == BoardItem.FOLDER) DropdownMenuItem(text = { Text("端末の写真・動画（すべて）にする") }, onClick = { close(); model.assignMedia(only.id) })
         if (only?.type == BoardItem.FILE) DropdownMenuItem(text = { Text("ファイルを選び直す") }, onClick = {
             close(); actions.openDocument(arrayOf("image/*", "application/pdf")) { model.setTabFile(only.id, it) }
         })
@@ -755,6 +756,14 @@ fun AddTabDialog(model: HomeModel, onWidget: () -> Unit, onDismiss: () -> Unit) 
                         val (t, item) = model.addBoardTab(BoardItem.FOLDER, Files.downloadsUri().toString())
                         model.renameTab(t.id, "DOWNLOAD")
                         model.updateBoardItem(item.copy(label = "DOWNLOAD"))
+                        onDismiss()
+                        model.toggle(t.id)
+                    })
+                    // 端末の写真・動画（フォルダを選ばずに、端末全体を新しい順に。アルバムからも）
+                    PillButton("＋ 写真・動画（端末）", {
+                        val (t, item) = model.addBoardTab(BoardItem.FOLDER, Files.MEDIA_ALL)
+                        model.renameTab(t.id, "PHOTO")
+                        model.updateBoardItem(item.copy(label = "PHOTO"))
                         onDismiss()
                         model.toggle(t.id)
                     })

@@ -970,6 +970,12 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** そのフォルダ（タブに置いたもの）を端末の写真・動画（すべて）にする。 */
+    fun assignMedia(itemId: String) {
+        setRef(itemId, Files.MEDIA_ALL)
+        folders.remove(itemId)
+    }
+
     /** そのフォルダ（タブに置いたもの）を端末の Download にする。 */
     fun assignDownloads(itemId: String) {
         setRef(itemId, Files.downloadsUri().toString())
@@ -1344,8 +1350,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             folders[t.id] = FolderState()
             return
         }
-        // Download など、パスで読むフォルダ：「すべてのファイルへのアクセス」が要る
-        if (Files.isPath(tree)) {
+        // Download など、パスで読むフォルダと、端末の写真・動画：「すべてのファイルへのアクセス」が要る
+        if (Files.isPath(tree) || Files.isMedia(tree)) {
             if (!Files.canReadAll()) folders[t.id] = FolderState(error = NEED_ALL_FILES)
             else load(t.id, listOf(tree to t.label))
             return
@@ -1381,7 +1387,11 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             val result = runCatching {
                 withContext(Dispatchers.IO) {
                     val dir = stack.last().first
-                    if (Files.isPath(dir)) Files.listPath(ctx, File(dir.path!!)) else Files.list(ctx, dir)
+                    when {
+                        Files.isMedia(dir) -> Files.listMedia(ctx, dir)
+                        Files.isPath(dir) -> Files.listPath(ctx, File(dir.path!!))
+                        else -> Files.list(ctx, dir)
+                    }
                 }
             }
             if (folders[tabId]?.stack != stack) return@launch

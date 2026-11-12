@@ -21,8 +21,8 @@ android {
         applicationId = "app.thetahatch.home"
         minSdk = 29
         targetSdk = 35
-        versionCode = 251
-        versionName = "1.15.1"
+        versionCode = 260
+        versionName = "1.16.0"
     }
 
     // 署名はシリーズ共通の鍵（Theta.Hatch.Series の secrets/README.md）。CI では Secret の 4 つ

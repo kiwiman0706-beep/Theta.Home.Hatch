@@ -213,6 +213,7 @@ internal fun AddItemDialog(model: HomeModel, tabId: String, onDismiss: () -> Uni
                     actions.pickFolder(item.id)
                 })
                 PillButton("＋ ダウンロード（Download）", { add(BoardItem.FOLDER, Files.downloadsUri().toString(), "DOWNLOAD"); onDismiss() })
+                PillButton("＋ 写真・動画（端末）", { add(BoardItem.FOLDER, Files.MEDIA_ALL, "PHOTO"); onDismiss() })
                 if (folderTabs.isNotEmpty()) {
                     Note("ほかのタブに置いたフォルダと同じ場所（NAS・ドライブのフォルダもここから）")
                     FlowRow2 {
