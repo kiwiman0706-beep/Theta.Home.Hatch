@@ -8,6 +8,7 @@ import android.Manifest
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -545,7 +546,35 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     }
 
     private val dsbooks get() = resolvePkg(DSBOOKS)
-    private val memo get() = resolvePkg(MEMO)
+    private val memo get() = memoPkg() ?: MEMO
+
+    /** 入っている MemoHatch のパッケージ（新しい ID を先に）。一覧や catalog に頼らず、端末に直接たずねる。 */
+    fun memoPkg(): String? = listOf(MEMO_NEW, MEMO).firstOrNull { p -> runCatching { ctx.packageManager.getPackageInfo(p, 0) }.isSuccess }
+
+    /**
+     * MemoHatch へ送る Intent。受け口（intent-filter）が見つかればその画面を、見つからなければ起動の画面を名指しする
+     * （名指しなら filter が合わなくても届く。MemoHatch は action と extra を見て動く）。入っていなければ null。
+     */
+    fun memoIntent(actions: List<String>): Intent? {
+        val pkg = memoPkg() ?: return null
+        val pm = ctx.packageManager
+        for (a in actions) {
+            val hit = runCatching { pm.queryIntentActivities(Intent(a).setPackage(pkg), PackageManager.MATCH_DEFAULT_ONLY) }.getOrNull()?.firstOrNull()?.activityInfo
+            if (hit != null) return Intent(a).setComponent(ComponentName(hit.packageName, hit.name)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val comp = pm.getLaunchIntentForPackage(pkg)?.component ?: return null
+        return Intent(actions.first()).setComponent(comp).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    /** MemoHatch を開く。だめなら理由を出して false。 */
+    private fun startMemo(i: Intent?, start: (Intent) -> Unit): Boolean {
+        if (i == null) { (ctx as HomeApp).toast("MemoHatch が見つかりません（入っていないか、開けません）"); return false }
+        return runCatching { start(i) }.onFailure { (ctx as HomeApp).toast("MemoHatch を開けません：${it.message ?: it.javaClass.simpleName}") }.isSuccess
+    }
+
+    /** 新しいメモ（type：text・list・ink・audio・photo・scan・file）の Intent。 */
+    fun memoNewIntent(type: String): Intent? =
+        memoIntent(listOf("$MEMO_NEW.NEW", "$MEMO.NEW"))?.putExtra("type", type)?.putExtra("new", type)
 
     fun dsbooksInstalled() = apps.any { it.packageName == dsbooks }
 
@@ -874,9 +903,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
      */
     fun memoCapture(start: (Intent) -> Unit): Boolean {
         if (!memoInstalled()) return false
-        val i = Intent(SCAN).setPackage(memo).putExtra("source", "home").putExtra("mode", "camera").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        if (ctx.packageManager.resolveActivity(i, 0) == null) return false
-        return runCatching { start(i) }.isSuccess
+        return startMemo(memoIntent(listOf(SCAN))?.putExtra("source", "home")?.putExtra("mode", "camera"), start)
     }
 
     /** カメラのボタン：MemoHatch 経由（撮ったものがメモに入る）→ Camera Hatch を直接 → MemoHatch の写真のメモ。どれもだめなら false。 */
@@ -1178,14 +1205,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
      */
     fun memoNew(type: String, start: (Intent) -> Unit): Boolean {
         if (!memoInstalled()) return false
-        val pkg = memo
-        val i = listOf("$pkg.NEW", "$MEMO.NEW").map { Intent(it).setPackage(pkg).putExtra("type", type).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-            .firstOrNull { ctx.packageManager.resolveActivity(it, 0) != null }
-        if (i == null) {
-            (ctx as HomeApp).toast("MemoHatch の「新しいメモ」の入口が見つかりません（このホームの入力で代わりにします）")
-            return false
-        }
-        return runCatching { start(i) }.isSuccess
+        return startMemo(memoNewIntent(type), start)
     }
 
     /**
@@ -1229,7 +1249,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     fun lineRecipients(): List<Pair<String, String>> =
         Shortcuts.shareTargets(ctx, LINE).map { it.id to Shortcuts.label(it) }
 
-    fun memoInstalled() = apps.any { it.packageName == memo }
+    fun memoInstalled() = memoPkg() != null
 
     /** MemoHatch の共有の受け口（ShareActivity。新しい ID ではクラスの場所が変わることがあるので探す）。 */
     private fun memoShare(): Intent {
@@ -2138,11 +2158,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             "voice-app" -> openApps(voice = true)
             // MemoHatch：新しい音声メモ（録音から）
             "memo-audio" -> {
-                val pkg = memo
-                // 新しい ID では app.thetahatch.memo.NEW、古い ID では jp.yaegaki.theta.memo.NEW
-                val i = listOf("$pkg.NEW", "$MEMO.NEW").map { Intent(it).setPackage(pkg).putExtra("type", "audio").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-                    .firstOrNull { ctx.packageManager.resolveActivity(it, 0) != null } ?: Intent("$MEMO.NEW").setPackage(pkg).putExtra("type", "audio").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                start(i)
+                startMemo(memoNewIntent("audio"), start)
             }
         }
     }
@@ -2611,6 +2627,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         const val GOOGLE = "com.google.android.googlequicksearchbox"
         const val DSBOOKS = "jp.shinwakai.dsbooks.preview"
         const val MEMO = "jp.yaegaki.theta.memo"
+        const val MEMO_NEW = "app.thetahatch.memo"
         const val LINE = "jp.naver.line.android"
 
         /** ほかの Hatch のアプリの「撮って登録」（Series の仕様に頼んでいる名前）。 */

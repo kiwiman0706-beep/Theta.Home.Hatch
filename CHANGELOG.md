@@ -1,5 +1,9 @@
 # 変更履歴
 
+## 1.18.2（2026-11-13）
+
+- MemoHatch へのつなぎを直した：すぐ記録・MemoHatch のタブのボタンが MemoHatch を開かないことがあった。アプリの一覧や catalog に頼らず、端末に MemoHatch（`app.thetahatch.memo`・古い ID）が入っているかを直接たずね、受け口の画面を名指しして開く（受け口が見つからなければ起動の画面に action と extra を付けて）。開けないときは理由を出す
+
 ## 1.18.1（2026-11-13）
 
 - すぐ記録・MemoHatch のタブのカメラ：MemoHatch 経由で開く（`app.thetahatch.action.SCAN` を MemoHatch に）。MemoHatch 0.3.4 が新しいメモを作って Camera Hatch を開き、撮った写真・動画・スキャンをそのメモに入れる。受けられないときは Camera Hatch を直接、それも無ければ写真のメモ
