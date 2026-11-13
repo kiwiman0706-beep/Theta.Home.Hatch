@@ -79,8 +79,8 @@ fun ShelfView(model: HomeModel, id: String) {
                     ) { GlyphIcon(g, p.onAccent, 22.dp) }
                 }
                 Box(
-                    Modifier.weight(1f).height(44.dp).background(p.accent).clickable(onClickLabel = "カメラ") { if (!model.openCamera(actions.start)) model.memoNew("photo", actions.start) }
-                        .semantics { contentDescription = "カメラ（Theta Camera Hatch）" },
+                    Modifier.weight(1f).height(44.dp).background(p.accent).clickable(onClickLabel = "カメラ") { model.capture(actions.start) }
+                        .semantics { contentDescription = "撮ってメモに（Camera Hatch）" },
                     contentAlignment = Alignment.Center,
                 ) { GlyphIcon(Glyph.CAMERA, p.onAccent, 22.dp) }
             }

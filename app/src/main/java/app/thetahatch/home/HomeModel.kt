@@ -867,6 +867,21 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         return t
     }
 
+    /**
+     * 撮って MemoHatch に入れる：MemoHatch に「撮って登録」（app.thetahatch.action.SCAN）を頼む。
+     * MemoHatch 0.3.4 から、新しいメモを作って Camera Hatch（写真・動画・スキャン）を開き、撮ったものをそのメモに入れる。
+     * 受けられなければ false。
+     */
+    fun memoCapture(start: (Intent) -> Unit): Boolean {
+        if (!memoInstalled()) return false
+        val i = Intent(SCAN).setPackage(memo).putExtra("source", "home").putExtra("mode", "camera").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (ctx.packageManager.resolveActivity(i, 0) == null) return false
+        return runCatching { start(i) }.isSuccess
+    }
+
+    /** カメラのボタン：MemoHatch 経由（撮ったものがメモに入る）→ Camera Hatch を直接 → MemoHatch の写真のメモ。どれもだめなら false。 */
+    fun capture(start: (Intent) -> Unit): Boolean = memoCapture(start) || openCamera(start) || memoNew("photo", start)
+
     /** Theta Camera Hatch を開く（入っていなければ false）。 */
     fun openCamera(start: (Intent) -> Unit): Boolean {
         val a = Catalog.apps.value.firstOrNull { it.id == "camera" }
