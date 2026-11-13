@@ -100,6 +100,13 @@ fun ShelfView(model: HomeModel, id: String) {
             }
             return@Column
         }
+        // MemoHatch のタブ：ピン留めの上に、ピン留めしていない新しいメモ（大事なものを見つけてピン留めできるように）
+        if (id == "memo" && pkg != null) {
+            val recent by produceState<List<HatchShelf.Item>?>(null, pkg, tick, model.resumeTick) {
+                value = withContext(Dispatchers.IO) { HatchShelf.memoNotes(ctx, pkg, 200)?.let { HatchShelf.recentUnpinned(it) } }
+            }
+            recent?.takeIf { it.isNotEmpty() }?.let { SectionTitle("最近のメモ（ピン留めなし）"); ShelfTiles(pkg, it) }
+        }
         when {
             app == null -> Note("シリーズの一覧に無いアプリです")
             pkg == null -> FlowRow2 { PillButton("入れる（Hatch の一覧）", { model.showHatch(id) }) }

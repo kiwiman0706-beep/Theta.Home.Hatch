@@ -18,6 +18,8 @@ object HatchShelf {
     data class Item(
         val section: String, val sectionTitle: String, val id: String, val title: String, val subtitle: String,
         val text: String, val image: String, val action: String, val color: String,
+        /** MemoHatch の /notes だけ：ピン留めか・変えた時刻（ミリ秒）。 */
+        val pinned: Boolean = false, val updated: Long = 0,
     )
 
     fun uri(pkg: String): Uri = Uri.parse("content://$pkg.theta/shelf")
@@ -41,9 +43,9 @@ object HatchShelf {
      * MemoHatch の全部のメモ（/notes、新しい順・ピン留めが先、500 件まで）を棚と同じ形で。検索に使う。
      * 押すとそのメモを開く（MemoHatch の起動の画面に「open」でメモの id を渡す。棚の action と同じ）。
      */
-    fun memoNotes(context: Context, pkg: String): List<Item>? = runCatching {
+    fun memoNotes(context: Context, pkg: String, limit: Int = 500): List<Item>? = runCatching {
         val main = context.packageManager.getLaunchIntentForPackage(pkg)?.component ?: return@runCatching null
-        context.contentResolver.query(Uri.parse("content://$pkg.theta/notes?limit=500"), null, null, null, null)?.use { c ->
+        context.contentResolver.query(Uri.parse("content://$pkg.theta/notes?limit=$limit"), null, null, null, null)?.use { c ->
             fun col(name: String) = c.getColumnIndex(name).takeIf { it >= 0 }?.let { c.getString(it) }.orEmpty()
             val out = ArrayList<Item>()
             while (c.moveToNext()) {
@@ -52,11 +54,15 @@ object HatchShelf {
                 val image = if (cover.matches(Regex("(?i).*\\.(jpe?g|png|gif|webp|heic|heif)$"))) "content://$pkg.theta/image/$cover" else ""
                 val action = Intent(Intent.ACTION_VIEW, Uri.parse("memo-note://$id")).setComponent(main).putExtra("open", id)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).toUri(Intent.URI_INTENT_SCHEME)
-                out += Item("search", "", id, col("title").ifEmpty { "メモ" }, "", col("snippet"), image, action, col("color"))
+                out += Item("search", "", id, col("title").ifEmpty { "メモ" }, "", col("snippet"), image, action, col("color"),
+                    pinned = col("pinned") == "1" || col("pinned").equals("true", true), updated = col("updated").toLongOrNull() ?: 0)
             }
             out
         }
     }.getOrNull()
+
+    /** ピン留めしていない、新しいメモ n 件（変えた時刻の新しい順）。 */
+    fun recentUnpinned(list: List<Item>, n: Int = 6): List<Item> = list.filter { !it.pinned }.sortedByDescending { it.updated }.take(n)
 
     /** 言葉に合うメモ（題名・本文の頭。空白で区切った言葉が全部入っているもの）。 */
     fun filter(list: List<Item>, q: String): List<Item> {

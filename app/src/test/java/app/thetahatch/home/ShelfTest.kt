@@ -54,4 +54,11 @@ class ShelfFilterTest {
         assertEquals(listOf("買い物"), HatchShelf.filter(list, "牛乳 卵").map { it.title })
         assertEquals(3, HatchShelf.filter(list, "  ").size)
     }
+
+    @org.junit.Test
+    fun recentUnpinnedNewestSix() {
+        fun i(t: String, pin: Boolean, at: Long) = HatchShelf.Item("search", "", t, t, "", "", "", "", "", pinned = pin, updated = at)
+        val list = listOf(i("p", true, 999)) + (1..8).map { i("n$it", false, it.toLong()) }
+        assertEquals(listOf("n8", "n7", "n6", "n5", "n4", "n3"), HatchShelf.recentUnpinned(list).map { it.title })
+    }
 }
