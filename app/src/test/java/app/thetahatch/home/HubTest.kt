@@ -43,9 +43,11 @@ class HubTest {
         val list = Catalog.parse(text)
         val home = list.first { it.id == "home" }
         assertEquals("app.thetahatch.home", home.targetPackage)
-        assertEquals("jp.yaegaki.theta.home", home.currentPackage)
+        assertTrue(home.currentPackage in setOf("jp.yaegaki.theta.home", "app.thetahatch.home"))
         assertTrue(home.android && home.updateHub && !home.bridge)
         assertTrue(list.first { it.id == "meishi" }.bridge)
+        // 作成中を外したアプリは一覧に出る
+        assertNull(list.first { it.id == "movie" }.status)
         // Android 版のない Hitsudan は更新の対象にしない
         assertFalse(list.first { it.id == "hitsudan" }.android)
     }

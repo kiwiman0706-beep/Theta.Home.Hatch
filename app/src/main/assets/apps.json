@@ -1,8 +1,8 @@
 {
   "spec": 1,
-  "updated": "2026-11-06",
+  "updated": "2026-11-17",
   "owner": "kiwiman0706-beep",
-  "note": "シリーズのアプリ一覧（機械が読む用）。current は今、target は揃えた後。autoUpdate は Android のアプリ内自動更新の有無。Theta Home Hatch の Hatch ドロワーはこれを正本にする（spec §6.1）。 settingsExport・integrations は yes / partial / planned / no（README の「連携の対応状況」と同じ）。 updateHub は Android の更新をまとめて行うアプリ（spec §6.1）。 migration.bridge は移行の橋渡し版を作るか、migration.data はデータを移すか（docs/MIGRATION.md §3）。",
+  "note": "シリーズのアプリ一覧（機械が読む用）。current は今、target は揃えた後。autoUpdate は Android のアプリ内自動更新の有無。Theta Home Hatch の Hatch ドロワーはこれを正本にする（spec §6.1）。 settingsExport・integrations は yes / partial / planned / no（README の「連携の対応状況」と同じ）。 updateHub は Android の更新をまとめて行うアプリ（spec §6.1）。 migration.bridge は移行の橋渡し版を作るか、migration.data はデータを移すか（docs/MIGRATION.md §3）。 googleApis は使う Google API（spec/THETA_GOOGLE_SETUP.md の表）。migration.bridgeVersion は橋渡し版のタグ。 hubReady はハブ（Home）から入れられる Release があるか（spec §6.1「ハブが入れられる Release の条件」）。移行が済んだアプリは current を target と同じにする。 previous.packageName は移行前の古い ID（端末に残っていれば、ハブが削除を案内する）。 tv は TV 版の予定（spec/THETA_TV_SPEC.md）：yes 対応済み・planned 予定・maybe 検討。",
   "apps": [
     {
       "id": "book",
@@ -10,7 +10,7 @@
       "nickname": "DSBooks",
       "current": {
         "repo": "Theta.Book.Hatch",
-        "packageName": "jp.shinwakai.dsbooks.preview"
+        "packageName": "app.thetahatch.book"
       },
       "target": {
         "repo": "Theta.Book.Hatch",
@@ -31,14 +31,28 @@
         "secureSignIn": "partial"
       },
       "settingsExport": "partial",
-      "remark": "ブランチが分かれている：claude/vigilant-ramanujan-4v5vsv（1.0.0、デスクトップ版あり）と ccr-fbd7a73d-mp81q5（0.8.7-preview、Android のみ）",
+      "remark": "本線は claude/vigilant-ramanujan-4v5vsv（デフォルトに設定済み）。2026-11-07 に公開。利用者が使っているのは Claude 版（jp.shinwakai.dsbooks.claude）。Theta.Jisui.Viewer は別のリポジトリに分ける予定。デスクトップ版は pywebview のまま",
       "thread": "session_01VBri9A5SpavPKRqvCQZARs",
       "googleOAuth": {
         "registered": "2026-11-06"
       },
       "migration": {
         "bridge": true,
-        "data": "required"
+        "data": "required",
+        "bridgeVersion": "1.0.1",
+        "status": "done"
+      },
+      "googleApis": [
+        "drive"
+      ],
+      "latestRelease": "1.1.0",
+      "hubReady": true,
+      "previous": {
+        "packageName": "jp.shinwakai.dsbooks.claude"
+      },
+      "tv": {
+        "androidtv": "yes",
+        "webos": "maybe"
       }
     },
     {
@@ -46,7 +60,7 @@
       "name": "Theta Meishi Hatch",
       "current": {
         "repo": "Theta.Meishi.Hatch",
-        "packageName": "jp.yaegaki.meishiclaude"
+        "packageName": "app.thetahatch.meishi"
       },
       "target": {
         "repo": "Theta.Meishi.Hatch",
@@ -74,7 +88,19 @@
       },
       "migration": {
         "bridge": true,
-        "data": "required"
+        "data": "required",
+        "bridgeVersion": "0.19.0",
+        "status": "done"
+      },
+      "googleApis": [
+        "drive",
+        "calendar",
+        "people"
+      ],
+      "latestRelease": "1.0.0",
+      "hubReady": true,
+      "previous": {
+        "packageName": "jp.yaegaki.meishiclaude"
       }
     },
     {
@@ -108,7 +134,10 @@
       "migration": {
         "bridge": false,
         "data": "none"
-      }
+      },
+      "googleApis": [
+        "drive"
+      ]
     },
     {
       "id": "kamigata",
@@ -174,7 +203,10 @@
       "migration": {
         "bridge": false,
         "data": "none"
-      }
+      },
+      "googleApis": [
+        "drive"
+      ]
     },
     {
       "id": "label",
@@ -307,7 +339,10 @@
       "migration": {
         "bridge": false,
         "data": "none"
-      }
+      },
+      "googleApis": [
+        "drive"
+      ]
     },
     {
       "id": "mensetsu",
@@ -342,14 +377,18 @@
       "migration": {
         "bridge": false,
         "data": "none"
-      }
+      },
+      "googleApis": [
+        "drive",
+        "people"
+      ]
     },
     {
       "id": "home",
       "name": "Theta Home Hatch",
       "current": {
         "repo": "Theta.Home.Hatch",
-        "packageName": "jp.yaegaki.theta.home"
+        "packageName": "app.thetahatch.home"
       },
       "target": {
         "repo": "Theta.Home.Hatch",
@@ -375,6 +414,17 @@
       "migration": {
         "bridge": false,
         "data": "none"
+      },
+      "googleApis": [
+        "drive"
+      ],
+      "latestRelease": "1.1.1",
+      "hubReady": true,
+      "previous": {
+        "packageName": "jp.yaegaki.theta.home"
+      },
+      "tv": {
+        "androidtv": "planned"
       }
     },
     {
@@ -382,7 +432,7 @@
       "name": "Theta Memo Hatch",
       "current": {
         "repo": "Theta.Memo.Hatch",
-        "packageName": "jp.yaegaki.theta.memo"
+        "packageName": "app.thetahatch.memo"
       },
       "target": {
         "repo": "Theta.Memo.Hatch",
@@ -396,8 +446,8 @@
       "integrations": {
         "obsidianVault": "yes",
         "googleDrive": "yes",
-        "synology": "no",
-        "secureSignIn": "no"
+        "synology": "yes",
+        "secureSignIn": "yes"
       },
       "settingsExport": "no",
       "thread": "session_01H9m1j4wPmRzXQbzu7zWADS",
@@ -407,7 +457,12 @@
       "migration": {
         "bridge": false,
         "data": "none"
-      }
+      },
+      "googleApis": [
+        "drive"
+      ],
+      "hubReady": false,
+      "remark": "0.3.0（新しい ID）はコードのみ。Release がまだ無いので Home から入れられない"
     },
     {
       "id": "kidshome",
@@ -415,7 +470,7 @@
       "nickname": "キッズホーム",
       "current": {
         "repo": "Theta.KidsHome.Hatch",
-        "packageName": "com.theta.kidshome"
+        "packageName": "app.thetahatch.kidshome"
       },
       "target": {
         "repo": "Theta.KidsHome.Hatch",
@@ -442,6 +497,17 @@
       "migration": {
         "bridge": false,
         "data": "none"
+      },
+      "googleApis": [
+        "drive"
+      ],
+      "latestRelease": "1.0.3",
+      "hubReady": true,
+      "previous": {
+        "packageName": "com.theta.kidshome"
+      },
+      "tv": {
+        "androidtv": "yes"
       }
     },
     {
@@ -510,6 +576,10 @@
       "migration": {
         "bridge": false,
         "data": "none"
+      },
+      "tv": {
+        "androidtv": "planned",
+        "webos": "maybe"
       }
     },
     {
@@ -543,6 +613,10 @@
       "migration": {
         "bridge": false,
         "data": "none"
+      },
+      "tv": {
+        "androidtv": "planned",
+        "webos": "planned"
       }
     },
     {
@@ -571,12 +645,15 @@
       "thread": "session_012DXkc1gdp42YFc5gM1nwUj",
       "googleOAuth": {
         "registered": "2026-11-06"
+      },
+      "tv": {
+        "androidtv": "planned",
+        "webos": "planned"
       }
     },
     {
       "id": "movie",
       "name": "Theta Movie Hatch",
-      "status": "design",
       "current": {
         "repo": "Theta.Movie.Hatch",
         "packageName": null
@@ -585,21 +662,32 @@
         "repo": "Theta.Movie.Hatch",
         "packageName": "app.thetahatch.movie"
       },
-      "platforms": [],
-      "autoUpdate": false,
+      "platforms": [
+        "android"
+      ],
+      "autoUpdate": true,
       "vault": false,
-      "remark": "設計中（NAS の Jellyfin＋ファイル名規則）",
+      "remark": "Flutter＋mpv。NAS を直接読む（File Station・WebDAV）。Jellyfin は並べて使う",
       "integrations": {
-        "obsidianVault": "no",
+        "obsidianVault": "planned",
         "googleDrive": "no",
-        "synology": "planned",
-        "secureSignIn": "no"
+        "synology": "yes",
+        "secureSignIn": "planned"
       },
       "settingsExport": "no",
       "thread": "session_012DXkbxgRpZwVsU9fra6sF1",
       "googleOAuth": {
         "registered": "2026-11-06"
-      }
+      },
+      "tv": {
+        "androidtv": "planned",
+        "webos": "planned"
+      },
+      "migration": {
+        "bridge": false,
+        "data": "none"
+      },
+      "hubReady": false
     },
     {
       "id": "file",
@@ -636,7 +724,7 @@
       "name": "Theta Chirashi Hatch",
       "current": {
         "repo": "Theta.Chirashi.Hatch",
-        "packageName": "jp.yaegaki.theta.chirashi"
+        "packageName": "app.thetahatch.chirashi"
       },
       "target": {
         "repo": "Theta.Chirashi.Hatch",
@@ -661,8 +749,54 @@
       },
       "migration": {
         "bridge": true,
-        "data": "required"
+        "data": "required",
+        "bridgeVersion": "0.1.1",
+        "status": "done"
+      },
+      "googleApis": [
+        "drive",
+        "calendar"
+      ],
+      "latestRelease": "0.3.0",
+      "hubReady": true,
+      "previous": {
+        "packageName": "jp.yaegaki.theta.chirashi"
       }
+    },
+    {
+      "id": "camera",
+      "name": "Theta Camera Hatch",
+      "current": {
+        "repo": "Theta.Camera.Hatch",
+        "packageName": "app.thetahatch.camera"
+      },
+      "target": {
+        "repo": "Theta.Camera.Hatch",
+        "packageName": "app.thetahatch.camera"
+      },
+      "platforms": [
+        "android"
+      ],
+      "autoUpdate": true,
+      "vault": false,
+      "integrations": {
+        "obsidianVault": "no",
+        "googleDrive": "no",
+        "synology": "no",
+        "secureSignIn": "no"
+      },
+      "settingsExport": "no",
+      "thread": "session_012DXkbx4X64tseX2Fpu1dRb",
+      "migration": {
+        "bridge": false,
+        "data": "none",
+        "previous": {
+          "packageName": "com.theta.camera.hatch",
+          "note": "ChatGPT で作った 0.1.0（別の鍵）。データは写真だけで DCIM に残るので入れ直し"
+        }
+      },
+      "hubReady": true,
+      "remark": "Galaxy Z Fold5 専用のカメラ。純正の置き換えが目標。0.15.0：撮って返す（spec §6.2 CAPTURE）、端末のカメラとしての入口・ロック画面、QR の自動読み取り。ADB の窓口あり"
     },
     {
       "id": "desk",

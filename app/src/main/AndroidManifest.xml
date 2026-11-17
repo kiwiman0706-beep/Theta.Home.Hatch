@@ -98,6 +98,9 @@
         <package android:name="photo.theta.theta_photo_hatch" />
         <package android:name="app.thetahatch.chirashi" />
         <package android:name="jp.yaegaki.theta.chirashi" />
+        <package android:name="app.thetahatch.movie" />
+        <package android:name="app.thetahatch.file" />
+        <package android:name="app.thetahatch.mitene" />
         <!-- 既定のホームアプリ（更新の受け持ちを決める） -->
         <intent>
             <action android:name="android.intent.action.MAIN" />
