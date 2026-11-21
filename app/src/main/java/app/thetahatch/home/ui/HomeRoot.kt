@@ -34,6 +34,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -196,7 +197,11 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity, edgeExit: (() -> Uni
             },
             wideHome = w >= 720.dp,
         )
-        LaunchedEffect(w >= 600.dp) { model.changeProfile(if (w >= 600.dp) "wide" else "narrow") }
+        // 閉じた画面・開いた画面。ホームとエッジは同じ model を使うので、前に出ている窓が自分の幅で毎回書き直す
+        // （エッジが開いた画面で「wide」にしたまま、閉じた画面のホームに戻ると、開いた画面の並びが残っていた）
+        val resumed = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateAsState().value
+            .isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+        LaunchedEffect(w >= 600.dp, model.profile, resumed) { if (resumed) model.changeProfile(if (w >= 600.dp) "wide" else "narrow") }
         val available = w - railW
         CompositionLocalProvider(
             LocalActions provides actions, LocalLayout provides layout, LocalIconLook provides IconLook(model.iconMode, model.iconVersion, model.iconColors, IconStyle.family(model.themeMode)),
