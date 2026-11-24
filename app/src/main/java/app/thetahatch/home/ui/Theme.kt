@@ -290,11 +290,40 @@ val LcdPalette = Palette(
     font = "mono",
 )
 
+/**
+ * DUSK：夕暮れのガラス。珊瑚色から青緑へのグラデーションの地に薄い方眼、暗い青緑の台、珊瑚色にぼんやり光る縁。
+ * 作りは SOFT と同じ（角丸の台・ゴシック）で、影の代わりに光（shadow = "glow"）。
+ */
+val DuskPalette = Palette(
+    bg = Color(0xFF243A3C),
+    panel = Color(0xFF2C4346),
+    raised = Color(0xFF36504F),
+    fg = Color(0xFFF5ECE6),
+    muted = Color(0xFFCDBFB7),
+    faint = Color(0xFFA3ADA9),
+    line = Color(0xFF5A7471),
+    accent = Color(0xFFFF8E7E),
+    onAccent = Color(0xFF3A2422),
+    widget = Color(0xFF86D9C4),
+    launch = Color(0xFFD69BE8),
+    zebra = Color(0x0FFFFFFF),
+    pop = true,
+    accent2 = Color(0xFFF2C46B),
+    accent3 = Color(0xFF86D9C4),
+    backdrop = "dusk",
+    style = "soft",
+    radius = 10.dp,
+    font = "sans",
+    shadow = "glow",
+    iconShape = "round",
+)
+
 /** テーマの名前から配色を決める。"system" は端末のダーク・ライトに合わせる。 */
 fun paletteFor(mode: String, systemDark: Boolean): Palette = when (mode) {
     "term" -> TermPalette
     "braun" -> BraunPalette
     "soft" -> SoftPalette
+    "dusk" -> DuskPalette
     "window" -> WindowPalette
     "lcd" -> LcdPalette
     "pop" -> PopPalette
@@ -365,6 +394,27 @@ fun androidx.compose.ui.Modifier.backdrop(p: Palette): androidx.compose.ui.Modif
             y += step
         }
     }
+    // DUSK：左上の珊瑚色から右下の青緑へ。設計図のような薄い方眼
+    "dusk" -> drawBehind {
+        drawRect(
+            androidx.compose.ui.graphics.Brush.linearGradient(
+                listOf(Color(0xFFB8705F), Color(0xFF6A5B5C), Color(0xFF2F4547), Color(0xFF213638)),
+                start = androidx.compose.ui.geometry.Offset.Zero,
+                end = androidx.compose.ui.geometry.Offset(size.width, size.height),
+            ),
+        )
+        val step = 40.dp.toPx()
+        var x = 0f
+        while (x < size.width) {
+            drawLine(Color.White.copy(alpha = 0.04f), androidx.compose.ui.geometry.Offset(x, 0f), androidx.compose.ui.geometry.Offset(x, size.height), 1f)
+            x += step
+        }
+        var y = 0f
+        while (y < size.height) {
+            drawLine(Color.White.copy(alpha = 0.04f), androidx.compose.ui.geometry.Offset(0f, y), androidx.compose.ui.geometry.Offset(size.width, y), 1f)
+            y += step
+        }
+    }
     // LCD：液晶の画素の格子
     "pixel" -> drawBehind {
         val step = 3.dp.toPx()
@@ -421,6 +471,14 @@ fun androidx.compose.ui.Modifier.popShadow(p: Palette, shape: androidx.compose.u
             translate(-o * 0.6f, -o * 0.6f) { drawOutline(outline, Color.White.copy(alpha = 0.12f)) }
         }
     }
+    // DUSK：縁が珊瑚色にぼんやり光る（外へ広がる薄い線を重ねる）＋細い縁
+    "glow" -> this.drawBehind {
+        val outline = shape.createOutline(size, layoutDirection, this)
+        for (i in 4 downTo 1) {
+            drawOutline(outline, p.accent.copy(alpha = 0.05f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = i * 3.dp.toPx()))
+        }
+        drawOutline(outline, p.accent.copy(alpha = 0.7f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()))
+    }
     else -> this
 }
 
@@ -455,7 +513,7 @@ fun HomeTheme(dark: Boolean, pop: Boolean = false, content: @Composable () -> Un
     CompositionLocalProvider(LocalPalette provides p) { HomeThemeInner(p, dark && !pop, content) }
 }
 
-/** 設定のテーマ名（dark・light・pop・alert・scifi・term・braun・soft・window・lcd・system）で包む。 */
+/** 設定のテーマ名（dark・light・pop・alert・scifi・term・braun・soft・dusk・window・lcd・system）で包む。 */
 @Composable
 fun HomeTheme(mode: String, content: @Composable () -> Unit) {
     val p = paletteFor(mode, androidx.compose.foundation.isSystemInDarkTheme())

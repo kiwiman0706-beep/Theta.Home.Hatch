@@ -1083,6 +1083,20 @@ class ScreenshotTest {
     fun softMain() = themeShots("soft")
 
     @Test
+    @Config(qualifiers = "w904dp-h1104dp-xhdpi")
+    fun duskMain() = themeShots("dusk")
+
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun duskCover() {
+        launch("dusk") { app ->
+            app.store.weatherPlace = WeatherPlace("東京都 / 東京", 35.68, 139.76)
+            app.store.weatherCache = weatherSample(System.currentTimeMillis())
+        }
+        shot("dusk-cover")
+    }
+
+    @Test
     @Config(qualifiers = "w360dp-h860dp-xxhdpi")
     fun softCover() {
         launch("soft") { app ->

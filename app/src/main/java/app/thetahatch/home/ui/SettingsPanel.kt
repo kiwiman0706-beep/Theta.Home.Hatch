@@ -200,7 +200,7 @@ fun SettingsPanel(model: HomeModel) {
                 FlowRow2 {
                     listOf(
                         "dark" to "ダーク", "light" to "ライト", "pop" to "POP（カラフル）", "alert" to "ALERT（警報画面）", "scifi" to "SCI-FI（操作卓）",
-                        "term" to "TERMINAL（緑の端末）", "braun" to "BRAUN（白い家電）", "soft" to "SOFT（浮き出し）", "window" to "WINDOW（昔のパソコン）",
+                        "term" to "TERMINAL（緑の端末）", "braun" to "BRAUN（白い家電）", "soft" to "SOFT（浮き出し）", "dusk" to "DUSK（夕暮れのガラス）", "window" to "WINDOW（昔のパソコン）",
                         "lcd" to "LCD（液晶ゲーム機）", "system" to "端末に合わせる",
                     ).forEach { (mode, label) ->
                         PillButton(label, { model.changeTheme(mode) }, primary = model.themeMode == mode)
