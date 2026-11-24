@@ -982,6 +982,11 @@ class ScreenshotTest {
         org.junit.Assert.assertEquals(m.homeSections, Store(m.getApplication()).homeSections)
         scenario!!.onActivity { m.settingsOpen = true }
         compose.waitForIdle()
+        // 設定はまとまりの一覧から：「ホームの画面」を開く
+        shot("settings-menu")
+        compose.onNodeWithText("ホームの画面").performScrollTo().performClick()
+        compose.waitForIdle()
+        shot("settings-screen")
         compose.onNodeWithText("ホームの並びを変える").performScrollTo().performClick()
         compose.waitForIdle()
         shot("home-layout")
