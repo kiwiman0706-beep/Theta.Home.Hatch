@@ -147,7 +147,8 @@ fun FavPeopleRow(model: HomeModel) {
                     // 押すと連絡、長押しで動かさずに離すとメニュー、長押しのままドラッグで並べ替え
                     Modifier.width(64.dp)
                         .reorderable(reorder, f.key, "favpeople", p.accent, onMenu = { menu = f.key }) { from, to -> model.moveFavTo(from, to) }
-                        .clickable(onClickLabel = if (link != null) "トークを開く" else "電話", onClick = ::primary)
+                        // 長押しはメニュー・並べ替えに任せる（clickable だけだと、長押しのあと離したときにも押したことになっていた）
+                        .combinedClickable(onClickLabel = if (link != null) "トークを開く" else "電話", onLongClick = {}, onClick = ::primary)
                         .semantics { contentDescription = f.label + if (unread > 0) "（未読 $unread）" else "" },
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {

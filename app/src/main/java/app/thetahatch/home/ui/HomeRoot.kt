@@ -464,7 +464,7 @@ private fun Taskbar(model: HomeModel) {
                         // 長押しのままドラッグで並べ替え、動かさずに離すとメニュー
                         Modifier.size(cell)
                             .reorderable(taskReorder, key, "taskbar", p.accent, onMenu = { menu = key }) { from, to -> model.moveTaskbarPinTo(from, to) }
-                            .clickable(onClickLabel = "開く") { dockLaunch(model, actions, item) }
+                            .combinedClickable(onClickLabel = "開く", onLongClick = {}) { dockLaunch(model, actions, item) }
                             .semantics { contentDescription = dockLabel(item) },
                         contentAlignment = Alignment.Center,
                     ) { DockIcon(model, item, 30.dp) }

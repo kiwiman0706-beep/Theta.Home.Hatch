@@ -889,7 +889,7 @@ private fun AppsDrawer(model: HomeModel, only: String? = null, split: Boolean = 
                                     Modifier.width(76.dp)
                                         // 長押しのままドラッグで並べ替え、動かさずに離すとメニュー
                                         .reorderable(reorder, "start:$key", "start", p.accent, onMenu = { menu = true }) { from, to -> model.moveStartPinTo(from.removePrefix("start:"), to.removePrefix("start:")) }
-                                        .clickable(onClickLabel = "開く") { dockLaunch(model, actions, item) }
+                                        .combinedClickable(onClickLabel = "開く", onLongClick = {}) { dockLaunch(model, actions, item) }
                                         .padding(vertical = 4.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(4.dp),

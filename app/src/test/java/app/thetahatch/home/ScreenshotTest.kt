@@ -266,6 +266,29 @@ class ScreenshotTest {
         compose.onNodeWithText("カテゴリーを変える").assertExists()
     }
 
+    /** よく連絡する人：長押しして離すとメニューだけが出る（トークや電話は開かない）。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun favPersonLongPressShowsMenu() {
+        launch()
+        compose.waitForIdle()
+        // 入っていないトークのアプリ：押すと「アプリが入っていません」と出る（開こうとしたしるし）
+        scenario!!.onActivity { a -> (a.application as HomeApp).model.toggleFav(app.thetahatch.home.data.FavPerson("talk:com.example.none|room1", "家族")) }
+        compose.waitForIdle()
+        val node = compose.onNodeWithContentDescription("家族").performScrollTo()
+        // ふつうに押すと開く（この試験が「開いたか」を見分けられることの確かめ）
+        node.performClick()
+        compose.waitForIdle()
+        org.junit.Assert.assertEquals("アプリが入っていません", org.robolectric.shadows.ShadowToast.getTextOfLatestToast())
+        org.robolectric.shadows.ShadowToast.reset()
+        node.performTouchInput { down(center) }
+        compose.mainClock.advanceTimeBy(1000)
+        node.performTouchInput { up() }
+        compose.waitForIdle()
+        compose.onNodeWithText("よく連絡する人から外す").assertExists()
+        org.junit.Assert.assertNull("長押しで開こうとした", org.robolectric.shadows.ShadowToast.getTextOfLatestToast())
+    }
+
     @Test
     @Config(qualifiers = "w360dp-h860dp-xxhdpi")
     fun dragTabs() {
