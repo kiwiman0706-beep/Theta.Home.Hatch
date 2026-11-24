@@ -34,6 +34,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.graphics.compositeOver
 import androidx.lifecycle.compose.currentStateAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -616,11 +617,14 @@ private fun shortcut(model: HomeModel, t: TabSpec) = model.keyOf(t)?.let { "Alt+
 @Composable
 private fun RailTab(model: HomeModel, reorder: ReorderState, id: String, label: String, group: Int, active: Boolean, shortcut: String?, left: Boolean) {
     val p = LocalPalette.current
-    val groupColor = p.group(group)
+    // NOTE は札が群の色なので、印と名前は紺で
+    val groupColor = if (p.style == "note") p.fg else p.group(group)
+    val bandColor = p.group(group)
     // POP では選んだタブを群の色（フォルダ＝コーラル・ウィジェット＝ミント・起動＝イエロー）で塗り、画面の内側の角を丸める
-    val activeBg = if (p.pop) groupColor else p.accent
+    val activeBg = if (p.pop) bandColor else p.accent
     val onActive = if (p.pop && group != 0) p.fg else p.onAccent
-    val tabShape = if (p.pop) {
+    val note = p.style == "note"
+    val tabShape = if (note) RoundedCornerShape(20.dp) else if (p.pop) {
         if (left) RoundedCornerShape(topEnd = p.radius, bottomEnd = p.radius) else RoundedCornerShape(topStart = p.radius, bottomStart = p.radius)
     } else RoundedCornerShape(0.dp)
     var menu by remember(id) { mutableStateOf(false) }
@@ -632,7 +636,8 @@ private fun RailTab(model: HomeModel, reorder: ReorderState, id: String, label: 
             .width(40.dp)
             // 長押し→ドラッグで並べ替え。動かさずに離すとメニュー
             .reorderable(reorder, id, "tab", p.accent, onMenu = { menu = true }) { from, to -> model.moveTabTo(from, to) }
-            .background(if (active) activeBg else if (p.pop) p.panel else p.bg, tabShape)
+            // NOTE：どのタブも群の色の淡い札、選んだものは濃く
+            .background(if (active) activeBg else if (note) bandColor.copy(alpha = 0.45f).compositeOver(p.panel) else if (p.pop) p.panel else p.bg, tabShape)
             .border(lineWidth, if (active && !p.pop) p.accent else p.line, tabShape)
             .combinedClickable(role = Role.Tab, onClick = { model.toggle(id) }, onLongClick = {}, onLongClickLabel = "ドラッグで並べ替え・離すとメニュー")
             .semantics {

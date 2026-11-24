@@ -128,7 +128,7 @@ fun DrawerFrame(model: HomeModel, id: String, docked: Boolean) {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             model.tabIcon(t)?.let { TabIconView(model, it, kickColor, 16.dp) }
-            if (p.style != "soft" && p.style != "braun") Text("[$kicker]·$code", color = kickColor, fontSize = 10.sp, letterSpacing = 1.sp, fontFamily = Hud.mono)
+            if (p.style != "soft" && p.style != "braun" && p.style != "note") Text("[$kicker]·$code", color = kickColor, fontSize = 10.sp, letterSpacing = 1.sp, fontFamily = Hud.mono)
             Text(title, color = headFg, fontSize = 18.sp, fontFamily = Hud.display, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             // カテゴリーのタブも、アプリの上にウィジェットなどを置ける
             if (board || t.kind == TabKind.CATEGORY) GlyphButton(Glyph.GEAR, if (editing) "編集を終える" else "高さ・並び・足す", { editing = !editing }, filled = editing)

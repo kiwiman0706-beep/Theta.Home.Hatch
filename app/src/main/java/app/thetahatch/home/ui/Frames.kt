@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -67,9 +68,11 @@ internal fun SectionFrame(
         }
         "soft", "braun" -> {
             val shape = RoundedCornerShape(p.radius)
-            Column(Modifier.fillMaxWidth().popShadow(p, shape).clip(shape).background(p.panel).padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.fillMaxWidth().popShadow(p, shape).clip(shape).background(p.cardBg).padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(header.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (p.style == "braun") Box(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(p.accent))
+                    // DUSK：見本の部品帳のように、太い英字の見出し
+                    if (p.shadow == "glow") Text(code.uppercase(), color = p.fg, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Text(if (p.style == "braun") code else title, color = p.faint, fontSize = 12.sp, letterSpacing = if (p.style == "braun") 1.5.sp else 0.sp,
                         fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
                     Text(trailing, color = p.faint, fontSize = 12.sp)
@@ -77,6 +80,7 @@ internal fun SectionFrame(
                 if (showBody) body()
             }
         }
+        "note" -> NoteCard(title, header, trailing, band?.takeIf { it != p.raised && it != p.panel } ?: noteBand(code), showBody, body)
         "pop" -> {
             val shape = RoundedCornerShape(p.radius + 2.dp)
             val b = band ?: p.raised
@@ -120,5 +124,48 @@ internal fun WindowBar(title: String, modifier: Modifier = Modifier, trailing: @
             }
         }
         Box(Modifier.fillMaxWidth().height(lineWidth).background(p.line))
+    }
+}
+
+/** NOTE の見出しの札の色：区画ごとに青・緑・桃をかわりばんこに。 */
+@Composable
+internal fun noteBand(code: String): androidx.compose.ui.graphics.Color {
+    val p = LocalPalette.current
+    return listOf(p.accent, p.widget, p.launch)[Math.floorMod(code.hashCode(), 3)]
+}
+
+/**
+ * NOTE（手帳）のカード：左上にフォルダの耳のような色の札（見出し）、その下に紺の太い線の白いカード。
+ * 札とカードの線はつながって見えるよう、カードを線の太さだけ上へずらす。
+ */
+@Composable
+internal fun NoteCard(
+    title: String,
+    header: Modifier = Modifier,
+    trailing: String = "",
+    band: androidx.compose.ui.graphics.Color,
+    showBody: Boolean = true,
+    body: @Composable () -> Unit,
+) {
+    val p = LocalPalette.current
+    val w = lineWidth
+    val tab = RoundedCornerShape(topStart = p.radius, topEnd = p.radius + 6.dp)
+    val card = RoundedCornerShape(topStart = 0.dp, topEnd = p.radius, bottomStart = p.radius, bottomEnd = p.radius)
+    Column(Modifier.fillMaxWidth()) {
+        Row(header.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+            Row(
+                Modifier.clip(tab).background(band).border(w, p.line, tab).padding(start = 12.dp, end = 18.dp, top = 5.dp, bottom = 5.dp + w),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(title, color = p.fg, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Box(Modifier.weight(1f))
+            if (trailing.isNotEmpty()) Text(trailing, color = p.muted, fontSize = 12.sp, modifier = Modifier.padding(end = 6.dp, bottom = 4.dp))
+        }
+        if (showBody) Column(
+            Modifier.fillMaxWidth().offset(y = -w).clip(card).background(p.panel).border(w, p.line, card).padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) { body() }
+        else Box(Modifier.fillMaxWidth().offset(y = -w).height(w).background(p.line))
     }
 }

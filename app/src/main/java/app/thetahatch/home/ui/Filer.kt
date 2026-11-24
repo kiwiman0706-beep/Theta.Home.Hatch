@@ -32,6 +32,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -252,6 +253,7 @@ internal fun ClockBlock(big: Boolean) {
         "term" -> TermClock(d, big)
         "lcd" -> LcdClock(d, big)
         "soft" -> SoftClock(d, big)
+        "note" -> NoteClock(d, big)
         "window" -> WindowClock(d, big)
         else -> HudClock(d, big)
     }
@@ -352,11 +354,28 @@ private fun SoftClock(d: Date, big: Boolean) {
     val p = LocalPalette.current
     val shape = RoundedCornerShape(p.radius)
     Column(
-        Modifier.popShadow(p, shape).clip(shape).background(p.panel).padding(horizontal = 16.dp, vertical = 8.dp),
+        Modifier.popShadow(p, shape).clip(shape).background(p.cardBg).padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(SimpleDateFormat("HH:mm", Locale.US).format(d), color = p.fg, fontSize = if (big) 64.sp else 50.sp, fontWeight = FontWeight.Bold, lineHeight = if (big) 68.sp else 54.sp, letterSpacing = 2.sp)
         Text(SimpleDateFormat("yyyy-MM-dd", Locale.US).format(d) + "  " + weekdayJa(d), color = p.muted, fontSize = 14.sp)
+    }
+}
+
+/** NOTE：「today」の札のカードに時計。 */
+@Composable
+private fun NoteClock(d: Date, big: Boolean) {
+    val p = LocalPalette.current
+    Box(Modifier.widthIn(max = 420.dp)) {
+        NoteCard("today.plan", band = p.accent) {
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text(SimpleDateFormat("HH:mm", Locale.US).format(d), color = p.fg, fontSize = if (big) 60.sp else 46.sp, fontWeight = FontWeight.Bold, lineHeight = if (big) 64.sp else 50.sp)
+                Column(Modifier.padding(bottom = 6.dp)) {
+                    Text(SimpleDateFormat("yyyy.MM.dd", Locale.US).format(d), color = p.fg, fontSize = 14.sp)
+                    Text(weekdayJa(d), color = p.muted, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
 }
 

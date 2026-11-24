@@ -44,7 +44,7 @@ object IconStyle {
     /** テーマの名前から、アイコンの型の作りを決める。 */
     fun family(theme: String): String = when (theme) {
         "term", "lcd" -> FAMILY_PIXEL
-        "pop", "soft", "dusk", "window" -> FAMILY_ROUND
+        "pop", "soft", "dusk", "note", "window" -> FAMILY_ROUND
         "braun" -> FAMILY_LINE
         else -> FAMILY_HUD
     }

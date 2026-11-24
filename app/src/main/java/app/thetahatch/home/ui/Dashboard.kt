@@ -178,8 +178,8 @@ private fun FilerSection(model: HomeModel, modifier: Modifier, openNasSettings: 
     // 枠は作りに合わせる（ほかの区画と同じ見た目の見出し）
     val shape = if (p.pop) androidx.compose.foundation.shape.RoundedCornerShape(p.radius) else androidx.compose.ui.graphics.RectangleShape
     val framed = when (p.style) {
-        "soft", "braun" -> modifier.popShadow(p, shape).clip(shape).background(p.panel)
-        "window", "pop" -> modifier.popShadow(p, shape).clip(shape).background(p.panel).border(lineWidth, p.line, shape)
+        "soft", "braun" -> modifier.popShadow(p, shape).clip(shape).background(p.cardBg)
+        "window", "pop", "note" -> modifier.popShadow(p, shape).clip(shape).background(p.panel).border(lineWidth, p.line, shape)
         "lcd" -> modifier.border(2.dp, p.line).background(p.panel)
         else -> modifier.border(1.dp, p.line)
     }

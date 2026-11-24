@@ -62,7 +62,12 @@ data class Palette(
     val shadow: String = "none",
     /** アイコンの台の形："square"・"round"（角丸）・"circle"。 */
     val iconShape: String = "square",
+    /** 区画の台の色（DUSK は地が透けるガラス）。指定が無ければ panel。 */
+    val card: Color = Color.Unspecified,
 ) {
+    /** 区画の台に塗る色。 */
+    val cardBg: Color get() = if (card == Color.Unspecified) panel else card
+
     fun group(g: Int) = when (g) {
         0 -> accent
         1 -> widget
@@ -311,10 +316,39 @@ val DuskPalette = Palette(
     accent2 = Color(0xFFF2C46B),
     accent3 = Color(0xFF86D9C4),
     backdrop = "dusk",
+    card = Color(0xC72C4346),
     style = "soft",
     radius = 10.dp,
     font = "sans",
     shadow = "glow",
+    iconShape = "round",
+)
+
+/**
+ * NOTE：手帳（プランナー）。薄いラベンダーの地に点の方眼、紺の太い線の白いカード、
+ * 見出しはフォルダの耳のような色の札（青・緑・桃）、端のタブはパステルの丸い札。
+ */
+val NotePalette = Palette(
+    bg = Color(0xFFF1EEFA),
+    panel = Color(0xFFFFFFFF),
+    raised = Color(0xFFEEF0FB),
+    fg = Color(0xFF1F2340),
+    muted = Color(0xFF454A68),
+    faint = Color(0xFF62678A),
+    line = Color(0xFF1F2340),
+    accent = Color(0xFFA9B8F0),
+    onAccent = Color(0xFF1F2340),
+    widget = Color(0xFFA8E6C1),
+    launch = Color(0xFFF6B8C8),
+    zebra = Color(0x0D1F2340),
+    pop = true,
+    accent2 = Color(0xFFF7DC8A),
+    accent3 = Color(0xFFF6B8C8),
+    backdrop = "dots",
+    hazard = 0.dp,
+    style = "note",
+    radius = 14.dp,
+    font = "sans",
     iconShape = "round",
 )
 
@@ -324,6 +358,7 @@ fun paletteFor(mode: String, systemDark: Boolean): Palette = when (mode) {
     "braun" -> BraunPalette
     "soft" -> SoftPalette
     "dusk" -> DuskPalette
+    "note" -> NotePalette
     "window" -> WindowPalette
     "lcd" -> LcdPalette
     "pop" -> PopPalette
@@ -398,7 +433,7 @@ fun androidx.compose.ui.Modifier.backdrop(p: Palette): androidx.compose.ui.Modif
     "dusk" -> drawBehind {
         drawRect(
             androidx.compose.ui.graphics.Brush.linearGradient(
-                listOf(Color(0xFFB8705F), Color(0xFF6A5B5C), Color(0xFF2F4547), Color(0xFF213638)),
+                listOf(Color(0xFFD8957F), Color(0xFF9C8078), Color(0xFF4E6766), Color(0xFF263D3F)),
                 start = androidx.compose.ui.geometry.Offset.Zero,
                 end = androidx.compose.ui.geometry.Offset(size.width, size.height),
             ),
@@ -412,6 +447,20 @@ fun androidx.compose.ui.Modifier.backdrop(p: Palette): androidx.compose.ui.Modif
         var y = 0f
         while (y < size.height) {
             drawLine(Color.White.copy(alpha = 0.04f), androidx.compose.ui.geometry.Offset(0f, y), androidx.compose.ui.geometry.Offset(size.width, y), 1f)
+            y += step
+        }
+    }
+    // NOTE：手帳の点の方眼
+    "dots" -> drawBehind {
+        val step = 18.dp.toPx()
+        val r = 1.3.dp.toPx()
+        var y = step / 2
+        while (y < size.height) {
+            var x = step / 2
+            while (x < size.width) {
+                drawCircle(p.fg.copy(alpha = 0.13f), r, androidx.compose.ui.geometry.Offset(x, y))
+                x += step
+            }
             y += step
         }
     }
@@ -444,7 +493,7 @@ val hudShape: androidx.compose.ui.graphics.Shape
 val lineWidth: androidx.compose.ui.unit.Dp
     @Composable @androidx.compose.runtime.ReadOnlyComposable get() = LocalPalette.current.let { p ->
         when {
-            p.style == "lcd" || p.style == "window" -> 2.dp
+            p.style == "lcd" || p.style == "window" || p.style == "note" -> 2.dp
             p.pop -> 1.5.dp
             else -> 1.dp
         }
@@ -474,10 +523,11 @@ fun androidx.compose.ui.Modifier.popShadow(p: Palette, shape: androidx.compose.u
     // DUSK：縁が珊瑚色にぼんやり光る（外へ広がる薄い線を重ねる）＋細い縁
     "glow" -> this.drawBehind {
         val outline = shape.createOutline(size, layoutDirection, this)
-        for (i in 4 downTo 1) {
-            drawOutline(outline, p.accent.copy(alpha = 0.05f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = i * 3.dp.toPx()))
+        // 外へ広がる光（重ねるほど濃く）と、ガラスの縁
+        for (i in 5 downTo 1) {
+            drawOutline(outline, p.accent.copy(alpha = 0.07f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = i * 3.dp.toPx()))
         }
-        drawOutline(outline, p.accent.copy(alpha = 0.7f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()))
+        drawOutline(outline, p.accent.copy(alpha = 0.9f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx()))
     }
     else -> this
 }
@@ -513,7 +563,7 @@ fun HomeTheme(dark: Boolean, pop: Boolean = false, content: @Composable () -> Un
     CompositionLocalProvider(LocalPalette provides p) { HomeThemeInner(p, dark && !pop, content) }
 }
 
-/** 設定のテーマ名（dark・light・pop・alert・scifi・term・braun・soft・dusk・window・lcd・system）で包む。 */
+/** 設定のテーマ名（dark・light・pop・alert・scifi・term・braun・soft・dusk・note・window・lcd・system）で包む。 */
 @Composable
 fun HomeTheme(mode: String, content: @Composable () -> Unit) {
     val p = paletteFor(mode, androidx.compose.foundation.isSystemInDarkTheme())
