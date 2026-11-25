@@ -37,7 +37,7 @@ import app.thetahatch.home.data.PinnedShortcut
 val TAB_GLYPHS = listOf(
     Glyph.FOLDER, Glyph.CALENDAR, Glyph.MAIL, Glyph.CHAT, Glyph.PERSON, Glyph.LINK, Glyph.CLIP, Glyph.CAMERA,
     Glyph.HATCH, Glyph.GLOBE, Glyph.FILE, Glyph.GRID, Glyph.STAR, Glyph.HOME, Glyph.WORK, Glyph.IMAGE,
-    Glyph.MUSIC, Glyph.HEART, Glyph.CLOCK, Glyph.CART, Glyph.GAME, Glyph.BOOK, Glyph.CAR, Glyph.PENCIL, Glyph.MIC, Glyph.SEARCH,
+    Glyph.MUSIC, Glyph.HEART, Glyph.CLOCK, Glyph.CART, Glyph.GAME, Glyph.BOOK, Glyph.CAR, Glyph.PENCIL, Glyph.MIC, Glyph.SEARCH, Glyph.SUN, Glyph.PHONE, Glyph.BELL,
 )
 
 /** タブの印を描く。icon は HomeModel.tabIcon の値（"g:<記号>"・"app:<アプリ>"）。 */

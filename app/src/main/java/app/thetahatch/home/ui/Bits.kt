@@ -240,6 +240,7 @@ enum class Glyph {
     SEARCH, PIN, CLOSE, BACK, PLUS, GEAR, LIST, GRID, FOLDER, MIC,
     CALENDAR, MAIL, CHAT, PERSON, LINK, CLIP, CAMERA, HATCH, GLOBE, FILE,
     STAR, HOME, MUSIC, IMAGE, WORK, HEART, CLOCK, CART, GAME, BOOK, CAR, PENCIL,
+    SUN, PHONE, BELL,
 }
 
 @Composable
@@ -456,6 +457,29 @@ private fun DrawScope.drawGlyph(g: Glyph, color: Color) {
             drawLine(color, Offset(w * 0.1f, w * 0.48f), Offset(w * 0.9f, w * 0.48f), s.width, StrokeCap.Square)
             drawCircle(color, radius = w * 0.08f, center = Offset(w * 0.28f, w * 0.74f))
             drawCircle(color, radius = w * 0.08f, center = Offset(w * 0.72f, w * 0.74f))
+        }
+        Glyph.SUN -> {
+            drawCircle(color, radius = w * 0.18f, center = Offset(w / 2, w / 2), style = s)
+            for (i in 0 until 8) {
+                val a = Math.toRadians(i * 45.0)
+                val c = Offset(w / 2, w / 2)
+                drawLine(color, Offset(c.x + (w * 0.3f * Math.cos(a)).toFloat(), c.y + (w * 0.3f * Math.sin(a)).toFloat()),
+                    Offset(c.x + (w * 0.42f * Math.cos(a)).toFloat(), c.y + (w * 0.42f * Math.sin(a)).toFloat()), s.width, StrokeCap.Square)
+            }
+        }
+        Glyph.PHONE -> {
+            drawRoundRect(color, topLeft = Offset(w * 0.28f, w * 0.08f), size = androidx.compose.ui.geometry.Size(w * 0.44f, w * 0.84f),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(w * 0.08f), style = s)
+            drawLine(color, Offset(w * 0.44f, w * 0.8f), Offset(w * 0.56f, w * 0.8f), s.width, StrokeCap.Square)
+        }
+        Glyph.BELL -> {
+            val path = Path().apply {
+                moveTo(w * 0.2f, w * 0.72f); lineTo(w * 0.28f, w * 0.6f); lineTo(w * 0.28f, w * 0.4f)
+                quadraticTo(w * 0.3f, w * 0.14f, w * 0.5f, w * 0.14f); quadraticTo(w * 0.7f, w * 0.14f, w * 0.72f, w * 0.4f)
+                lineTo(w * 0.72f, w * 0.6f); lineTo(w * 0.8f, w * 0.72f); close()
+            }
+            drawPath(path, color, style = s)
+            drawLine(color, Offset(w * 0.42f, w * 0.86f), Offset(w * 0.58f, w * 0.86f), s.width, StrokeCap.Square)
         }
         Glyph.PENCIL -> {
             val path = Path().apply { moveTo(w * 0.66f, w * 0.12f); lineTo(w * 0.88f, w * 0.34f); lineTo(w * 0.34f, w * 0.88f); lineTo(w * 0.12f, w * 0.88f); lineTo(w * 0.12f, w * 0.66f); close() }

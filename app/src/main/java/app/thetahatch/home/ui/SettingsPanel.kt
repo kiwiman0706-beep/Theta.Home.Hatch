@@ -372,7 +372,7 @@ fun SettingsPanel(model: HomeModel) {
                         ).forEach { (mode, label) -> PillButton(label, { model.changeIconMode(mode) }, primary = model.iconMode == mode) }
                     }
                     if (model.iconMode == IconStyle.LOCAL || model.iconMode == IconStyle.GEMINI) IconColorPicker(model)
-                    if (model.iconMode == IconStyle.THEME) Note("テーマの絵：今のテーマの画風と色のまま、Gemini にアイコンを描いてもらいます（塗り替えはしません）。テーマごとに 1 回ずつ作り、テーマを戻せば前に作ったものを使います。ホームのボタンの絵柄（虫めがね・マイク・タブの印など 32 種）も、同じ画風で作ります。まだ作っていないものは元のアイコン・線の記号で出します。GAZEE は 90 年代のデスクトップの立体アイコン、DUSK は光るガラス、NOTE はパステルのシール、WINDOW はレトロなパソコン。ほかのテーマはその配色で描きます。")
+                    if (model.iconMode == IconStyle.THEME) Note("テーマの絵：今のテーマの画風と色のまま、Gemini にアイコンを描いてもらいます（塗り替えはしません）。テーマごとに 1 回ずつ作り、テーマを戻せば前に作ったものを使います。ホームのボタンの絵柄（虫めがね・マイク・タブの印・区画の見出しなど 35 種）も、同じ画風で作ります。まだ作っていないものは元のアイコン・線の記号で出します。GAZEE は 90 年代のデスクトップの立体アイコン、DUSK は光るガラス、NOTE はパステルのシール、WINDOW はレトロなパソコン。ほかのテーマはその配色で描きます。")
                     if (model.iconMode == IconStyle.GEMINI || model.iconMode == IconStyle.THEME) {
                         val job = model.iconJob
                         Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {

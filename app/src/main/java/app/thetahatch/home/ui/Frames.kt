@@ -41,12 +41,15 @@ internal fun SectionFrame(
     trailing: String = "",
     band: androidx.compose.ui.graphics.Color? = null,
     showBody: Boolean = true,
+    /** 見出しの印（作りに合わせた色で。テーマの絵があればその絵柄）。 */
+    glyph: Glyph? = null,
     body: @Composable () -> Unit,
 ) {
     val p = LocalPalette.current
     when (p.style) {
         "term" -> Column(Modifier.fillMaxWidth().border(1.dp, p.line)) {
-            Row(header.fillMaxWidth().background(p.fg).padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(header.fillMaxWidth().background(p.fg).padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                glyph?.let { GlyphIcon(it, p.bg, 15.dp) }
                 Text("$code  ${title}", color = p.bg, fontSize = 13.sp, fontFamily = Hud.mono, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 Text(trailing, color = p.bg, fontSize = 13.sp, fontFamily = Hud.mono)
             }
@@ -55,12 +58,13 @@ internal fun SectionFrame(
         "window" -> {
             val shape = RoundedCornerShape(p.radius)
             Column(Modifier.fillMaxWidth().popShadow(p, shape).clip(shape).background(p.panel).border(lineWidth, p.line, shape)) {
-                WindowBar(title, header) { Text(trailing, color = p.fg, fontSize = 12.sp) }
+                WindowBar(title, header, glyph) { Text(trailing, color = p.fg, fontSize = 12.sp) }
                 if (showBody) Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { body() }
             }
         }
         "lcd" -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(header.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Row(header.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                glyph?.let { GlyphIcon(it, p.fg, 15.dp) }
                 Text(title.uppercase(), color = p.fg, fontSize = 13.sp, fontFamily = Hud.mono, modifier = Modifier.weight(1f))
                 Text(trailing, color = p.fg, fontSize = 13.sp, fontFamily = Hud.mono)
             }
@@ -70,7 +74,8 @@ internal fun SectionFrame(
             val shape = RoundedCornerShape(p.radius)
             Column(Modifier.fillMaxWidth().popShadow(p, shape).clip(shape).background(p.cardBg).padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(header.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (p.style == "braun") Box(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(p.accent))
+                    if (p.style == "braun" && glyph == null) Box(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(p.accent))
+                    glyph?.let { GlyphIcon(it, p.accent, 16.dp) }
                     // DUSK：見本の部品帳のように、太い英字の見出し
                     if (p.shadow == "glow") Text(code.uppercase(), color = p.fg, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Text(if (p.style == "braun") code else title, color = p.faint, fontSize = 12.sp, letterSpacing = if (p.style == "braun") 1.5.sp else 0.sp,
@@ -80,14 +85,15 @@ internal fun SectionFrame(
                 if (showBody) body()
             }
         }
-        "gazee" -> GazeeCard(title, header, trailing, showBody, body)
-        "note" -> NoteCard(title, header, trailing, band?.takeIf { it != p.raised && it != p.panel } ?: noteBand(code), showBody, body)
+        "gazee" -> GazeeCard(title, header, trailing, showBody, glyph, body)
+        "note" -> NoteCard(title, header, trailing, band?.takeIf { it != p.raised && it != p.panel } ?: noteBand(code), showBody, glyph, body)
         "pop" -> {
             val shape = RoundedCornerShape(p.radius + 2.dp)
             val b = band ?: p.raised
             val on = if (b == p.accent) p.onAccent else p.fg
             Column(Modifier.fillMaxWidth().popShadow(p, shape).clip(shape).background(p.panel).border(lineWidth, p.line, shape)) {
                 Row(header.fillMaxWidth().background(b).padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    glyph?.let { GlyphIcon(it, on, 15.dp) }
                     Text(code, color = on, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Text(title, color = on, fontSize = 12.sp, modifier = Modifier.weight(1f))
                     Text(trailing, color = on, fontSize = 12.sp)
@@ -100,6 +106,7 @@ internal fun SectionFrame(
         }
         else -> Column(Modifier.fillMaxWidth().border(1.dp, p.line).corners(p.accent, 8.dp).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(header, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                glyph?.let { GlyphIcon(it, p.accent, 14.dp) }
                 Text("[ $code ]", color = p.accent, fontSize = 11.sp, fontFamily = Hud.mono, letterSpacing = 2.sp)
                 Text(title, color = p.muted, fontSize = 11.sp)
                 Stripes(Modifier.weight(1f).height(5.dp), color = p.line)
@@ -112,10 +119,11 @@ internal fun SectionFrame(
 
 /** WINDOW の作りのタイトルバー：オレンジの帯に見出し、右に「_ □ ×」。 */
 @Composable
-internal fun WindowBar(title: String, modifier: Modifier = Modifier, trailing: @Composable RowScope.() -> Unit = {}) {
+internal fun WindowBar(title: String, modifier: Modifier = Modifier, glyph: Glyph? = null, trailing: @Composable RowScope.() -> Unit = {}) {
     val p = LocalPalette.current
     Column {
         Row(modifier.fillMaxWidth().background(p.accent).padding(horizontal = 10.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            glyph?.let { GlyphIcon(it, p.onAccent, 15.dp) }
             Text(title, color = p.onAccent, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             trailing()
             listOf("–", "□", "×").forEach { g ->
@@ -146,6 +154,7 @@ internal fun NoteCard(
     trailing: String = "",
     band: androidx.compose.ui.graphics.Color,
     showBody: Boolean = true,
+    glyph: Glyph? = null,
     body: @Composable () -> Unit,
 ) {
     val p = LocalPalette.current
@@ -157,7 +166,9 @@ internal fun NoteCard(
             Row(
                 Modifier.clip(tab).background(band).border(w, p.line, tab).padding(start = 12.dp, end = 18.dp, top = 5.dp, bottom = 5.dp + w),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
+                glyph?.let { GlyphIcon(it, p.fg, 16.dp) }
                 Text(title, color = p.fg, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Box(Modifier.weight(1f))
@@ -180,6 +191,7 @@ internal fun GazeeCard(
     header: Modifier = Modifier,
     trailing: String = "",
     showBody: Boolean = true,
+    glyph: Glyph? = null,
     body: @Composable () -> Unit,
 ) {
     val p = LocalPalette.current
@@ -189,7 +201,9 @@ internal fun GazeeCard(
             Row(
                 Modifier.clip(tab).background(p.accent).border(1.dp, p.line, tab).padding(horizontal = 10.dp, vertical = 3.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
+                glyph?.let { GlyphIcon(it, p.onAccent, 15.dp) }
                 Text(title, color = p.onAccent, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Box(Modifier.weight(1f))

@@ -167,6 +167,7 @@ object IconStyle {
         "MUSIC" to "music (a musical note)", "IMAGE" to "a photo (a picture frame with mountains)", "WORK" to "a briefcase",
         "HEART" to "a heart", "CLOCK" to "a clock", "CART" to "a shopping cart", "GAME" to "a game controller",
         "BOOK" to "a book", "CAR" to "a car", "PENCIL" to "handwriting (a pencil)",
+        "SUN" to "the weather (a sun)", "PHONE" to "a smartphone", "BELL" to "notifications (a bell)",
     )
 
     /** ボタンの絵柄の保存場所（テーマの絵と同じ場所に、名前を分けて）。 */

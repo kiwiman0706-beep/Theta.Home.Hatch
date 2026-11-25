@@ -402,7 +402,20 @@ private fun Panel(model: HomeModel, code: String, title: String, folded: (@Compo
         "FILES" -> p.accent2
         else -> p.raised
     }
-    SectionFrame(code, title, toggle, if (closed) "▸" else "▾", band, showBody = !closed || folded != null) {
+    // 見出しの印
+    val glyph = when (code) {
+        "TODAY" -> Glyph.CALENDAR
+        "WEATHER" -> Glyph.SUN
+        "PEOPLE" -> Glyph.PERSON
+        "FILES" -> Glyph.FOLDER
+        "DEVICE" -> Glyph.PHONE
+        "MUSIC" -> Glyph.MUSIC
+        "BOOKS" -> Glyph.BOOK
+        "PINNED" -> Glyph.PIN
+        "NOTICE" -> Glyph.BELL
+        else -> null
+    }
+    SectionFrame(code, title, toggle, if (closed) "▸" else "▾", band, showBody = !closed || folded != null, glyph = glyph) {
         if (closed) folded?.invoke() else body()
     }
 }

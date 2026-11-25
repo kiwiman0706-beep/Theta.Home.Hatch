@@ -368,7 +368,7 @@ private fun SoftClock(d: Date, big: Boolean) {
 private fun GazeeClock(d: Date, big: Boolean) {
     val p = LocalPalette.current
     Box(Modifier.widthIn(max = 420.dp)) {
-        GazeeCard("Clock") {
+        GazeeCard("Clock", glyph = Glyph.CLOCK) {
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text(SimpleDateFormat("HH:mm", Locale.US).format(d), color = p.fg, fontSize = if (big) 60.sp else 46.sp, fontWeight = FontWeight.Bold, lineHeight = if (big) 64.sp else 50.sp)
                 Column(Modifier.padding(bottom = 6.dp)) {
@@ -385,7 +385,7 @@ private fun GazeeClock(d: Date, big: Boolean) {
 private fun NoteClock(d: Date, big: Boolean) {
     val p = LocalPalette.current
     Box(Modifier.widthIn(max = 420.dp)) {
-        NoteCard("today.plan", band = p.accent) {
+        NoteCard("today.plan", band = p.accent, glyph = Glyph.CLOCK) {
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text(SimpleDateFormat("HH:mm", Locale.US).format(d), color = p.fg, fontSize = if (big) 60.sp else 46.sp, fontWeight = FontWeight.Bold, lineHeight = if (big) 64.sp else 50.sp)
                 Column(Modifier.padding(bottom = 6.dp)) {
