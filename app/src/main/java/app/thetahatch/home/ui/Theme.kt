@@ -352,6 +352,33 @@ val NotePalette = Palette(
     iconShape = "round",
 )
 
+/**
+ * GAZEE：90 年代のデスクトップ OS ふう。青い机の地に、灰色の立体的な窓（左上が明るく右下が暗い縁）、
+ * 窓の見出しは左上の黄色い札。アイコンは立体（テーマの絵）。
+ */
+val GazeePalette = Palette(
+    bg = Color(0xFF8FB0D6),
+    panel = Color(0xFFE9E9E9),
+    raised = Color(0xFFD9D9D9),
+    fg = Color(0xFF1A1A1A),
+    muted = Color(0xFF444444),
+    faint = Color(0xFF555555),
+    line = Color(0xFF555555),
+    accent = Color(0xFFFFCB00),
+    onAccent = Color(0xFF1A1A1A),
+    widget = Color(0xFF3F7FD0),
+    launch = Color(0xFFE0584F),
+    zebra = Color(0x0F000000),
+    pop = true,
+    accent2 = Color(0xFF3F7FD0),
+    accent3 = Color(0xFF4FA55A),
+    hazard = 0.dp,
+    style = "gazee",
+    radius = 3.dp,
+    font = "sans",
+    iconShape = "square",
+)
+
 /** テーマの名前から配色を決める。"system" は端末のダーク・ライトに合わせる。 */
 fun paletteFor(mode: String, systemDark: Boolean): Palette = when (mode) {
     "term" -> TermPalette
@@ -359,6 +386,7 @@ fun paletteFor(mode: String, systemDark: Boolean): Palette = when (mode) {
     "soft" -> SoftPalette
     "dusk" -> DuskPalette
     "note" -> NotePalette
+    "gazee" -> GazeePalette
     "window" -> WindowPalette
     "lcd" -> LcdPalette
     "pop" -> PopPalette
@@ -532,6 +560,19 @@ fun androidx.compose.ui.Modifier.popShadow(p: Palette, shape: androidx.compose.u
     else -> this
 }
 
+/** GAZEE の立体的な縁：外に濃い線、内側の左上に白、右下に灰の線。地を塗った後に重ねる。 */
+fun androidx.compose.ui.Modifier.bevel(p: Palette): androidx.compose.ui.Modifier = this.drawBehind {
+    val w = 1.5.dp.toPx()
+    val o = 1.dp.toPx()
+    val hi = Color.White
+    val lo = Color(0xFF9A9A9A)
+    drawLine(hi, androidx.compose.ui.geometry.Offset(o, o + w / 2), androidx.compose.ui.geometry.Offset(size.width - o, o + w / 2), w)
+    drawLine(hi, androidx.compose.ui.geometry.Offset(o + w / 2, o), androidx.compose.ui.geometry.Offset(o + w / 2, size.height - o), w)
+    drawLine(lo, androidx.compose.ui.geometry.Offset(o, size.height - o - w / 2), androidx.compose.ui.geometry.Offset(size.width - o, size.height - o - w / 2), w)
+    drawLine(lo, androidx.compose.ui.geometry.Offset(size.width - o - w / 2, o), androidx.compose.ui.geometry.Offset(size.width - o - w / 2, size.height - o), w)
+    drawRect(p.line, style = androidx.compose.ui.graphics.drawscope.Stroke(o))
+}
+
 /** 見出し・時計は細長い Oswald、ラベル・数字・ファイル名は等幅の Share Tech Mono。日本語は端末の書体になる。 */
 object Hud {
     private val oswald = FontFamily(
@@ -563,7 +604,7 @@ fun HomeTheme(dark: Boolean, pop: Boolean = false, content: @Composable () -> Un
     CompositionLocalProvider(LocalPalette provides p) { HomeThemeInner(p, dark && !pop, content) }
 }
 
-/** 設定のテーマ名（dark・light・pop・alert・scifi・term・braun・soft・dusk・note・window・lcd・system）で包む。 */
+/** 設定のテーマ名（dark・light・pop・alert・scifi・term・braun・soft・dusk・note・gazee・window・lcd・system）で包む。 */
 @Composable
 fun HomeTheme(mode: String, content: @Composable () -> Unit) {
     val p = paletteFor(mode, androidx.compose.foundation.isSystemInDarkTheme())

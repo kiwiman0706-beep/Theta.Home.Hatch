@@ -249,7 +249,7 @@ fun SettingsPanel(model: HomeModel) {
                     FlowRow2 {
                         listOf(
                             "dark" to "ダーク", "light" to "ライト", "pop" to "POP（カラフル）", "alert" to "ALERT（警報画面）", "scifi" to "SCI-FI（操作卓）",
-                            "term" to "TERMINAL（緑の端末）", "braun" to "BRAUN（白い家電）", "soft" to "SOFT（浮き出し）", "dusk" to "DUSK（夕暮れのガラス）", "note" to "NOTE（手帳）", "window" to "WINDOW（昔のパソコン）",
+                            "term" to "TERMINAL（緑の端末）", "braun" to "BRAUN（白い家電）", "soft" to "SOFT（浮き出し）", "dusk" to "DUSK（夕暮れのガラス）", "note" to "NOTE（手帳）", "gazee" to "GAZEE（90 年代のデスクトップ）", "window" to "WINDOW（昔のパソコン）",
                             "lcd" to "LCD（液晶ゲーム機）", "system" to "端末に合わせる",
                         ).forEach { (mode, label) ->
                             PillButton(label, { model.changeTheme(mode) }, primary = model.themeMode == mode)
@@ -368,18 +368,19 @@ fun SettingsPanel(model: HomeModel) {
                     FlowRow2 {
                         listOf(
                             IconStyle.ORIGINAL to "そのまま", IconStyle.MONO to "モノクロ",
-                            IconStyle.LOCAL to "3 色（簡易）", IconStyle.GEMINI to "3 色（Gemini）",
+                            IconStyle.LOCAL to "3 色（簡易）", IconStyle.GEMINI to "3 色（Gemini）", IconStyle.THEME to "テーマの絵（Gemini・フルカラー）",
                         ).forEach { (mode, label) -> PillButton(label, { model.changeIconMode(mode) }, primary = model.iconMode == mode) }
                     }
                     if (model.iconMode == IconStyle.LOCAL || model.iconMode == IconStyle.GEMINI) IconColorPicker(model)
-                    if (model.iconMode == IconStyle.GEMINI) {
+                    if (model.iconMode == IconStyle.THEME) Note("テーマの絵：今のテーマの画風と色のまま、Gemini にアイコンを描いてもらいます（塗り替えはしません）。テーマごとに 1 回ずつ作り、テーマを戻せば前に作ったものを使います。まだ作っていないアプリは元のアイコンで出します。GAZEE は 90 年代のデスクトップの立体アイコン、DUSK は光るガラス、NOTE はパステルのシール、WINDOW はレトロなパソコン。ほかのテーマはその配色で描きます。")
+                    if (model.iconMode == IconStyle.GEMINI || model.iconMode == IconStyle.THEME) {
                         val job = model.iconJob
                         Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                             Readout("API KEY", if (model.hasGeminiKey) "SET" else "未設定", accent = !model.hasGeminiKey)
                             Readout("MODEL", model.geminiModel)
                             Readout("DONE", "%03d / %03d".format(model.geminiDone(), model.apps.size))
                         }
-                        Note("描き方はテーマに合わせて変えます（今は「" + when (model.iconFamily()) {
+                        if (model.iconMode == IconStyle.GEMINI) Note("描き方はテーマに合わせて変えます（今は「" + when (model.iconFamily()) {
                             IconStyle.FAMILY_PIXEL -> "ドット絵（TERMINAL・LCD）"
                             IconStyle.FAMILY_ROUND -> "丸くかわいい（POP・SOFT・WINDOW）"
                             IconStyle.FAMILY_LINE -> "細い線の家電ふう（BRAUN）"

@@ -295,6 +295,8 @@ fun LookIcon(key: String, label: String, size: Dp, load: () -> android.graphics.
             val original = load() ?: return@withContext null
             when (look.mode) {
                 IconStyle.GEMINI -> IconStyle.cached(ctx, key, look.family) ?: IconStyle.localMaskCached(key, original)
+                // テーマの絵：作ってあればそれ、まだなら元のアイコン
+                IconStyle.THEME -> IconStyle.cachedFull(ctx, key, look.family) ?: original
                 IconStyle.LOCAL -> IconStyle.localMaskCached(key, original)
                 else -> original
             }
@@ -307,7 +309,7 @@ fun LookIcon(key: String, label: String, size: Dp, load: () -> android.graphics.
             else -> null
         }
     }
-    val inset = if (look.mode == IconStyle.LOCAL || look.mode == IconStyle.GEMINI) 0.dp else 8.dp
+    val inset = if (look.mode == IconStyle.LOCAL || look.mode == IconStyle.GEMINI || (look.mode == IconStyle.THEME && icon?.width == 192)) 0.dp else 8.dp
     // 台の形は作りに合わせる（角丸・丸）
     val tile: androidx.compose.ui.graphics.Shape = when (p.iconShape) {
         "circle" -> androidx.compose.foundation.shape.CircleShape

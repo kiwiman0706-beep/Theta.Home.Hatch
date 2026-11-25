@@ -179,6 +179,7 @@ private fun FilerSection(model: HomeModel, modifier: Modifier, openNasSettings: 
     val shape = if (p.pop) androidx.compose.foundation.shape.RoundedCornerShape(p.radius) else androidx.compose.ui.graphics.RectangleShape
     val framed = when (p.style) {
         "soft", "braun" -> modifier.popShadow(p, shape).clip(shape).background(p.cardBg)
+        "gazee" -> modifier.background(p.panel).bevel(p)
         "window", "pop", "note" -> modifier.popShadow(p, shape).clip(shape).background(p.panel).border(lineWidth, p.line, shape)
         "lcd" -> modifier.border(2.dp, p.line).background(p.panel)
         else -> modifier.border(1.dp, p.line)

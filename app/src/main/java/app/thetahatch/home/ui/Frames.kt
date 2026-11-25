@@ -80,6 +80,7 @@ internal fun SectionFrame(
                 if (showBody) body()
             }
         }
+        "gazee" -> GazeeCard(title, header, trailing, showBody, body)
         "note" -> NoteCard(title, header, trailing, band?.takeIf { it != p.raised && it != p.panel } ?: noteBand(code), showBody, body)
         "pop" -> {
             val shape = RoundedCornerShape(p.radius + 2.dp)
@@ -167,5 +168,36 @@ internal fun NoteCard(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) { body() }
         else Box(Modifier.fillMaxWidth().offset(y = -w).height(w).background(p.line))
+    }
+}
+
+/**
+ * GAZEE（90 年代のデスクトップ）の窓：左上に黄色い札の見出し、その下に灰色の立体的な窓。
+ */
+@Composable
+internal fun GazeeCard(
+    title: String,
+    header: Modifier = Modifier,
+    trailing: String = "",
+    showBody: Boolean = true,
+    body: @Composable () -> Unit,
+) {
+    val p = LocalPalette.current
+    val tab = RoundedCornerShape(topStart = p.radius, topEnd = p.radius)
+    Column(Modifier.fillMaxWidth()) {
+        Row(header.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+            Row(
+                Modifier.clip(tab).background(p.accent).border(1.dp, p.line, tab).padding(horizontal = 10.dp, vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(title, color = p.onAccent, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Box(Modifier.weight(1f))
+            if (trailing.isNotEmpty()) Text(trailing, color = p.fg, fontSize = 12.sp, modifier = Modifier.padding(end = 6.dp, bottom = 2.dp))
+        }
+        if (showBody) Column(
+            Modifier.fillMaxWidth().offset(y = (-1).dp).background(p.panel).bevel(p).padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) { body() }
     }
 }

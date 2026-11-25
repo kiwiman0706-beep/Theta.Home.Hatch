@@ -1129,6 +1129,20 @@ class ScreenshotTest {
     fun noteMain() = themeShots("note")
 
     @Test
+    @Config(qualifiers = "w904dp-h1104dp-xhdpi")
+    fun gazeeMain() = themeShots("gazee")
+
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun gazeeCover() {
+        launch("gazee") { app ->
+            app.store.weatherPlace = WeatherPlace("東京都 / 東京", 35.68, 139.76)
+            app.store.weatherCache = weatherSample(System.currentTimeMillis())
+        }
+        shot("gazee-cover")
+    }
+
+    @Test
     @Config(qualifiers = "w360dp-h860dp-xxhdpi")
     fun noteCover() {
         launch("note") { app ->

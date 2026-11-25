@@ -60,4 +60,21 @@ class IconStyleTest {
         assertEquals(Color.RED, m.getPixel(0, 0))
         assertEquals(Color.BLACK, m.getPixel(1, 0))
     }
+
+    /** テーマの絵（フルカラー）：テーマごとに別の保存場所、頼み方はテーマの画風か配色から。製品の名前は入れない。 */
+    @Test
+    fun themeIconsPerTheme() {
+        val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val g = IconStyle.fullFamily("gazee")
+        org.junit.Assert.assertTrue(IconStyle.isFull(g))
+        org.junit.Assert.assertFalse(IconStyle.isFull(IconStyle.FAMILY_ROUND))
+        org.junit.Assert.assertNotEquals(IconStyle.cacheFile(ctx, "a/b", g), IconStyle.cacheFile(ctx, "a/b", IconStyle.fullFamily("dusk")))
+        // まだ作っていなければ、ほかの型で代えない
+        org.junit.Assert.assertNull(IconStyle.cachedFull(ctx, "a/b", g))
+        val gazee = IconStyle.fullPrompt("gazee", listOf("#000000", "#111111", "#222222", "#333333", "#444444"))
+        org.junit.Assert.assertTrue(gazee.contains("isometric"))
+        org.junit.Assert.assertFalse(gazee.contains("BeOS", ignoreCase = true))
+        val other = IconStyle.fullPrompt("braun", listOf("#F6F5F1", "#E8711A", "#5E7A68", "#3A3A3A", "#2A2A2A"))
+        org.junit.Assert.assertTrue(other.contains("#E8711A") && other.contains("no text"))
+    }
 }

@@ -249,7 +249,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     suspend fun runAuto() {
         if (store.geminiKey.isEmpty()) return
         if (autoReadings) generateReadings()
-        if (autoIcons && iconMode == IconStyle.GEMINI) {
+        if (autoIcons && (iconMode == IconStyle.GEMINI || iconMode == IconStyle.THEME)) {
             startGeminiIcons(quiet = true)
             iconWork?.join()
         }
@@ -1903,6 +1903,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
                                     ?: IconStyle.localMask(original)
                                 HudArt.paintMask(mask, size, plate, base, accent)
                             }
+                            IconStyle.THEME -> IconStyle.cachedFull(ctx, app.key, iconFamily())?.let { android.graphics.Bitmap.createScaledBitmap(it, size, size, true) } ?: original
                             else -> original
                         }
                         if (HudArt.savePng(ctx, out, folder, app.label) != null) saved++
@@ -1921,7 +1922,14 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     fun geminiDone(): Int = apps.count { IconStyle.cacheFile(ctx, it.key, iconFamily()).exists() }
 
     /** 今のテーマのアイコンの型の作り（Gemini に頼む描き方と保存場所）。 */
-    fun iconFamily(): String = IconStyle.family(themeMode)
+    fun iconFamily(): String = if (iconMode == IconStyle.THEME) IconStyle.fullFamily(themeMode) else IconStyle.family(themeMode)
+
+    /** 今のテーマの絵（フルカラー）の頼み方。知らないテーマは今の配色から。 */
+    private fun fullPrompt(): String {
+        val p = palette()
+        fun hex(c: androidx.compose.ui.graphics.Color) = "#%06X".format(c.toArgbInt() and 0xFFFFFF)
+        return IconStyle.fullPrompt(themeMode, listOf(hex(p.panel), hex(p.accent), hex(p.widget), hex(p.launch), hex(p.fg)))
+    }
 
     /** 0.15 までの 2 色の型だけがあるアプリの数（3 色で作り直せる）。 */
     fun geminiLegacy(): Int = apps.count { !IconStyle.cacheFile(ctx, it.key).exists() && IconStyle.legacyFile(ctx, it.key).exists() }
@@ -1951,7 +1959,8 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
                 val r = runCatching {
                     withContext(Dispatchers.IO) {
                         val icon = Apps.icon(ctx, app, 192) ?: error("アイコンを読めません")
-                        val mask = IconStyle.geminiMask(key, store.geminiModel, icon, family)
+                        val mask = if (IconStyle.isFull(family)) IconStyle.geminiFull(key, store.geminiModel, icon, fullPrompt())
+                        else IconStyle.geminiMask(key, store.geminiModel, icon, family)
                         IconStyle.cacheFile(ctx, app.key, family).outputStream().use { mask.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
                     }
                 }
@@ -1978,6 +1987,7 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         } else {
             File(ctx.filesDir, "icons").listFiles()?.forEach { it.delete() }
             IconStyle.FAMILIES.forEach { f -> File(ctx.filesDir, IconStyle.dirOf(f)).listFiles()?.forEach { it.delete() } }
+            IconStyle.fullDirs(ctx).forEach { d -> d.listFiles()?.forEach { it.delete() } }
         }
         iconVersion++
     }

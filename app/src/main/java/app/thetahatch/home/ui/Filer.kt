@@ -254,6 +254,7 @@ internal fun ClockBlock(big: Boolean) {
         "lcd" -> LcdClock(d, big)
         "soft" -> SoftClock(d, big)
         "note" -> NoteClock(d, big)
+        "gazee" -> GazeeClock(d, big)
         "window" -> WindowClock(d, big)
         else -> HudClock(d, big)
     }
@@ -359,6 +360,23 @@ private fun SoftClock(d: Date, big: Boolean) {
     ) {
         Text(SimpleDateFormat("HH:mm", Locale.US).format(d), color = p.fg, fontSize = if (big) 64.sp else 50.sp, fontWeight = FontWeight.Bold, lineHeight = if (big) 68.sp else 54.sp, letterSpacing = 2.sp)
         Text(SimpleDateFormat("yyyy-MM-dd", Locale.US).format(d) + "  " + weekdayJa(d), color = p.muted, fontSize = 14.sp)
+    }
+}
+
+/** GAZEE：「Clock」の窓に時計。 */
+@Composable
+private fun GazeeClock(d: Date, big: Boolean) {
+    val p = LocalPalette.current
+    Box(Modifier.widthIn(max = 420.dp)) {
+        GazeeCard("Clock") {
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text(SimpleDateFormat("HH:mm", Locale.US).format(d), color = p.fg, fontSize = if (big) 60.sp else 46.sp, fontWeight = FontWeight.Bold, lineHeight = if (big) 64.sp else 50.sp)
+                Column(Modifier.padding(bottom = 6.dp)) {
+                    Text(SimpleDateFormat("yyyy.MM.dd", Locale.US).format(d), color = p.fg, fontSize = 14.sp)
+                    Text(weekdayJa(d), color = p.widget, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
 }
 

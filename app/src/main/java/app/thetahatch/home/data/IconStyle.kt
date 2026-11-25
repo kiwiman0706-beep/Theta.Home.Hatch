@@ -30,6 +30,8 @@ object IconStyle {
     const val MONO = "mono"
     const val LOCAL = "local"
     const val GEMINI = "gemini"
+    /** テーマの画風・配色のまま Gemini に描いてもらう（フルカラー。塗り替えない）。 */
+    const val THEME = "theme"
 
     const val DEFAULT_MODEL = "gemini-3.1-flash-image"
     private val FALLBACK_MODELS = listOf("gemini-3.1-flash-image", "gemini-2.5-flash-image")
@@ -44,7 +46,7 @@ object IconStyle {
     /** テーマの名前から、アイコンの型の作りを決める。 */
     fun family(theme: String): String = when (theme) {
         "term", "lcd" -> FAMILY_PIXEL
-        "pop", "soft", "dusk", "note", "window" -> FAMILY_ROUND
+        "pop", "soft", "dusk", "note", "gazee", "window" -> FAMILY_ROUND
         "braun" -> FAMILY_LINE
         else -> FAMILY_HUD
     }
@@ -84,6 +86,60 @@ object IconStyle {
     fun dirOf(family: String) = if (family == FAMILY_HUD) "icons3" else "icons3-$family"
 
     val FAMILIES = listOf(FAMILY_HUD, FAMILY_PIXEL, FAMILY_ROUND, FAMILY_LINE)
+
+    /** テーマの絵（フルカラー）の保存場所の名前。テーマごとに作る。 */
+    fun fullFamily(theme: String) = "full-$theme"
+    fun isFull(family: String) = family.startsWith("full-")
+
+    /** テーマの絵（フルカラー）。そのテーマのものだけ（ほかの型には代えない）。 */
+    fun cachedFull(context: Context, appKey: String, family: String): Bitmap? =
+        cacheFile(context, appKey, family).takeIf { it.exists() }?.let { BitmapFactory.decodeFile(it.path) }
+
+    /** テーマの絵の保存場所すべて（消すとき）。 */
+    fun fullDirs(context: Context): List<File> = context.filesDir.listFiles()?.filter { it.isDirectory && it.name.startsWith("icons3-full-") }.orEmpty()
+
+    /**
+     * テーマの絵の頼み方。テーマごとの画風を言葉で伝える（実在の製品の名前は使わない）。
+     * 知らないテーマは、配色（地・主な色・2 色目・3 色目）から組み立てる。
+     */
+    private val FULL_PROMPTS = mapOf(
+        "gazee" to "Redraw this app icon as a playful 1990s desktop operating system icon: a chunky isometric 3D object (seen from slightly above, about 30 degrees) " +
+            "that stands for the app, with a thick black outline, saturated colors with soft gradients, a bright highlight on the top faces " +
+            "and a small soft drop shadow to the lower right, on a plain light grey (#E9E9E9) background. Glossy, slightly exaggerated, toy-like proportions.",
+        "dusk" to "Redraw this app icon as a glowing glass symbol: simple shapes drawn with coral (#FF8E7E) and mint (#86D9C4) neon lines with a soft outer glow, " +
+            "a faint lilac (#D69BE8) accent, on a dark teal glass background (#2C4346) with a subtle lighter highlight at the top.",
+        "note" to "Redraw this app icon as a cute planner sticker: a simple friendly symbol with a thick dark navy (#1F2340) outline, flat pastel fills " +
+            "(periwinkle #A9B8F0, mint #A8E6C1, pink #F6B8C8, butter yellow #F7DC8A) and a small white highlight, on a plain white (#FFFFFF) background. Kawaii but tidy.",
+        "window" to "Redraw this app icon as a cute retro computer icon: chunky shapes with a thick dark brown (#3B2C27) outline, flat fills in orange (#F5A33A), " +
+            "periwinkle (#7C8DF2) and pink (#F28DB2), on a cream (#FFF8EA) background.",
+    )
+    private const val FULL_RULES = " Keep the main motif of the original icon so it stays recognizable. Fill the whole square edge to edge with the background; " +
+        "no rounded mask, no frame, no text, no letters, no logos. Output a single square 1:1 image."
+
+    fun fullPrompt(theme: String, colors: List<String>): String =
+        (FULL_PROMPTS[theme] ?: ("Redraw this app icon as a clean modern icon in the colors of this launcher theme: background ${colors[0]}, " +
+            "main color ${colors[1]}, second color ${colors[2]}, third color ${colors[3]}, text color ${colors[4]}. Simple shapes, consistent line weight.")) + FULL_RULES
+
+    /** Gemini にテーマの絵（フルカラー）を描いてもらい、192px にする。通信するのでメインスレッドでは呼ばない。 */
+    fun geminiFull(apiKey: String, model: String, icon: Bitmap, prompt: String): Bitmap {
+        val png = ByteArrayOutputStream().also { onWhite(icon, SIZE).compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()
+        val body = JSONObject()
+            .put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", JSONArray()
+                .put(JSONObject().put("text", prompt))
+                .put(JSONObject().put("inline_data", JSONObject().put("mime_type", "image/png").put("data", Base64.encodeToString(png, Base64.NO_WRAP)))))))
+            .put("generationConfig", JSONObject().put("responseModalities", JSONArray().put("TEXT").put("IMAGE")))
+            .toString()
+        var last: Exception? = null
+        for (m in (listOf(model) + FALLBACK_MODELS).distinct()) {
+            try {
+                val img = call(apiKey, m, body)
+                return Bitmap.createScaledBitmap(img, SIZE, SIZE, true)
+            } catch (e: ModelNotFound) {
+                last = e
+            }
+        }
+        throw last ?: IOException("Gemini を呼べませんでした")
+    }
 
     /** 0.15 までの 2 色の型（白地に黒）。 */
     fun legacyFile(context: Context, appKey: String): File = File(File(context.filesDir, "icons"), hash(appKey) + ".png")

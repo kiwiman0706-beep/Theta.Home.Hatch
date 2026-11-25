@@ -205,7 +205,7 @@ fun HomeRoot(model: HomeModel, activity: ComponentActivity, edgeExit: (() -> Uni
         LaunchedEffect(w >= 600.dp, model.profile, resumed) { if (resumed) model.changeProfile(if (w >= 600.dp) "wide" else "narrow") }
         val available = w - railW
         CompositionLocalProvider(
-            LocalActions provides actions, LocalLayout provides layout, LocalIconLook provides IconLook(model.iconMode, model.iconVersion, model.iconColors, IconStyle.family(model.themeMode)),
+            LocalActions provides actions, LocalLayout provides layout, LocalIconLook provides IconLook(model.iconMode, model.iconVersion, model.iconColors, model.iconFamily()),
             LocalRailLeft provides railLeft, LocalEdgeExit provides edgeExit,
         ) {
             val docked = model.docked.takeLast(layout.maxDocked)
