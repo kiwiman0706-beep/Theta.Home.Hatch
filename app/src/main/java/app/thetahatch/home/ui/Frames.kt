@@ -49,7 +49,7 @@ internal fun SectionFrame(
     when (p.style) {
         "term" -> Column(Modifier.fillMaxWidth().border(1.dp, p.line)) {
             Row(header.fillMaxWidth().background(p.fg).padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                glyph?.let { GlyphIcon(it, p.bg, 15.dp) }
+                glyph?.let { GlyphIcon(it, p.bg, HEAD_GLYPH) }
                 Text("$code  ${title}", color = p.bg, fontSize = 13.sp, fontFamily = Hud.mono, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 Text(trailing, color = p.bg, fontSize = 13.sp, fontFamily = Hud.mono)
             }
@@ -64,7 +64,7 @@ internal fun SectionFrame(
         }
         "lcd" -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(header.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                glyph?.let { GlyphIcon(it, p.fg, 15.dp) }
+                glyph?.let { GlyphIcon(it, p.fg, HEAD_GLYPH) }
                 Text(title.uppercase(), color = p.fg, fontSize = 13.sp, fontFamily = Hud.mono, modifier = Modifier.weight(1f))
                 Text(trailing, color = p.fg, fontSize = 13.sp, fontFamily = Hud.mono)
             }
@@ -75,7 +75,7 @@ internal fun SectionFrame(
             Column(Modifier.fillMaxWidth().popShadow(p, shape).clip(shape).background(p.cardBg).padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(header.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (p.style == "braun" && glyph == null) Box(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(p.accent))
-                    glyph?.let { GlyphIcon(it, p.accent, 16.dp) }
+                    glyph?.let { GlyphIcon(it, p.accent, HEAD_GLYPH) }
                     // DUSK：見本の部品帳のように、太い英字の見出し
                     if (p.shadow == "glow") Text(code.uppercase(), color = p.fg, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Text(if (p.style == "braun") code else title, color = p.faint, fontSize = 12.sp, letterSpacing = if (p.style == "braun") 1.5.sp else 0.sp,
@@ -93,7 +93,7 @@ internal fun SectionFrame(
             val on = if (b == p.accent) p.onAccent else p.fg
             Column(Modifier.fillMaxWidth().popShadow(p, shape).clip(shape).background(p.panel).border(lineWidth, p.line, shape)) {
                 Row(header.fillMaxWidth().background(b).padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    glyph?.let { GlyphIcon(it, on, 15.dp) }
+                    glyph?.let { GlyphIcon(it, on, HEAD_GLYPH) }
                     Text(code, color = on, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Text(title, color = on, fontSize = 12.sp, modifier = Modifier.weight(1f))
                     Text(trailing, color = on, fontSize = 12.sp)
@@ -106,7 +106,7 @@ internal fun SectionFrame(
         }
         else -> Column(Modifier.fillMaxWidth().border(1.dp, p.line).corners(p.accent, 8.dp).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(header, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                glyph?.let { GlyphIcon(it, p.accent, 14.dp) }
+                glyph?.let { GlyphIcon(it, p.accent, HEAD_GLYPH) }
                 Text("[ $code ]", color = p.accent, fontSize = 11.sp, fontFamily = Hud.mono, letterSpacing = 2.sp)
                 Text(title, color = p.muted, fontSize = 11.sp)
                 Stripes(Modifier.weight(1f).height(5.dp), color = p.line)
@@ -123,7 +123,7 @@ internal fun WindowBar(title: String, modifier: Modifier = Modifier, glyph: Glyp
     val p = LocalPalette.current
     Column {
         Row(modifier.fillMaxWidth().background(p.accent).padding(horizontal = 10.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            glyph?.let { GlyphIcon(it, p.onAccent, 15.dp) }
+            glyph?.let { GlyphIcon(it, p.onAccent, HEAD_GLYPH) }
             Text(title, color = p.onAccent, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             trailing()
             listOf("–", "□", "×").forEach { g ->
@@ -168,7 +168,7 @@ internal fun NoteCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                glyph?.let { GlyphIcon(it, p.fg, 16.dp) }
+                glyph?.let { GlyphIcon(it, p.fg, HEAD_GLYPH) }
                 Text(title, color = p.fg, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Box(Modifier.weight(1f))
@@ -203,7 +203,7 @@ internal fun GazeeCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                glyph?.let { GlyphIcon(it, p.onAccent, 15.dp) }
+                glyph?.let { GlyphIcon(it, p.onAccent, HEAD_GLYPH) }
                 Text(title, color = p.onAccent, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Box(Modifier.weight(1f))
@@ -215,3 +215,6 @@ internal fun GazeeCard(
         ) { body() }
     }
 }
+
+/** 区画の見出しの印の大きさ（1.25.1 で 14〜16dp から大きく）。 */
+internal val HEAD_GLYPH = 21.dp
