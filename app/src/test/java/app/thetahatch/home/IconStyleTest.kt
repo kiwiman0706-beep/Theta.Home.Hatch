@@ -85,4 +85,25 @@ class IconStyleTest {
         org.junit.Assert.assertFalse(IconStyle.imageModels("gemini-2.5-flash").contains("gemini-2.5-flash"))
         org.junit.Assert.assertEquals("gemini-2.5-flash-image", IconStyle.imageModel("gemini-2.5-flash-image"))
     }
+
+    /** ボタンの絵柄：テーマの画風の言葉だけを取り出して頼む。白い地は端から抜き、絵の中の白は残す。作ったものは読み出せる。 */
+    @Test
+    fun glyphArt() {
+        val p = IconStyle.glyphPrompt("gazee", listOf("#000000", "#111111", "#222222", "#333333", "#444444"), "a microphone")
+        org.junit.Assert.assertTrue(p.contains("a microphone") && p.contains("isometric") && p.contains("#FFFFFF"))
+        org.junit.Assert.assertFalse(p.contains("#E9E9E9"))
+        org.junit.Assert.assertFalse(p.contains("Redraw this app icon"))
+        // 白い地の中に、白い穴のある黒い輪
+        val b = icon(Color.WHITE, Color.BLACK)
+        Canvas(b).drawCircle(48f, 48f, 8f, Paint().apply { color = Color.WHITE; isAntiAlias = false })
+        val c = IconStyle.cutout(b)
+        assertEquals(0, Color.alpha(c.getPixel(2, 2)))
+        assertEquals(255, Color.alpha(c.getPixel(48, 30)))
+        assertEquals(Color.WHITE, c.getPixel(48, 48))
+        val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val fam = IconStyle.fullFamily("gazee")
+        org.junit.Assert.assertNull(IconStyle.glyphArt(ctx, fam, "MIC", 1))
+        IconStyle.glyphFile(ctx, fam, "MIC").outputStream().use { c.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        org.junit.Assert.assertNotNull(IconStyle.glyphArt(ctx, fam, "MIC", 2))
+    }
 }

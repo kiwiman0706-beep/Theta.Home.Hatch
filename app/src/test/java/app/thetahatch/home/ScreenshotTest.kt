@@ -1132,6 +1132,22 @@ class ScreenshotTest {
     @Config(qualifiers = "w904dp-h1104dp-xhdpi")
     fun gazeeMain() = themeShots("gazee")
 
+    /** テーマの絵：作ったボタンの絵柄（ここでは見本の赤い丸）が、線の記号の代わりに出る。 */
+    @Test
+    @Config(qualifiers = "w360dp-h860dp-xxhdpi")
+    fun gazeeGlyphArt() {
+        val theme = app.thetahatch.home.data.IconStyle.THEME
+        launch("gazee", iconMode = theme) { a ->
+            val dot = android.graphics.Bitmap.createBitmap(64, 64, android.graphics.Bitmap.Config.ARGB_8888)
+            android.graphics.Canvas(dot).drawCircle(32f, 32f, 26f, android.graphics.Paint().apply { color = android.graphics.Color.RED })
+            listOf("MIC", "FILE", "SEARCH").forEach { n ->
+                app.thetahatch.home.data.IconStyle.glyphFile(a, app.thetahatch.home.data.IconStyle.fullFamily("gazee"), n)
+                    .outputStream().use { dot.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            }
+        }
+        shot("gazee-glyph-art")
+    }
+
     @Test
     @Config(qualifiers = "w360dp-h860dp-xxhdpi")
     fun gazeeCover() {

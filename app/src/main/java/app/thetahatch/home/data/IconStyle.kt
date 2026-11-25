@@ -131,12 +131,15 @@ object IconStyle {
             "main color ${colors[1]}, second color ${colors[2]}, third color ${colors[3]}, text color ${colors[4]}. Simple shapes, consistent line weight.")) + FULL_RULES
 
     /** Gemini にテーマの絵（フルカラー）を描いてもらい、192px にする。通信するのでメインスレッドでは呼ばない。 */
-    fun geminiFull(apiKey: String, model: String, icon: Bitmap, prompt: String): Bitmap {
-        val png = ByteArrayOutputStream().also { onWhite(icon, SIZE).compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()
+    fun geminiFull(apiKey: String, model: String, icon: Bitmap?, prompt: String): Bitmap {
+        val parts = JSONArray().put(JSONObject().put("text", prompt))
+        // 元の絵が無いとき（ボタンの絵柄）は、言葉だけで頼む
+        if (icon != null) {
+            val png = ByteArrayOutputStream().also { onWhite(icon, SIZE).compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()
+            parts.put(JSONObject().put("inline_data", JSONObject().put("mime_type", "image/png").put("data", Base64.encodeToString(png, Base64.NO_WRAP))))
+        }
         val body = JSONObject()
-            .put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", JSONArray()
-                .put(JSONObject().put("text", prompt))
-                .put(JSONObject().put("inline_data", JSONObject().put("mime_type", "image/png").put("data", Base64.encodeToString(png, Base64.NO_WRAP)))))))
+            .put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", parts)))
             .put("generationConfig", JSONObject().put("responseModalities", JSONArray().put("TEXT").put("IMAGE")))
             .toString()
         var last: Exception? = null
@@ -149,6 +152,72 @@ object IconStyle {
             }
         }
         throw last ?: IOException("Gemini を呼べませんでした")
+    }
+
+    /**
+     * ボタンの絵柄（Glyph の名前）が表すもの。テーマの絵のとき、これを Gemini に言葉で伝えて描いてもらう。
+     */
+    val GLYPH_MEANING = mapOf(
+        "SEARCH" to "search (a magnifying glass)", "PIN" to "pin (a push pin)", "CLOSE" to "close (an X mark)",
+        "BACK" to "back (a left-pointing arrow)", "PLUS" to "add (a plus sign)", "GEAR" to "settings (a gear)",
+        "LIST" to "a checklist", "GRID" to "all apps (a 2x2 grid of squares)", "FOLDER" to "a folder", "MIC" to "a microphone",
+        "CALENDAR" to "a calendar", "MAIL" to "mail (an envelope)", "CHAT" to "chat (a speech bubble)", "PERSON" to "a person",
+        "LINK" to "a link (chain links)", "CLIP" to "a clipboard", "CAMERA" to "a camera", "HATCH" to "a hatching egg",
+        "GLOBE" to "the web (a globe)", "FILE" to "a document (a sheet of paper)", "STAR" to "a star", "HOME" to "a house",
+        "MUSIC" to "music (a musical note)", "IMAGE" to "a photo (a picture frame with mountains)", "WORK" to "a briefcase",
+        "HEART" to "a heart", "CLOCK" to "a clock", "CART" to "a shopping cart", "GAME" to "a game controller",
+        "BOOK" to "a book", "CAR" to "a car", "PENCIL" to "handwriting (a pencil)",
+    )
+
+    /** ボタンの絵柄の保存場所（テーマの絵と同じ場所に、名前を分けて）。 */
+    fun glyphFile(context: Context, family: String, name: String): File =
+        File(File(context.filesDir, dirOf(family)).also { it.mkdirs() }, "glyph-$name.png")
+
+    private val glyphCache = android.util.LruCache<String, Bitmap>(64)
+    private val glyphMissing = java.util.Collections.synchronizedSet(HashSet<String>())
+
+    /** ボタンの絵柄（作ってあれば）。作り直したら version を上げて読み直す。 */
+    fun glyphArt(context: Context, family: String, name: String, version: Int): Bitmap? {
+        val k = "$family/$name/$version"
+        glyphCache.get(k)?.let { return it }
+        if (k in glyphMissing) return null
+        val b = glyphFile(context, family, name).takeIf { it.exists() }?.let { BitmapFactory.decodeFile(it.path) }
+        if (b == null) glyphMissing += k else glyphCache.put(k, b)
+        return b
+    }
+
+    /** ボタンの絵柄の頼み方：テーマの画風で、白い地の上に記号を 1 つ（地は後で抜く）。 */
+    fun glyphPrompt(theme: String, colors: List<String>, meaning: String): String {
+        val style = fullPrompt(theme, colors).substringBefore(FULL_RULES).removePrefix("Redraw this app icon as ")
+            .substringBefore(", on a plain").substringBefore(", on a dark").substringBefore(", on a cream").substringBefore(" Fill the whole")
+        return "Draw a single small user-interface icon that means: $meaning. Style: $style. " +
+            "Put it alone in the center on a pure white (#FFFFFF) background with generous empty margin, no shadow on the background, " +
+            "no frame, no tile, no text, no letters. Bold and readable even when shown very small. Output a square 1:1 image."
+    }
+
+    /** 白い地を透明にする（端からつながった白に近い色だけ。絵の中の白は残す）。 */
+    fun cutout(img: Bitmap): Bitmap {
+        val w = img.width
+        val h = img.height
+        val px = IntArray(w * h).also { img.getPixels(it, 0, w, 0, 0, w, h) }
+        fun white(c: Int) = Color.red(c) > 228 && Color.green(c) > 228 && Color.blue(c) > 228
+        val seen = BooleanArray(w * h)
+        val stack = ArrayDeque<Int>()
+        for (x in 0 until w) { stack.add(x); stack.add((h - 1) * w + x) }
+        for (y in 0 until h) { stack.add(y * w); stack.add(y * w + w - 1) }
+        while (stack.isNotEmpty()) {
+            val i = stack.removeLast()
+            if (seen[i] || !white(px[i])) continue
+            seen[i] = true
+            px[i] = 0
+            val x = i % w
+            val y = i / w
+            if (x > 0) stack.add(i - 1)
+            if (x < w - 1) stack.add(i + 1)
+            if (y > 0) stack.add(i - w)
+            if (y < h - 1) stack.add(i + w)
+        }
+        return Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also { it.setPixels(px, 0, w, 0, 0, w, h) }
     }
 
     /** 0.15 までの 2 色の型（白地に黒）。 */

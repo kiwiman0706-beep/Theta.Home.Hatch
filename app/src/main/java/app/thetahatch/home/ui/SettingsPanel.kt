@@ -372,13 +372,14 @@ fun SettingsPanel(model: HomeModel) {
                         ).forEach { (mode, label) -> PillButton(label, { model.changeIconMode(mode) }, primary = model.iconMode == mode) }
                     }
                     if (model.iconMode == IconStyle.LOCAL || model.iconMode == IconStyle.GEMINI) IconColorPicker(model)
-                    if (model.iconMode == IconStyle.THEME) Note("テーマの絵：今のテーマの画風と色のまま、Gemini にアイコンを描いてもらいます（塗り替えはしません）。テーマごとに 1 回ずつ作り、テーマを戻せば前に作ったものを使います。まだ作っていないアプリは元のアイコンで出します。GAZEE は 90 年代のデスクトップの立体アイコン、DUSK は光るガラス、NOTE はパステルのシール、WINDOW はレトロなパソコン。ほかのテーマはその配色で描きます。")
+                    if (model.iconMode == IconStyle.THEME) Note("テーマの絵：今のテーマの画風と色のまま、Gemini にアイコンを描いてもらいます（塗り替えはしません）。テーマごとに 1 回ずつ作り、テーマを戻せば前に作ったものを使います。ホームのボタンの絵柄（虫めがね・マイク・タブの印など 32 種）も、同じ画風で作ります。まだ作っていないものは元のアイコン・線の記号で出します。GAZEE は 90 年代のデスクトップの立体アイコン、DUSK は光るガラス、NOTE はパステルのシール、WINDOW はレトロなパソコン。ほかのテーマはその配色で描きます。")
                     if (model.iconMode == IconStyle.GEMINI || model.iconMode == IconStyle.THEME) {
                         val job = model.iconJob
                         Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                             Readout("API KEY", if (model.hasGeminiKey) "SET" else "未設定", accent = !model.hasGeminiKey)
                             Readout("MODEL", IconStyle.imageModel(model.geminiModel))
                             Readout("DONE", "%03d / %03d".format(model.geminiDone(), model.apps.size))
+                            if (model.iconMode == IconStyle.THEME) model.glyphDone().let { (d, n) -> Readout("BUTTONS", "%02d / %02d".format(d, n)) }
                         }
                         if (model.iconMode == IconStyle.GEMINI) Note("描き方はテーマに合わせて変えます（今は「" + when (model.iconFamily()) {
                             IconStyle.FAMILY_PIXEL -> "ドット絵（TERMINAL・LCD）"

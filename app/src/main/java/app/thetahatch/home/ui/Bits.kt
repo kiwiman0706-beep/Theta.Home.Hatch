@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -242,6 +244,21 @@ enum class Glyph {
 
 @Composable
 fun GlyphIcon(g: Glyph, color: Color, size: Dp = 18.dp) {
+    // アイコンが「テーマの絵」で、この記号の絵柄を作ってあれば、それを出す（少し大きめに）
+    val look = LocalIconLook.current
+    if (look.mode == app.thetahatch.home.data.IconStyle.THEME) {
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        val art = androidx.compose.runtime.remember(look.family, look.version, g) {
+            app.thetahatch.home.data.IconStyle.glyphArt(ctx, look.family, g.name, look.version)
+        }
+        if (art != null) {
+            androidx.compose.foundation.Image(
+                art.asImageBitmap(), contentDescription = null,
+                modifier = Modifier.size(size).wrapContentSize(unbounded = true).size(size * 1.3f),
+            )
+            return
+        }
+    }
     Canvas(Modifier.size(size)) { drawGlyph(g, color) }
 }
 

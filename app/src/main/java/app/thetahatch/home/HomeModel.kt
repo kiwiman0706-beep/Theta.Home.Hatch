@@ -1924,6 +1924,19 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
     /** 今のテーマのアイコンの型の作り（Gemini に頼む描き方と保存場所）。 */
     fun iconFamily(): String = if (iconMode == IconStyle.THEME) IconStyle.fullFamily(themeMode) else IconStyle.family(themeMode)
 
+    /** まだ作っていないボタンの絵柄（テーマの絵のとき）。 */
+    private fun glyphTargets(): List<String> =
+        IconStyle.GLYPH_MEANING.keys.filter { !IconStyle.glyphFile(ctx, iconFamily(), it).exists() }
+
+    /** 作ったボタンの絵柄の数と、全部の数。 */
+    fun glyphDone(): Pair<Int, Int> = IconStyle.GLYPH_MEANING.size.let { n -> (n - glyphTargets().size) to n }
+
+    private fun glyphPrompt(name: String): String {
+        val p = palette()
+        fun hex(c: androidx.compose.ui.graphics.Color) = "#%06X".format(c.toArgbInt() and 0xFFFFFF)
+        return IconStyle.glyphPrompt(themeMode, listOf(hex(p.panel), hex(p.accent), hex(p.widget), hex(p.launch), hex(p.fg)), IconStyle.GLYPH_MEANING.getValue(name))
+    }
+
     /** 今のテーマの絵（フルカラー）の頼み方。知らないテーマは今の配色から。 */
     private fun fullPrompt(): String {
         val p = palette()
@@ -1948,34 +1961,45 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
             // ふだんは型の無いものだけ。upgrade なら 2 色の型しか無いものを 3 色で作り直す
             !done && (if (upgrade) legacy else !legacy)
         }
-        if (targets.isEmpty()) {
+        // テーマの絵のときは、ボタンの絵柄（Glyph）も作る
+        val glyphs = if (only == null && IconStyle.isFull(family)) glyphTargets() else emptyList()
+        if (targets.isEmpty() && glyphs.isEmpty()) {
             if (!quiet) (ctx as HomeApp).toast("すべてのアプリを加工済みです"); return
+        }
+        val work: List<Pair<String, () -> Unit>> = targets.map { app ->
+            app.label to {
+                val icon = Apps.icon(ctx, app, 192) ?: error("アイコンを読めません")
+                val mask = if (IconStyle.isFull(family)) IconStyle.geminiFull(key, store.geminiModel, icon, fullPrompt())
+                else IconStyle.geminiMask(key, store.geminiModel, icon, family)
+                IconStyle.cacheFile(ctx, app.key, family).outputStream().use { mask.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                Unit
+            }
+        } + glyphs.map { name ->
+            "ボタン：${name.lowercase()}" to {
+                val art = IconStyle.cutout(IconStyle.geminiFull(key, store.geminiModel, null, glyphPrompt(name)))
+                IconStyle.glyphFile(ctx, family, name).outputStream().use { art.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                Unit
+            }
         }
         iconWork = viewModelScope.launch {
             var failed = 0
             var inARow = 0
             var lastError: String? = null
-            for ((i, app) in targets.withIndex()) {
-                iconJob = IconJob(i, targets.size, app.label, failed, lastError, true)
-                val r = runCatching {
-                    withContext(Dispatchers.IO) {
-                        val icon = Apps.icon(ctx, app, 192) ?: error("アイコンを読めません")
-                        val mask = if (IconStyle.isFull(family)) IconStyle.geminiFull(key, store.geminiModel, icon, fullPrompt())
-                        else IconStyle.geminiMask(key, store.geminiModel, icon, family)
-                        IconStyle.cacheFile(ctx, app.key, family).outputStream().use { mask.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
-                    }
-                }
-                r.onFailure { failed++; if (it.message?.contains("429") != true) inARow++; lastError = "${app.label}：${it.message}" }
+            for ((i, job) in work.withIndex()) {
+                val (label, make) = job
+                iconJob = IconJob(i, work.size, label, failed, lastError, true)
+                val r = runCatching { withContext(Dispatchers.IO) { make() } }
+                r.onFailure { failed++; if (it.message?.contains("429") != true) inARow++; lastError = "$label：${it.message}" }
                 r.onSuccess { iconVersion++; inARow = 0 }
                 // 続けて 3 回失敗したら止める（キーやモデルの間違いで、全部のアプリを無駄に回さない）
                 if (inARow >= 3) {
-                    iconJob = IconJob(i + 1, targets.size, "", failed, "続けて失敗したので止めました。$lastError", false)
+                    iconJob = IconJob(i + 1, work.size, "", failed, "続けて失敗したので止めました。$lastError", false)
                     return@launch
                 }
                 // 混み合い（429）を避けるため、少し間をあける
                 kotlinx.coroutines.delay(if (r.exceptionOrNull()?.message?.contains("429") == true) 20_000 else 1_500)
             }
-            iconJob = IconJob(targets.size, targets.size, "", failed, lastError, false)
+            iconJob = IconJob(work.size, work.size, "", failed, lastError, false)
         }
     }
 
