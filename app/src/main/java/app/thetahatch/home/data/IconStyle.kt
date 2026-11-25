@@ -35,6 +35,16 @@ object IconStyle {
 
     const val DEFAULT_MODEL = "gemini-3.1-flash-image"
     private val FALLBACK_MODELS = listOf("gemini-3.1-flash-image", "gemini-2.5-flash-image")
+
+    /**
+     * 画像を描かせるときに試すモデル。設定のモデルが画像を返せない名前（gemini-2.5-flash など、シリーズで共通の文字用のもの）なら、
+     * 画像用のモデルだけを使う。
+     */
+    fun imageModels(model: String): List<String> =
+        ((if (model.contains("image", ignoreCase = true)) listOf(model) else emptyList()) + FALLBACK_MODELS).distinct()
+
+    /** 画像に使うモデル（設定の画面に出す）。 */
+    fun imageModel(model: String): String = imageModels(model).first()
     private const val SIZE = 192
 
     /** 型の作り（テーマの作りごと）。hud は前からのもので、保存場所も前のまま。 */
@@ -130,7 +140,7 @@ object IconStyle {
             .put("generationConfig", JSONObject().put("responseModalities", JSONArray().put("TEXT").put("IMAGE")))
             .toString()
         var last: Exception? = null
-        for (m in (listOf(model) + FALLBACK_MODELS).distinct()) {
+        for (m in imageModels(model)) {
             try {
                 val img = call(apiKey, m, body)
                 return Bitmap.createScaledBitmap(img, SIZE, SIZE, true)
@@ -248,7 +258,7 @@ object IconStyle {
                 .put(JSONObject().put("inline_data", JSONObject().put("mime_type", "image/png").put("data", Base64.encodeToString(png, Base64.NO_WRAP)))))))
             .put("generationConfig", JSONObject().put("responseModalities", JSONArray().put("TEXT").put("IMAGE")))
             .toString()
-        val models = (listOf(model) + FALLBACK_MODELS).distinct()
+        val models = imageModels(model)
         var last: Exception? = null
         for (m in models) {
             try {
@@ -276,6 +286,8 @@ object IconStyle {
         if (code !in 200..299) {
             val err = c.errorStream?.bufferedReader()?.readText().orEmpty()
             val msg = runCatching { JSONObject(err).getJSONObject("error").getString("message") }.getOrDefault(err.take(200))
+            // 画像を返せないモデル：次のモデルを試す
+            if (code == 400 && (msg.contains("only supports text", true) || msg.contains("modalit", true))) throw ModelNotFound(model)
             throw IOException("Gemini HTTP $code：$msg")
         }
         val json = JSONObject(c.inputStream.bufferedReader().readText())

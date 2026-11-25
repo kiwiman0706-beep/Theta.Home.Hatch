@@ -1953,8 +1953,9 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
         }
         iconWork = viewModelScope.launch {
             var failed = 0
+            var inARow = 0
             var lastError: String? = null
-            targets.forEachIndexed { i, app ->
+            for ((i, app) in targets.withIndex()) {
                 iconJob = IconJob(i, targets.size, app.label, failed, lastError, true)
                 val r = runCatching {
                     withContext(Dispatchers.IO) {
@@ -1964,8 +1965,13 @@ class HomeModel(app: Application) : AndroidViewModel(app) {
                         IconStyle.cacheFile(ctx, app.key, family).outputStream().use { mask.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
                     }
                 }
-                r.onFailure { failed++; lastError = "${app.label}：${it.message}" }
-                r.onSuccess { iconVersion++ }
+                r.onFailure { failed++; if (it.message?.contains("429") != true) inARow++; lastError = "${app.label}：${it.message}" }
+                r.onSuccess { iconVersion++; inARow = 0 }
+                // 続けて 3 回失敗したら止める（キーやモデルの間違いで、全部のアプリを無駄に回さない）
+                if (inARow >= 3) {
+                    iconJob = IconJob(i + 1, targets.size, "", failed, "続けて失敗したので止めました。$lastError", false)
+                    return@launch
+                }
                 // 混み合い（429）を避けるため、少し間をあける
                 kotlinx.coroutines.delay(if (r.exceptionOrNull()?.message?.contains("429") == true) 20_000 else 1_500)
             }

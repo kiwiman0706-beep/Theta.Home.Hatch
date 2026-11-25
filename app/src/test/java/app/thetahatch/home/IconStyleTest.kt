@@ -77,4 +77,12 @@ class IconStyleTest {
         val other = IconStyle.fullPrompt("braun", listOf("#F6F5F1", "#E8711A", "#5E7A68", "#3A3A3A", "#2A2A2A"))
         org.junit.Assert.assertTrue(other.contains("#E8711A") && other.contains("no text"))
     }
+
+    /** 画像を描かせるとき：文字用のモデル（シリーズで共通の gemini-2.5-flash など）は使わず、画像用のモデルにする。 */
+    @Test
+    fun imageModelsSkipTextOnly() {
+        org.junit.Assert.assertEquals(IconStyle.DEFAULT_MODEL, IconStyle.imageModel("gemini-2.5-flash"))
+        org.junit.Assert.assertFalse(IconStyle.imageModels("gemini-2.5-flash").contains("gemini-2.5-flash"))
+        org.junit.Assert.assertEquals("gemini-2.5-flash-image", IconStyle.imageModel("gemini-2.5-flash-image"))
+    }
 }

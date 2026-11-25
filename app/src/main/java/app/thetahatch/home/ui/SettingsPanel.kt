@@ -377,7 +377,7 @@ fun SettingsPanel(model: HomeModel) {
                         val job = model.iconJob
                         Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                             Readout("API KEY", if (model.hasGeminiKey) "SET" else "未設定", accent = !model.hasGeminiKey)
-                            Readout("MODEL", model.geminiModel)
+                            Readout("MODEL", IconStyle.imageModel(model.geminiModel))
                             Readout("DONE", "%03d / %03d".format(model.geminiDone(), model.apps.size))
                         }
                         if (model.iconMode == IconStyle.GEMINI) Note("描き方はテーマに合わせて変えます（今は「" + when (model.iconFamily()) {
